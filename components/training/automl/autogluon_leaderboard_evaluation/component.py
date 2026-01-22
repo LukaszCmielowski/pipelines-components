@@ -11,7 +11,7 @@ def leaderboard_evaluation(
     models: dsl.Input[List[dsl.Model]],
     full_dataset: dsl.Input[dsl.Dataset],
     markdown_artifact: dsl.Output[dsl.Markdown],
-) -> str:  # Specify your return type
+):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
     This component evaluates a list of trained AutoGluon TabularPredictor models
@@ -35,10 +35,6 @@ def leaderboard_evaluation(
         markdown_artifact: Output artifact where the markdown-formatted
             leaderboard will be written. The leaderboard contains model names
             and their evaluation metrics.
-
-    Returns:
-        A string message indicating the completion status of the evaluation
-        process.
 
     Raises:
         FileNotFoundError: If any model path or dataset path cannot be found.

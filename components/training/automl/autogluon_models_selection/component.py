@@ -10,8 +10,8 @@ def models_selection(
     target_column: str,
     problem_type: str,
     top_n: int,
-    train_data_regression: dsl.Input[dsl.Dataset],
-    test_data_regression: dsl.Input[dsl.Dataset],
+    train_data: dsl.Input[dsl.Dataset],
+    test_data: dsl.Input[dsl.Dataset],
     model_artifact: dsl.Output[dsl.Model],
 ) -> NamedTuple("outputs", top_models=List[str]):
     """Build multiple AutoGluon models and select top performers.
@@ -40,10 +40,10 @@ def models_selection(
         top_n: The number of top-performing models to select from the leaderboard.
             Only the top N models will be returned and promoted to the refit stage.
             Must be a positive integer.
-        train_data_regression: A Dataset artifact containing the training data
+        train_data: A Dataset artifact containing the training data
             in CSV format. This data is used to train the AutoGluon models.
             The dataset should include the target_column and all feature columns.
-        test_data_regression: A Dataset artifact containing the test data in
+        test_data: A Dataset artifact containing the test data in
             CSV format. This data is used to evaluate model performance and
             generate the leaderboard. The dataset should match the schema of
             the training data.
@@ -58,7 +58,7 @@ def models_selection(
               by performance on the test dataset.
 
     Raises:
-        FileNotFoundError: If the train_data_regression or test_data_regression
+        FileNotFoundError: If the train_data or test_data
             paths cannot be found.
         ValueError: If the target_column is not found in the datasets, the
             problem_type is invalid, top_n is not positive, or model training fails.
@@ -77,8 +77,8 @@ def models_selection(
                 target_column="price",
                 problem_type="regression",
                 top_n=3,
-                train_data_regression=train_data,
-                test_data_regression=test_data
+                train_data=train_data,
+                test_data=test_data
             )
             # result.top_models contains list of top 3 model names
             return result
@@ -86,8 +86,8 @@ def models_selection(
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
-    train_data_regression_df = pd.read_csv(train_data_regression.path)
-    test_data_regression_df = pd.read_csv(test_data_regression.path)
+    train_data_df = pd.read_csv(train_data.path)
+    test_data_df = pd.read_csv(test_data.path)
 
     predictor_regression = TabularPredictor(
         problem_type=problem_type,
@@ -95,13 +95,13 @@ def models_selection(
         path=model_artifact.path,
         verbosity=2,
     ).fit(
-        train_data=train_data_regression_df,
+        train_data=train_data_df,
         num_stack_levels=3,
         num_bag_folds=2,
         use_bag_holdout=True,
     )
 
-    leaderboard = predictor_regression.leaderboard(test_data_regression_df)
+    leaderboard = predictor_regression.leaderboard(test_data_df)
     top_n_models = leaderboard.head(top_n)["model"].values.tolist()
     model_artifact.metadata["top_models"] = top_n_models
 
