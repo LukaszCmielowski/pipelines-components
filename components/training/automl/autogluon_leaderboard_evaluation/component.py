@@ -1,4 +1,5 @@
 from typing import List
+
 from kfp import dsl
 
 
@@ -58,9 +59,8 @@ def leaderboard_evaluation(
             )
             return leaderboard
     """
-
-    from autogluon.tabular import TabularPredictor
     import pandas as pd
+    from autogluon.tabular import TabularPredictor
 
     results = []
     for model in models:
