@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="python:3.11",
+    base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",
     # packages_to_install=["numpy", "pandas"],  # Add your dependencies here
 )
 def leaderboard_evaluation(
