@@ -306,8 +306,6 @@ hyperparameter optimization to achieve high performance.
 
 ## Supported Features ✨
 
-**Status**: Tech Preview - MVP
-
 ### Data Configuration
 
 - **Data Type**: Tabular data (CSV, Parquet, etc.)
