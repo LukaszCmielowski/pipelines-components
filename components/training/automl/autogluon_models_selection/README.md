@@ -172,7 +172,5 @@ The component generates a leaderboard CSV file containing:
 
 ## Additional Resources 📚
 
-- **AutoML Documentation**: [AutoML README](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/README.md)
-- **Components Documentation**: [Components Structure](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/components.md)
 - **AutoGluon Documentation**: [AutoGluon GitHub](https://github.com/autogluon/autogluon)
 - **Issue Tracker**: [GitHub Issues](https://github.com/kubeflow/pipelines-components/issues)

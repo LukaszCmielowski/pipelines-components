@@ -146,8 +146,6 @@ This capability will be available in future versions.
 
 ## Additional Resources 📚
 
-- **AutoML Documentation**: [AutoML README](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/README.md)
-- **Components Documentation**: [Components Structure](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/components.md)
 - **AutoGluon Documentation**: [AutoGluon GitHub](https://github.com/autogluon/autogluon)
 - **Kubeflow Katib**: [Katib Documentation](https://www.kubeflow.org/docs/components/katib/)
 - **Issue Tracker**: [GitHub Issues](https://github.com/kubeflow/pipelines-components/issues)
