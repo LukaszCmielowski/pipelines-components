@@ -8,7 +8,7 @@ from kfp import dsl
     # packages_to_install=["numpy", "pandas"],  # Add your dependencies here
 )
 def leaderboard_evaluation(
-    models: dsl.Input[List[dsl.Model]],
+    models: List[dsl.Model],
     full_dataset: dsl.Input[dsl.Dataset],
     markdown_artifact: dsl.Output[dsl.Markdown],
 ):
@@ -62,12 +62,10 @@ def leaderboard_evaluation(
     for model in models:
         predictor = TabularPredictor.load(model.path)
         eval_results = predictor.evaluate(full_dataset.path)
-        results.append({"model": model.metadta["model_name"]} | eval_results)
+        results.append({"model": model.metadata["model_name"]} | eval_results)
 
     with open(markdown_artifact.path, "w") as f:
-        f.write(
-            pd.DataFrame(results.to_markdown()).sort_values(by="root_mean_squared_error", ascending=False).to_markdown()
-        )
+        f.write(pd.DataFrame(results).sort_values(by="root_mean_squared_error", ascending=False).to_markdown())
 
 
 if __name__ == "__main__":
