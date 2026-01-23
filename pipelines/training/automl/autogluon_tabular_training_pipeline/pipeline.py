@@ -1,10 +1,10 @@
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
-from kfp_components.components.data_processing.automl.train_test_split import train_test_split
-from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
-from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
-from kfp_components.components.training.automl.autogluon_models_selection import models_selection
+from components.data_processing.automl.tabular_data_loader import automl_data_loader
+from components.data_processing.automl.train_test_split import train_test_split
+from components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
+from components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
+from components.training.automl.autogluon_models_selection import models_selection
 
 
 @dsl.pipeline(
