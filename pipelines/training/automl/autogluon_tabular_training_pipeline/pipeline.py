@@ -1,10 +1,10 @@
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-from components.data_processing.automl.tabular_data_loader import automl_data_loader
-from components.data_processing.automl.train_test_split import train_test_split
-from components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
-from components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
-from components.training.automl.autogluon_models_selection import models_selection
+from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
+from kfp_components.components.data_processing.automl.train_test_split import train_test_split
+from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
+from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
+from kfp_components.components.training.automl.autogluon_models_selection import models_selection
 
 
 @dsl.pipeline(
@@ -143,7 +143,7 @@ def autogluon_tabular_training_pipeline(
         },
     )
 
-    train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["tabular_data"], test_size=0.2)
+    train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
 
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
@@ -151,8 +151,8 @@ def autogluon_tabular_training_pipeline(
         target_column=target_column,
         problem_type=problem_type,
         top_n=top_n,
-        train_data=train_test_split_task.outputs["train_data"],
-        test_data=train_test_split_task.outputs["test_data"],
+        train_data=train_test_split_task.outputs["sampled_train_dataset"],
+        test_data=train_test_split_task.outputs["sampled_test_dataset"],
     )
 
     # Stage 2: Model Refitting
