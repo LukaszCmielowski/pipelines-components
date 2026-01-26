@@ -23,9 +23,9 @@ deployment.
 |-----------|------|---------|-------------|
 | `rag_patterns` | `dsl.Output[dsl.Artifact]` | `None` | Output artifacts containing optimized RAG Patterns. |
 | `leaderboard` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the leaderboard with RAG Patterns ranked by performance. |
-| `validated_configurations` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing validated configurations from search-space-preparation. |
-| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing test data for evaluation. |
-| `extracted_text` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing extracted text from text-extraction. |
+| `validated_configurations` | `dsl.Input[dsl.Artifact]` | --- | Input artifact containing validated configurations from search-space-preparation. |
+| `test_data` | `dsl.Input[dsl.Artifact]` | --- | Input artifact containing test data for evaluation. |
+| `extracted_text` | `dsl.Input[dsl.Artifact]` | --- | Input artifact containing extracted text from text-extraction. |
 | `vector_database_id` | `str` | `None` | Optional vector database ID (e.g., registered in llama-stack Milvus database). If not provided, an in-memory database will be used. |
 | `optimization_settings` | `dict` | `None` | Optional dictionary with optimization settings. See [Optimization Settings](#optimization-settings) below. |
 
