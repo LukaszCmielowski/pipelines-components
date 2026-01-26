@@ -52,10 +52,16 @@ def document_loader(
     input_data_reference = DataReference(**input_data_reference)
 
     def get_test_data_docs_names(test_data: Input[Artifact]) -> list[str]:
+        if test_data is None:
+            return []
         with open(test_data.path, "r") as f:
             benchmark = json.load(f)
 
-        return []
+        docs_names = []
+        for question in benchmark:
+            docs_names.extend(question["correct_answer_document_ids"])
+
+        return docs_names
 
     def download_docs_s3():
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -105,6 +111,7 @@ def document_loader(
             documents_to_download.append(file)
             total_size += file["Size"]
 
+        os.makedirs(sampled_documents.path, exist_ok=True)
         for file_info in documents_to_download:
             key = file_info["Key"]
             safe_name = key.replace("/", "__")
