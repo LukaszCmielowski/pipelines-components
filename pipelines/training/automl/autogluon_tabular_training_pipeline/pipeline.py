@@ -140,6 +140,7 @@ def autogluon_tabular_training_pipeline(
             "aws_access_key_id": "AWS_ACCESS_KEY_ID",
             "aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
             "endpoint_url": "AWS_ENDPOINT_URL",
+            "aws_region_name": "AWS_REGION",
         },
     )
 

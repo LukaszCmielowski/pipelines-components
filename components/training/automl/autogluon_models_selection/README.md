@@ -24,7 +24,7 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 | `target_column` | `str` | `None` | The name of the target/label column in the training
 and test datasets. This column will be used as the prediction target. |
 | `problem_type` | `str` | `None` | The type of machine learning problem. Supported values
-include "classification", "regression", or "time_series". This
+include "classification" or "regression". This
 determines the evaluation metrics and model types AutoGluon will use. |
 | `top_n` | `int` | `None` | The number of top-performing models to select from the leaderboard.
 Only the top N models will be returned and promoted to the refit stage.

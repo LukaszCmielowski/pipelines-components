@@ -62,7 +62,6 @@ exist in the loaded dataset. |
 | `problem_type` | `str` | `None` | The type of machine learning problem. Supported values:
 - "classification": For classification tasks (binary or multiclass)
 - "regression": For regression tasks (predicting continuous values)
-- "time_series": For time-series forecasting tasks
 This parameter determines the evaluation metrics and model types AutoGluon
 will use during training. |
 | `top_n` | `int` | `3` | The number of top-performing models to select and refit (default: 3).
