@@ -24,15 +24,15 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 | `target_column` | `str` | `None` | The name of the target/label column in the training
 and test datasets. This column will be used as the prediction target. |
 | `problem_type` | `str` | `None` | The type of machine learning problem. Supported values
-include "classification" or "regression". This
+include "binary", "multiclass" (classification) or "regression". This
 determines the evaluation metrics and model types AutoGluon will use. |
 | `top_n` | `int` | `None` | The number of top-performing models to select from the leaderboard.
 Only the top N models will be returned and promoted to the refit stage.
 Must be a positive integer. |
-| `train_data_regression` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the training data
+| `train_data` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the training data
 in CSV format. This data is used to train the AutoGluon models.
 The dataset should include the target_column and all feature columns. |
-| `test_data_regression` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the test data in
+| `test_data` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the test data in
 CSV format. This data is used to evaluate model performance and
 generate the leaderboard. The dataset should match the schema of
 the training data. |
@@ -44,11 +44,15 @@ with the list of selected model names. |
 
 | Name | Type | Description |
 |------|------|-------------|
-| Output | `NamedTuple('outputs', top_models=List[str])` | A NamedTuple with the following fields:
+| Output | `NamedTuple('outputs', top_models=List[str], eval_metric=str)` | A NamedTuple with the following fields:
 
 - top_models (List[str]): A list of model names (strings) representing
   the top N performing models selected from the leaderboard, ranked
-  by performance on the test dataset. |
+  by performance on the test dataset.
+- eval_metric (str): The evaluation metric name used by the TabularPredictor
+  to assess model performance. This metric is automatically determined
+  based on the problem_type (e.g., "accuracy" for classification,
+  "root_mean_squared_error" for regression). |
 
 ## Metadata 🗂️
 

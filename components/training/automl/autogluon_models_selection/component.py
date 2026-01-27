@@ -13,7 +13,7 @@ def models_selection(
     train_data: dsl.Input[dsl.Dataset],
     test_data: dsl.Input[dsl.Dataset],
     model_artifact: dsl.Output[dsl.Model],
-) -> NamedTuple("outputs", top_models=List[str]):
+) -> NamedTuple("outputs", top_models=List[str], eval_metric=str):
     """Build multiple AutoGluon models and select top performers.
 
     This component trains multiple machine learning models using AutoGluon's
@@ -35,7 +35,7 @@ def models_selection(
         target_column: The name of the target/label column in the training
             and test datasets. This column will be used as the prediction target.
         problem_type: The type of machine learning problem. Supported values
-            include "classification" or "regression". This
+            include "binary", "multiclass" (classification) or "regression". This
             determines the evaluation metrics and model types AutoGluon will use.
         top_n: The number of top-performing models to select from the leaderboard.
             Only the top N models will be returned and promoted to the refit stage.
@@ -56,6 +56,10 @@ def models_selection(
             - top_models (List[str]): A list of model names (strings) representing
               the top N performing models selected from the leaderboard, ranked
               by performance on the test dataset.
+            - eval_metric (str): The evaluation metric name used by the TabularPredictor
+              to assess model performance. This metric is automatically determined
+              based on the problem_type (e.g., "accuracy" for classification,
+              "root_mean_squared_error" for regression).
 
     Raises:
         FileNotFoundError: If the train_data or test_data
@@ -89,7 +93,7 @@ def models_selection(
     train_data_df = pd.read_csv(train_data.path)
     test_data_df = pd.read_csv(test_data.path)
 
-    predictor_regression = TabularPredictor(
+    predictor = TabularPredictor(
         problem_type=problem_type,
         label=target_column,
         path=model_artifact.path,
@@ -101,12 +105,12 @@ def models_selection(
         use_bag_holdout=True,
     )
 
-    leaderboard = predictor_regression.leaderboard(test_data_df)
+    leaderboard = predictor.leaderboard(test_data_df)
     top_n_models = leaderboard.head(top_n)["model"].values.tolist()
     model_artifact.metadata["top_models"] = top_n_models
 
-    outputs = NamedTuple("outputs", top_models=str)
-    return outputs(top_models=top_n_models)
+    outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str)
+    return outputs(top_models=top_n_models, eval_metric=str(predictor.eval_metric))
 
 
 if __name__ == "__main__":
