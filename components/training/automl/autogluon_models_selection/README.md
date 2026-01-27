@@ -45,6 +45,7 @@ with the list of selected model names. |
 | Name | Type | Description |
 |------|------|-------------|
 | Output | `NamedTuple('outputs', top_models=List[str])` | A NamedTuple with the following fields:
+
 - top_models (List[str]): A list of model names (strings) representing
   the top N performing models selected from the leaderboard, ranked
   by performance on the test dataset. |

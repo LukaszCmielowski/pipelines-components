@@ -18,15 +18,14 @@ def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output
         Description of what the component returns.
     """
     import os
-
-    import boto3
     import pandas as pd
+    import boto3
 
     def download_from_s3():
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-        region_name = os.environ.get("AWS_REGION")
+        region_name = "us-east-1" #os.environ.get("AWS_REGION")
 
         if (access_key and not secret_key) or (secret_key and not access_key):
             raise ValueError(
