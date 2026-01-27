@@ -61,7 +61,7 @@ will be used as the prediction target for model training. The column must
 exist in the loaded dataset. |
 | `problem_type` | `str` | `None` | The type of machine learning problem. Supported values:
 
-- "classification": For classification tasks (binary or multiclass)
+- "binary" or "multiclass": For classification tasks
 - "regression": For regression tasks (predicting continuous values)
 This parameter determines the evaluation metrics and model types AutoGluon
 will use during training. |

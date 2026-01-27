@@ -93,9 +93,8 @@ def autogluon_tabular_training_pipeline(
             will be used as the prediction target for model training. The column must
             exist in the loaded dataset.
         problem_type: The type of machine learning problem. Supported values:
-            - "classification": For classification tasks (binary or multiclass)
+            - "binary" or "multiclass": For classification tasks
             - "regression": For regression tasks (predicting continuous values)
-            - "time_series": For time-series forecasting tasks
             This parameter determines the evaluation metrics and model types AutoGluon
             will use during training.
         top_n: The number of top-performing models to select and refit (default: 3).
@@ -169,6 +168,7 @@ def autogluon_tabular_training_pipeline(
     # Generate leaderboard
     leaderboard_evaluation_task = leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
+        eval_metric=selection_task.outputs["eval_metric"],
         full_dataset=tabular_loader_task.outputs["full_dataset"],
     )
 

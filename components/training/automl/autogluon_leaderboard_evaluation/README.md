@@ -10,7 +10,7 @@ This component evaluates a list of trained AutoGluon TabularPredictor models on 
 markdown-formatted leaderboard ranking the models by their performance metrics. Each model is loaded, evaluated on the
 provided dataset, and the results are compiled into a sorted leaderboard table.
 
-The leaderboard is sorted by root mean squared error (RMSE) in descending order, making it easy to identify the
+The leaderboard is sorted by the specified evaluation metric in descending order, making it easy to identify the
 best-performing models. The output is written as a markdown table that can be used for reporting and model selection
 decisions.
 
@@ -18,9 +18,14 @@ decisions.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `models` | `dsl.Input[List[dsl.Model]]` | `None` | A list of Model artifacts containing trained AutoGluon
+| `models` | `List[dsl.Model]` | `None` | A list of Model artifacts containing trained AutoGluon
 TabularPredictor models to evaluate. Each model should have
 metadata containing a "model_name" field. |
+| `eval_metric` | `str` | `None` | The name of the evaluation metric to use for ranking
+models in the leaderboard. This should match one of the metrics
+returned by the TabularPredictor's evaluate method (e.g., "accuracy"
+for classification, "root_mean_squared_error" for regression).
+The leaderboard will be sorted by this metric in descending order. |
 | `full_dataset` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the evaluation dataset
 on which all models will be evaluated. The dataset should be
 compatible with the models' training data format. |
@@ -30,10 +35,7 @@ and their evaluation metrics. |
 
 ## Outputs 📤
 
-| Name | Type | Description |
-|------|------|-------------|
-| Output | `str` | A string message indicating the completion status of the evaluation
-process. |
+This component does not return any outputs. The leaderboard is written directly to the `markdown_artifact` output.
 
 ## Metadata 🗂️
 
