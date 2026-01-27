@@ -3,14 +3,17 @@ from kfp import dsl
 
 @dsl.component(
     base_image="python:3.11",
-    # packages_to_install=["numpy", "pandas"],  # Add your dependencies here
+    packages_to_install=["pandas", "scikit-learn"],
 )
 def train_test_split(
     # Add your component parameters here
-    input_param: str,
+    dataset: dsl.Input[dsl.Dataset],
+    sampled_train_dataset: dsl.Output[dsl.Dataset],
+    sampled_test_dataset: dsl.Output[dsl.Dataset],
+    test_size: float = 0.3,
     # Add your output artifacts here
     # output_artifact: dsl.Output[dsl.Artifact]
-) -> str:  # Specify your return type
+):  # Specify your return type
     """Train Test Split component.
 
     TODO: Add a detailed description of what this component does.
@@ -22,6 +25,15 @@ def train_test_split(
     Returns:
         Description of what the component returns.
     """
+    import pandas as pd
+
+    # Split the data
+    from sklearn.model_selection import train_test_split
+
+    X_train, X_test = train_test_split(pd.read_csv(dataset.path), test_size=test_size, random_state=42)
+
+    X_train.to_csv(sampled_train_dataset.path, index=False)
+    X_test.to_csv(sampled_test_dataset.path, index=False)
     # TODO: Implement your component logic here
 
 

@@ -5,6 +5,8 @@ dependencies:
   kubeflow:
     - name: Pipelines
       version: '>=2.14.4'
+    - name: Kubernetes
+      version: ">=1.28.0"
   # external_services:  # Add if pipeline uses external services
   #   - name: Example Service
   #     version: ">=1.0.0"
