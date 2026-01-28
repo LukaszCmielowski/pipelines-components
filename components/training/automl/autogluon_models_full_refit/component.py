@@ -85,10 +85,9 @@ def autogluon_models_full_refit(
     path = os.path.join(model_artifact.path, model_artifact.metadata["model_name"])
     models_to_keep = [model_name, model_name + "_FULL"]
 
-    # predictor.clone_for_deployment(model=model_name + "_FULL", path=model_artifact.path)
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=models_to_keep)
-    predictor_clone.set_model_best(model=model_name + "_FULL", save_trainer=True)
+    predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
     predictor_clone.save_space()
 
 
