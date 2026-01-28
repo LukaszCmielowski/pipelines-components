@@ -8,7 +8,7 @@ from kfp_components.components.training.automl.autogluon_models_selection import
 
 
 @dsl.pipeline(
-    name="autogluon-training-pipeline",
+    name="autogluon-tabular-training-pipeline",
     description=(
         "End-to-end AutoGluon tabular training pipeline implementing a two-stage approach: "
         "first builds and selects top-performing models on sampled data, then refits them "
@@ -172,7 +172,7 @@ def autogluon_tabular_training_pipeline(
         full_dataset=tabular_loader_task.outputs["full_dataset"],
     )
 
-    return leaderboard_evaluation_task.outputs["markdown_artifact"]
+    return leaderboard_evaluation_task.outputs["html_artifact"]
 
 
 if __name__ == "__main__":

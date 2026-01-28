@@ -11,7 +11,7 @@ def leaderboard_evaluation(
     models: List[dsl.Model],
     eval_metric: str,
     full_dataset: dsl.Input[dsl.Dataset],
-    markdown_artifact: dsl.Output[dsl.Markdown],
+    html_artifact: dsl.Output[dsl.Markdown],
 ):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
@@ -38,7 +38,7 @@ def leaderboard_evaluation(
         full_dataset: A Dataset artifact containing the evaluation dataset
             on which all models will be evaluated. The dataset should be
             compatible with the models' training data format.
-        markdown_artifact: Output artifact where the markdown-formatted
+        html_artifact: Output artifact where the html-formatted
             leaderboard will be written. The leaderboard contains model names
             and their evaluation metrics.
 
@@ -62,17 +62,19 @@ def leaderboard_evaluation(
             )
             return leaderboard
     """
+    import os
+
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
     results = []
     for model in models:
-        predictor = TabularPredictor.load(model.path)
+        predictor = TabularPredictor.load(os.path.join(model.path, model.metadata["model_name"]))
         eval_results = predictor.evaluate(full_dataset.path)
         results.append({"model": model.metadata["model_name"]} | eval_results)
 
-    with open(markdown_artifact.path, "w") as f:
-        f.write(pd.DataFrame(results).sort_values(by=eval_metric, ascending=False).to_markdown())
+    with open(html_artifact.path, "w") as f:
+        f.write(pd.DataFrame(results).sort_values(by=eval_metric, ascending=False).to_html())
 
 
 if __name__ == "__main__":

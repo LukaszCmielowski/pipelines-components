@@ -71,6 +71,8 @@ def autogluon_models_full_refit(
             return refitted
 
     """
+    import os
+
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
@@ -79,8 +81,8 @@ def autogluon_models_full_refit(
     predictor = TabularPredictor.load(predictor_artifact.path)
     predictor.refit_full(train_data_extra=full_dataset_df, model=model_name)
 
-    path = model_artifact.path
     model_artifact.metadata["model_name"] = model_name + "_FULL"
+    path = os.path.join(model_artifact.path, model_artifact.metadata["model_name"])
     models_to_keep = [model_name, model_name + "_FULL"]
 
     # predictor.clone_for_deployment(model=model_name + "_FULL", path=model_artifact.path)
