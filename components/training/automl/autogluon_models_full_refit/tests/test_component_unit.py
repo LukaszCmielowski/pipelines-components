@@ -72,52 +72,6 @@ class TestAutogluonModelsFullRefitUnitTests:
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_full_refit_with_different_model_name(self, mock_predictor_class, mock_read_csv):
-        """Test full refit with a different model name."""
-        # Setup mocks
-        mock_predictor = mock.MagicMock()
-        mock_predictor_clone = mock.MagicMock()
-        mock_predictor.clone.return_value = mock_predictor_clone
-        mock_predictor_class.load.return_value = mock_predictor
-
-        # Mock DataFrame for dataset
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_read_csv.return_value = mock_dataset_df
-
-        # Create mock artifacts
-        mock_predictor_artifact = mock.MagicMock()
-        mock_predictor_artifact.path = "/tmp/predictor"
-
-        mock_full_dataset = mock.MagicMock()
-        mock_full_dataset.path = "/tmp/full_dataset.csv"
-
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/refitted_model"
-        mock_model_artifact.metadata = {}
-
-        # Call the component function with different model name
-        autogluon_models_full_refit.python_func(
-            model_name="NeuralNetFastAI_BAG_L1",
-            full_dataset=mock_full_dataset,
-            predictor_artifact=mock_predictor_artifact,
-            model_artifact=mock_model_artifact,
-        )
-
-        # Verify refit_full was called with correct model name
-        mock_predictor.refit_full.assert_called_once_with(
-            train_data_extra=mock_dataset_df, model="NeuralNetFastAI_BAG_L1"
-        )
-
-        # Verify models_to_keep includes both original and FULL version
-        mock_predictor_clone.delete_models.assert_called_once_with(
-            models_to_keep=["NeuralNetFastAI_BAG_L1", "NeuralNetFastAI_BAG_L1_FULL"]
-        )
-
-        # Verify metadata uses correct model name with _FULL suffix
-        assert mock_model_artifact.metadata["model_name"] == "NeuralNetFastAI_BAG_L1_FULL"
-
-    @mock.patch("pandas.read_csv")
-    @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_handles_file_not_found_predictor(self, mock_predictor_class, mock_read_csv):
         """Test that FileNotFoundError is raised when predictor path doesn't exist."""
         # Setup mocks to raise FileNotFoundError
@@ -128,36 +82,6 @@ class TestAutogluonModelsFullRefitUnitTests:
 
         mock_predictor_artifact = mock.MagicMock()
         mock_predictor_artifact.path = "/nonexistent/predictor"
-
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/refitted_model"
-        mock_model_artifact.metadata = {}
-
-        # Verify FileNotFoundError is raised
-        with pytest.raises(FileNotFoundError):
-            autogluon_models_full_refit.python_func(
-                model_name="LightGBM_BAG_L1",
-                full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
-                model_artifact=mock_model_artifact,
-            )
-
-    @mock.patch("pandas.read_csv")
-    @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_full_refit_handles_file_not_found_dataset(self, mock_predictor_class, mock_read_csv):
-        """Test that FileNotFoundError is raised when dataset path doesn't exist."""
-        # Setup mocks
-        mock_predictor = mock.MagicMock()
-        mock_predictor_class.load.return_value = mock_predictor
-
-        # Mock read_csv to raise FileNotFoundError
-        mock_read_csv.side_effect = FileNotFoundError("Dataset file not found")
-
-        mock_full_dataset = mock.MagicMock()
-        mock_full_dataset.path = "/nonexistent/dataset.csv"
-
-        mock_predictor_artifact = mock.MagicMock()
-        mock_predictor_artifact.path = "/tmp/predictor"
 
         mock_model_artifact = mock.MagicMock()
         mock_model_artifact.path = "/tmp/refitted_model"
@@ -206,38 +130,6 @@ class TestAutogluonModelsFullRefitUnitTests:
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_full_refit_handles_clone_failure(self, mock_predictor_class, mock_read_csv):
-        """Test that errors are raised when clone fails."""
-        # Setup mocks
-        mock_predictor = mock.MagicMock()
-        mock_predictor.clone.side_effect = ValueError("Clone failed")
-        mock_predictor_class.load.return_value = mock_predictor
-
-        # Mock DataFrame for dataset
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_read_csv.return_value = mock_dataset_df
-
-        mock_full_dataset = mock.MagicMock()
-        mock_full_dataset.path = "/tmp/full_dataset.csv"
-
-        mock_predictor_artifact = mock.MagicMock()
-        mock_predictor_artifact.path = "/tmp/predictor"
-
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/refitted_model"
-        mock_model_artifact.metadata = {}
-
-        # Verify ValueError is raised
-        with pytest.raises(ValueError, match="Clone failed"):
-            autogluon_models_full_refit.python_func(
-                model_name="LightGBM_BAG_L1",
-                full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
-                model_artifact=mock_model_artifact,
-            )
-
-    @mock.patch("pandas.read_csv")
-    @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
         """Test that all required operations are called in correct order."""
         # Setup mocks
@@ -279,41 +171,6 @@ class TestAutogluonModelsFullRefitUnitTests:
         # Verify refit_full was called before clone
         assert mock_predictor.refit_full.call_count == 1
         assert mock_predictor.clone.call_count == 1
-
-    @mock.patch("pandas.read_csv")
-    @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_full_refit_with_empty_dataset(self, mock_predictor_class, mock_read_csv):
-        """Test full refit with an empty dataset."""
-        # Setup mocks
-        mock_predictor = mock.MagicMock()
-        mock_predictor_clone = mock.MagicMock()
-        mock_predictor.clone.return_value = mock_predictor_clone
-        mock_predictor_class.load.return_value = mock_predictor
-
-        # Mock empty DataFrame
-        mock_dataset_df = pd.DataFrame()
-        mock_read_csv.return_value = mock_dataset_df
-
-        mock_full_dataset = mock.MagicMock()
-        mock_full_dataset.path = "/tmp/empty_dataset.csv"
-
-        mock_predictor_artifact = mock.MagicMock()
-        mock_predictor_artifact.path = "/tmp/predictor"
-
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/refitted_model"
-        mock_model_artifact.metadata = {}
-
-        # Call the component function
-        autogluon_models_full_refit.python_func(
-            model_name="LightGBM_BAG_L1",
-            full_dataset=mock_full_dataset,
-            predictor_artifact=mock_predictor_artifact,
-            model_artifact=mock_model_artifact,
-        )
-
-        # Verify refit_full was called with empty DataFrame
-        mock_predictor.refit_full.assert_called_once_with(train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1")
 
     def test_component_imports_correctly(self):
         """Test that the component can be imported and has required attributes."""

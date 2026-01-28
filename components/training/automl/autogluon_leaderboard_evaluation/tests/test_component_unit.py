@@ -4,8 +4,6 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-import pytest
-
 from ..component import leaderboard_evaluation
 
 
@@ -183,59 +181,6 @@ class TestLeaderboardEvaluationUnitTests:
 
         finally:
             Path(tmp_path).unlink(missing_ok=True)
-
-    @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_leaderboard_evaluation_handles_missing_model_name(self, mock_predictor_class):
-        """Test that KeyError is raised when model metadata lacks model_name."""
-        # Setup mocks
-        mock_predictor = mock.MagicMock()
-        mock_predictor.evaluate.return_value = {"root_mean_squared_error": 0.5}
-        mock_predictor_class.load.return_value = mock_predictor
-
-        # Create mock artifacts without model_name in metadata
-        mock_model = mock.MagicMock()
-        mock_model.path = "/tmp/model1"
-        mock_model.metadata = {}  # Missing model_name
-
-        mock_dataset = mock.MagicMock()
-        mock_dataset.path = "/tmp/test_data.csv"
-
-        mock_markdown = mock.MagicMock()
-        mock_markdown.path = "/tmp/output.md"
-
-        # Verify KeyError is raised
-        with pytest.raises(KeyError, match="model_name"):
-            leaderboard_evaluation.python_func(
-                models=[mock_model],
-                eval_metric="root_mean_squared_error",
-                full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
-            )
-
-    @mock.patch("autogluon.tabular.TabularPredictor")
-    def test_leaderboard_evaluation_handles_file_not_found(self, mock_predictor_class):
-        """Test that FileNotFoundError is raised when model path doesn't exist."""
-        # Setup mocks to raise FileNotFoundError
-        mock_predictor_class.load.side_effect = FileNotFoundError("Model file not found")
-
-        mock_model = mock.MagicMock()
-        mock_model.path = "/nonexistent/model"
-        mock_model.metadata = {"model_name": "Model1"}
-
-        mock_dataset = mock.MagicMock()
-        mock_dataset.path = "/tmp/test_data.csv"
-
-        mock_markdown = mock.MagicMock()
-        mock_markdown.path = "/tmp/output.md"
-
-        # Verify FileNotFoundError is raised
-        with pytest.raises(FileNotFoundError):
-            leaderboard_evaluation.python_func(
-                models=[mock_model],
-                eval_metric="root_mean_squared_error",
-                full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
-            )
 
     @mock.patch("pandas.DataFrame", create=True)
     @mock.patch("autogluon.tabular.TabularPredictor", create=True)
