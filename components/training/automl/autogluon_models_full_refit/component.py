@@ -81,9 +81,10 @@ def autogluon_models_full_refit(
     predictor = TabularPredictor.load(predictor_artifact.path)
     predictor.refit_full(train_data_extra=full_dataset_df, model=model_name)
 
-    model_artifact.metadata["model_name"] = model_name + "_FULL"
-    path = os.path.join(model_artifact.path, model_artifact.metadata["model_name"])
-    models_to_keep = [model_name, model_name + "_FULL"]
+    model_name_full = model_name + "_FULL"
+    model_artifact.metadata["model_name"] = model_name_full
+    path = os.path.join(model_artifact.path, model_name_full)
+    models_to_keep = [model_name, model_name_full]
 
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=models_to_keep)
