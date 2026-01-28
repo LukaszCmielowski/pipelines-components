@@ -51,6 +51,7 @@ class TestLeaderboardEvaluationUnitTests:
             # Call the component function
             leaderboard_evaluation.python_func(
                 models=[mock_model],
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
@@ -147,6 +148,7 @@ class TestLeaderboardEvaluationUnitTests:
             # Call the component function
             leaderboard_evaluation.python_func(
                 models=[mock_model1, mock_model2, mock_model3],
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
@@ -205,6 +207,7 @@ class TestLeaderboardEvaluationUnitTests:
         with pytest.raises(KeyError, match="model_name"):
             leaderboard_evaluation.python_func(
                 models=[mock_model],
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
@@ -229,6 +232,7 @@ class TestLeaderboardEvaluationUnitTests:
         with pytest.raises(FileNotFoundError):
             leaderboard_evaluation.python_func(
                 models=[mock_model],
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
@@ -281,6 +285,7 @@ class TestLeaderboardEvaluationUnitTests:
 
             leaderboard_evaluation.python_func(
                 models=mock_models,
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
@@ -337,6 +342,7 @@ class TestLeaderboardEvaluationUnitTests:
 
             leaderboard_evaluation.python_func(
                 models=[mock_model],
+                eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
                 markdown_artifact=mock_markdown,
             )
