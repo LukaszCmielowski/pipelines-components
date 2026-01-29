@@ -23,9 +23,9 @@ class TestLeaderboardEvaluationUnitTests:
         }
         mock_predictor_class.load.return_value = mock_predictor
 
-        # Mock DataFrame operations - chain sort_values().to_markdown()
+        # Mock DataFrame operations - chain sort_values().to_html()
         mock_df_sorted = mock.MagicMock()
-        mock_df_sorted.to_markdown.return_value = "| model | rmse |\n|-------|------|\n| Model1 | 0.5 |"
+        mock_df_sorted.to_html.return_value = "| model | rmse |\n|-------|------|\n| Model1 | 0.5 |"
 
         mock_df = mock.MagicMock()
         mock_df.sort_values.return_value = mock_df_sorted
@@ -39,23 +39,23 @@ class TestLeaderboardEvaluationUnitTests:
         mock_dataset = mock.MagicMock()
         mock_dataset.path = "/tmp/test_data.csv"
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".md") as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
             tmp_path = tmp_file.name
 
         try:
-            mock_markdown = mock.MagicMock()
-            mock_markdown.path = tmp_path
+            mock_html = mock.MagicMock()
+            mock_html.path = tmp_path
 
             # Call the component function
             leaderboard_evaluation.python_func(
                 models=[mock_model],
                 eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
+                html_artifact=mock_html,
             )
 
-            # Verify TabularPredictor.load was called with correct path
-            mock_predictor_class.load.assert_called_once_with("/tmp/model1")
+            # Verify TabularPredictor.load was called with correct path (path/model_name)
+            mock_predictor_class.load.assert_called_once_with("/tmp/model1/Model1")
 
             # Verify evaluate was called with dataset path
             mock_predictor.evaluate.assert_called_once_with("/tmp/test_data.csv")
@@ -72,8 +72,8 @@ class TestLeaderboardEvaluationUnitTests:
             # Verify sorting was done by RMSE
             mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
 
-            # Verify markdown was generated
-            mock_df_sorted.to_markdown.assert_called_once()
+            # Verify HTML was generated
+            mock_df_sorted.to_html.assert_called_once()
 
             # Verify file was written with correct content
             with open(tmp_path, "r") as f:
@@ -112,9 +112,9 @@ class TestLeaderboardEvaluationUnitTests:
             mock_predictor3,
         ]
 
-        # Mock DataFrame operations - chain sort_values().to_markdown()
+        # Mock DataFrame operations - chain sort_values().to_html()
         mock_df_sorted = mock.MagicMock()
-        mock_df_sorted.to_markdown.return_value = "| model | rmse |\n|-------|------|"
+        mock_df_sorted.to_html.return_value = "<table></table>"
 
         mock_df = mock.MagicMock()
         mock_df.sort_values.return_value = mock_df_sorted
@@ -136,26 +136,26 @@ class TestLeaderboardEvaluationUnitTests:
         mock_dataset = mock.MagicMock()
         mock_dataset.path = "/tmp/test_data.csv"
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".md") as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
             tmp_path = tmp_file.name
 
         try:
-            mock_markdown = mock.MagicMock()
-            mock_markdown.path = tmp_path
+            mock_html = mock.MagicMock()
+            mock_html.path = tmp_path
 
             # Call the component function
             leaderboard_evaluation.python_func(
                 models=[mock_model1, mock_model2, mock_model3],
                 eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
+                html_artifact=mock_html,
             )
 
-            # Verify all models were loaded
+            # Verify all models were loaded (path/model_name)
             assert mock_predictor_class.load.call_count == 3
-            assert mock_predictor_class.load.call_args_list[0][0][0] == "/tmp/model1"
-            assert mock_predictor_class.load.call_args_list[1][0][0] == "/tmp/model2"
-            assert mock_predictor_class.load.call_args_list[2][0][0] == "/tmp/model3"
+            assert mock_predictor_class.load.call_args_list[0][0][0] == "/tmp/model1/Model1"
+            assert mock_predictor_class.load.call_args_list[1][0][0] == "/tmp/model2/Model2"
+            assert mock_predictor_class.load.call_args_list[2][0][0] == "/tmp/model3/Model3"
 
             # Verify all models were evaluated
             assert mock_predictor1.evaluate.call_count == 1
@@ -176,8 +176,8 @@ class TestLeaderboardEvaluationUnitTests:
             # Verify sorting was called
             mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
 
-            # Verify markdown was generated
-            mock_df_sorted.to_markdown.assert_called_once()
+            # Verify HTML was generated
+            mock_df_sorted.to_html.assert_called_once()
 
         finally:
             Path(tmp_path).unlink(missing_ok=True)
@@ -202,9 +202,9 @@ class TestLeaderboardEvaluationUnitTests:
             mock_predictor3,
         ]
 
-        # Mock DataFrame - chain sort_values().to_markdown()
+        # Mock DataFrame - chain sort_values().to_html()
         mock_df_sorted = mock.MagicMock()
-        mock_df_sorted.to_markdown.return_value = "sorted markdown"
+        mock_df_sorted.to_html.return_value = "sorted markdown"
 
         mock_df = mock.MagicMock()
         mock_df.sort_values.return_value = mock_df_sorted
@@ -221,25 +221,25 @@ class TestLeaderboardEvaluationUnitTests:
         mock_dataset = mock.MagicMock()
         mock_dataset.path = "/tmp/test_data.csv"
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".md") as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
             tmp_path = tmp_file.name
 
         try:
-            mock_markdown = mock.MagicMock()
-            mock_markdown.path = tmp_path
+            mock_html = mock.MagicMock()
+            mock_html.path = tmp_path
 
             leaderboard_evaluation.python_func(
                 models=mock_models,
                 eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
+                html_artifact=mock_html,
             )
 
             # Verify sorting was called with correct parameters
             mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
 
-            # Verify markdown was generated
-            mock_df_sorted.to_markdown.assert_called_once()
+            # Verify HTML was generated
+            mock_df_sorted.to_html.assert_called_once()
 
             # Verify file was written
             with open(tmp_path, "r") as f:
@@ -251,8 +251,8 @@ class TestLeaderboardEvaluationUnitTests:
 
     @mock.patch("pandas.DataFrame", create=True)
     @mock.patch("autogluon.tabular.TabularPredictor", create=True)
-    def test_leaderboard_evaluation_writes_markdown_file(self, mock_predictor_class, mock_dataframe_class):
-        """Test that markdown file is written correctly."""
+    def test_leaderboard_evaluation_writes_html_file(self, mock_predictor_class, mock_dataframe_class):
+        """Test that HTML file is written correctly."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.evaluate.return_value = {
@@ -261,10 +261,10 @@ class TestLeaderboardEvaluationUnitTests:
         }
         mock_predictor_class.load.return_value = mock_predictor
 
-        # Mock DataFrame - chain sort_values().to_markdown()
-        expected_markdown = "| model | rmse | mae |\n|-------|------|-----|\n| Model1 | 0.5 | 0.4 |"
+        # Mock DataFrame - chain sort_values().to_html()
+        expected_html = "<table><tr><td>Model1</td><td>0.5</td><td>0.4</td></tr></table>"
         mock_df_sorted = mock.MagicMock()
-        mock_df_sorted.to_markdown.return_value = expected_markdown
+        mock_df_sorted.to_html.return_value = expected_html
 
         mock_df = mock.MagicMock()
         mock_df.sort_values.return_value = mock_df_sorted
@@ -278,18 +278,18 @@ class TestLeaderboardEvaluationUnitTests:
         mock_dataset = mock.MagicMock()
         mock_dataset.path = "/tmp/test_data.csv"
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".md") as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
             tmp_path = tmp_file.name
 
         try:
-            mock_markdown = mock.MagicMock()
-            mock_markdown.path = tmp_path
+            mock_html = mock.MagicMock()
+            mock_html.path = tmp_path
 
             leaderboard_evaluation.python_func(
                 models=[mock_model],
                 eval_metric="root_mean_squared_error",
                 full_dataset=mock_dataset,
-                markdown_artifact=mock_markdown,
+                html_artifact=mock_html,
             )
 
             # Verify DataFrame was created
@@ -303,13 +303,13 @@ class TestLeaderboardEvaluationUnitTests:
             # Verify sorting was called
             mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
 
-            # Verify markdown was generated
-            mock_df_sorted.to_markdown.assert_called_once()
+            # Verify HTML was generated
+            mock_df_sorted.to_html.assert_called_once()
 
             # Verify file was written with correct content
             with open(tmp_path, "r") as f:
                 content = f.read()
-                assert content == expected_markdown
+                assert content == expected_html
 
         finally:
             Path(tmp_path).unlink(missing_ok=True)

@@ -53,8 +53,10 @@ class TestAutogluonModelsFullRefitUnitTests:
         # Verify refit_full was called with correct parameters
         mock_predictor.refit_full.assert_called_once_with(train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1")
 
-        # Verify clone was called with correct parameters
-        mock_predictor.clone.assert_called_once_with(path="/tmp/refitted_model", return_clone=True, dirs_exist_ok=True)
+        # Verify clone was called with correct parameters (path includes model_name_FULL)
+        mock_predictor.clone.assert_called_once_with(
+            path="/tmp/refitted_model/LightGBM_BAG_L1_FULL", return_clone=True, dirs_exist_ok=True
+        )
 
         # Verify delete_models was called with correct models to keep
         mock_predictor_clone.delete_models.assert_called_once_with(

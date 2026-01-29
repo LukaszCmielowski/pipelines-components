@@ -39,8 +39,8 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
             "secret_name",
             "bucket_name",
             "file_key",
-            "target_column",
-            "problem_type",
+            "label_column",
+            "task_type",
             "top_n",
         }
         inputs = autogluon_tabular_training_pipeline.component_spec.inputs
@@ -59,7 +59,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
                 package_path=tmp_path,
             )
             content = Path(tmp_path).read_text()
-            for name in ("secret_name", "bucket_name", "file_key", "target_column", "problem_type", "top_n"):
+            for name in ("secret_name", "bucket_name", "file_key", "label_column", "task_type", "top_n"):
                 assert name in content, f"Expected pipeline input '{name}' in compiled YAML"
         except Exception as e:
             pytest.fail(f"Pipeline compilation or validation failed: {e}")
