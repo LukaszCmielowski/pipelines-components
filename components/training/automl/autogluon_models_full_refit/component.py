@@ -71,6 +71,7 @@ def autogluon_models_full_refit(
             return refitted
 
     """
+    import json
     import os
 
     import pandas as pd
@@ -81,15 +82,40 @@ def autogluon_models_full_refit(
     predictor = TabularPredictor.load(predictor_artifact.path)
     predictor.refit_full(train_data_extra=full_dataset_df, model=model_name)
 
+    eval_results = predictor.evaluate(full_dataset_df)
+    feature_importance = predictor.feature_importance(full_dataset_df)
+
     model_name_full = model_name + "_FULL"
     path = os.path.join(model_artifact.path, model_name_full)
     models_to_keep = [model_name, model_name_full]
     model_artifact.metadata["model_name"] = model_name_full
 
+    # save refitted model to output artifact
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=models_to_keep)
     predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
     predictor_clone.save_space()
+
+    # save evaluation results to output artifact
+    os.makedirs(os.path.join(model_artifact.path, "metrics"), exist_ok=True)
+    with open(os.path.join(model_artifact.path, "metrics", "metrics.json"), "w") as f:
+        json.dump(eval_results, f)
+
+    # save feature importance to output artifact
+    with open(os.path.join(model_artifact.path, "metrics", "feature_importance.json"), "w") as f:
+        json.dump(feature_importance.to_dict(), f)
+
+    # generate confusion matrix for classification problem types
+    if predictor.problem_type in {"binary", "multiclass"}:
+        from autogluon.core.metrics import confusion_matrix
+
+        confusion_matrix_res = confusion_matrix(
+            solution=predictor.predict(full_dataset_df),
+            prediction=full_dataset_df[predictor.label],
+            output_format="pandas_dataframe",
+        )
+        with open(os.path.join(model_artifact.path, "metrics", "confusion_matrix.json"), "w") as f:
+            json.dump(confusion_matrix_res.to_dict(), f)
 
 
 if __name__ == "__main__":

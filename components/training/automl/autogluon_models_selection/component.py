@@ -1,4 +1,4 @@
-from typing import List, NamedTuple, Dict
+from typing import List, NamedTuple
 
 from kfp import dsl
 
