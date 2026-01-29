@@ -11,7 +11,7 @@ def leaderboard_evaluation(
     models: List[dsl.Model],
     eval_metric: str,
     full_dataset: dsl.Input[dsl.Dataset],
-    html_artifact: dsl.Output[dsl.Markdown],
+    html_artifact: dsl.Output[dsl.HTML],
 ):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
