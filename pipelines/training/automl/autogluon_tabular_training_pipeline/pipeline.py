@@ -1,3 +1,5 @@
+from typing import Dict
+
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
@@ -19,13 +21,8 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
 )
 def autogluon_tabular_training_pipeline(
-    secret_name: str,
-    bucket_name: str,
-    file_key: str,
-    target_column: str,
-    problem_type: str,
-    top_n: int = 3,
-) -> dsl.Markdown:
+    secret_name: str, bucket_name: str, file_key: str, label_column: str, task_type: str, top_n: int = 3
+):
     """AutoGluon Tabular Training Pipeline.
 
     This pipeline implements an efficient two-stage training approach for AutoGluon tabular models
@@ -92,10 +89,10 @@ def autogluon_tabular_training_pipeline(
             'secret_name' Kubernetes secret.
         file_key: The key (path) of the data file within the S3 bucket. The file should
             be in CSV format and contain both feature columns and the target column.
-        target_column: The name of the target/label column in the dataset. This column
+        label_column: The name of the target/label column in the dataset. This column
             will be used as the prediction target for model training. The column must
             exist in the loaded dataset.
-        problem_type: The type of machine learning problem. Supported values:
+        task_type: The type of machine learning task. Supported values:
             - "binary" or "multiclass": For classification tasks
             - "regression": For regression tasks (predicting continuous values)
             This parameter determines the evaluation metrics and model types AutoGluon
@@ -107,13 +104,13 @@ def autogluon_tabular_training_pipeline(
 
     Returns:
         A Markdown artifact containing the leaderboard with evaluation metrics for all
-        refitted models, ranked by performance. The leaderboard is sorted by root mean
-        squared error (RMSE) in descending order and can be used for model comparison
-        and selection decisions.
+        refitted models, ranked by performance. The leaderboard uses the metric
+        determined by task_type (e.g., accuracy for classification, r2 for regression)
+        and can be used for model comparison and selection decisions.
 
     Raises:
         FileNotFoundError: If the S3 file cannot be found or accessed.
-        ValueError: If the target_column is not found in the dataset, problem_type is
+        ValueError: If the label_column is not found in the dataset, task_type is
             invalid, top_n is not positive, or data splitting fails.
         KeyError: If required AWS credentials are missing from Kubernetes secrets or
             if required component outputs are not available.
@@ -126,11 +123,12 @@ def autogluon_tabular_training_pipeline(
 
         # Compile and run the pipeline
         pipeline = autogluon_tabular_training_pipeline(
+            secret_name="my-s3-secret",
             bucket_name="my-data-bucket",
             file_key="datasets/housing_prices.csv",
-            target_column="price",
-            problem_type="regression",
-            top_n=3
+            label_column="price",
+            task_type="regression",
+            top_n=3,
         )
     """
     tabular_loader_task = automl_data_loader(bucket_name=bucket_name, file_key=file_key)
@@ -151,11 +149,11 @@ def autogluon_tabular_training_pipeline(
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
     selection_task = models_selection(
-        target_column=target_column,
-        problem_type=problem_type,
-        top_n=top_n,
+        label_column=label_column,
+        task_type=task_type,
         train_data=train_test_split_task.outputs["sampled_train_dataset"],
         test_data=train_test_split_task.outputs["sampled_test_dataset"],
+        top_n=top_n,
     )
 
     # Stage 2: Model Refitting
@@ -174,8 +172,6 @@ def autogluon_tabular_training_pipeline(
         eval_metric=selection_task.outputs["eval_metric"],
         full_dataset=tabular_loader_task.outputs["full_dataset"],
     )
-
-    return leaderboard_evaluation_task.outputs["html_artifact"]
 
 
 if __name__ == "__main__":

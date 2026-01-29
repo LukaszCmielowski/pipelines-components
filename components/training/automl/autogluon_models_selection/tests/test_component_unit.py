@@ -17,7 +17,7 @@ class TestModelsSelectionUnitTests:
         """Test models selection with regression problem type."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.eval_metric = "root_mean_squared_error"
+        mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
         mock_predictor_class.return_value = mock_predictor
 
@@ -48,8 +48,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         result = models_selection.python_func(
-            target_column="target",
-            problem_type="regression",
+            label_column="target",
+            task_type="regression",
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -65,6 +65,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor_class.assert_called_once_with(
             problem_type="regression",
             label="target",
+            eval_metric="r2",
             path="/tmp/model",
             verbosity=2,
         )
@@ -85,7 +86,7 @@ class TestModelsSelectionUnitTests:
 
         # Verify return values
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
-        assert result.eval_metric == "root_mean_squared_error"
+        assert result.eval_metric == "r2"
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
@@ -125,8 +126,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         result = models_selection.python_func(
-            target_column="target",
-            problem_type="binary",
+            label_column="target",
+            task_type="binary",
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -137,6 +138,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor_class.assert_called_once_with(
             problem_type="binary",
             label="target",
+            eval_metric="accuracy",
             path="/tmp/model",
             verbosity=2,
         )
@@ -183,8 +185,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         result = models_selection.python_func(
-            target_column="target",
-            problem_type="multiclass",
+            label_column="target",
+            task_type="multiclass",
             top_n=3,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -195,6 +197,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor_class.assert_called_once_with(
             problem_type="multiclass",
             label="target",
+            eval_metric="accuracy",
             path="/tmp/model",
             verbosity=2,
         )
@@ -209,7 +212,7 @@ class TestModelsSelectionUnitTests:
         """Test models selection with different top_n values."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.eval_metric = "root_mean_squared_error"
+        mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
         # Mock leaderboard DataFrame with 5 models
@@ -247,8 +250,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function with top_n=1
         result = models_selection.python_func(
-            target_column="target",
-            problem_type="regression",
+            label_column="target",
+            task_type="regression",
             top_n=1,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -283,8 +286,8 @@ class TestModelsSelectionUnitTests:
         # Verify FileNotFoundError is raised
         with pytest.raises(FileNotFoundError):
             models_selection.python_func(
-                target_column="target",
-                problem_type="regression",
+                label_column="target",
+                task_type="regression",
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
@@ -312,8 +315,8 @@ class TestModelsSelectionUnitTests:
         # Verify FileNotFoundError is raised
         with pytest.raises(FileNotFoundError):
             models_selection.python_func(
-                target_column="target",
-                problem_type="regression",
+                label_column="target",
+                task_type="regression",
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
@@ -347,8 +350,8 @@ class TestModelsSelectionUnitTests:
         # Verify ValueError is raised
         with pytest.raises(ValueError, match="Target column not found in dataset"):
             models_selection.python_func(
-                target_column="target",
-                problem_type="regression",
+                label_column="target",
+                task_type="regression",
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
@@ -383,8 +386,8 @@ class TestModelsSelectionUnitTests:
         # Verify ValueError is raised
         with pytest.raises(ValueError, match="Test data schema mismatch"):
             models_selection.python_func(
-                target_column="target",
-                problem_type="regression",
+                label_column="target",
+                task_type="regression",
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
@@ -397,7 +400,7 @@ class TestModelsSelectionUnitTests:
         """Test that all required operations are called in correct order."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.eval_metric = "root_mean_squared_error"
+        mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
         # Mock leaderboard DataFrame
@@ -428,8 +431,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         models_selection.python_func(
-            target_column="target",
-            problem_type="regression",
+            label_column="target",
+            task_type="regression",
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -452,7 +455,7 @@ class TestModelsSelectionUnitTests:
         """Test that model artifact metadata is set correctly."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.eval_metric = "root_mean_squared_error"
+        mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
         # Mock leaderboard DataFrame
@@ -483,8 +486,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         models_selection.python_func(
-            target_column="target",
-            problem_type="regression",
+            label_column="target",
+            task_type="regression",
             top_n=3,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -506,7 +509,7 @@ class TestModelsSelectionUnitTests:
         """Test that the function returns a NamedTuple with correct fields."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.eval_metric = "root_mean_squared_error"
+        mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
         # Mock leaderboard DataFrame
@@ -537,8 +540,8 @@ class TestModelsSelectionUnitTests:
 
         # Call the component function
         result = models_selection.python_func(
-            target_column="target",
-            problem_type="regression",
+            label_column="target",
+            task_type="regression",
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
@@ -551,7 +554,7 @@ class TestModelsSelectionUnitTests:
         assert isinstance(result.top_models, list)
         assert isinstance(result.eval_metric, str)
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
-        assert result.eval_metric == "root_mean_squared_error"
+        assert result.eval_metric == "r2"
 
     def test_component_imports_correctly(self):
         """Test that the component can be imported and has required attributes."""

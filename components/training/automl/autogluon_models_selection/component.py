@@ -7,8 +7,8 @@ from kfp import dsl
     base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",
 )
 def models_selection(
-    target_column: str,
-    problem_type: str,
+    label_column: str,
+    task_type: str,
     top_n: int,
     train_data: dsl.Input[dsl.Dataset],
     test_data: dsl.Input[dsl.Dataset],
@@ -32,9 +32,9 @@ def models_selection(
     candidates are refitted on the full dataset for optimal performance.
 
     Args:
-        target_column: The name of the target/label column in the training
+        label_column: The name of the target/label column in the training
             and test datasets. This column will be used as the prediction target.
-        problem_type: The type of machine learning problem. Supported values
+        task_type: The type of machine learning task. Supported values
             include "binary", "multiclass" (classification) or "regression". This
             determines the evaluation metrics and model types AutoGluon will use.
         top_n: The number of top-performing models to select from the leaderboard.
@@ -42,7 +42,7 @@ def models_selection(
             Must be a positive integer.
         train_data: A Dataset artifact containing the training data
             in CSV format. This data is used to train the AutoGluon models.
-            The dataset should include the target_column and all feature columns.
+            The dataset should include the label_column and all feature columns.
         test_data: A Dataset artifact containing the test data in
             CSV format. This data is used to evaluate model performance and
             generate the leaderboard. The dataset should match the schema of
@@ -58,14 +58,14 @@ def models_selection(
               by performance on the test dataset.
             - eval_metric (str): The evaluation metric name used by the TabularPredictor
               to assess model performance. This metric is automatically determined
-              based on the problem_type (e.g., "accuracy" for classification,
-              "root_mean_squared_error" for regression).
+              based on the task_type (e.g., "accuracy" for classification,
+              "r2" for regression).
 
     Raises:
         FileNotFoundError: If the train_data or test_data
             paths cannot be found.
-        ValueError: If the target_column is not found in the datasets, the
-            problem_type is invalid, top_n is not positive, or model training fails.
+        ValueError: If the label_column is not found in the datasets, the
+            task_type is invalid, top_n is not positive, or model training fails.
         KeyError: If required columns are missing from the datasets.
 
     Example:
@@ -78,11 +78,11 @@ def models_selection(
         def selection_pipeline(train_data, test_data):
             "Select top 3 models from training."
             result = models_selection(
-                target_column="price",
-                problem_type="regression",
+                label_column="price",
+                task_type="regression",
                 top_n=3,
                 train_data=train_data,
-                test_data=test_data
+                test_data=test_data,
             )
             # result.top_models contains list of top 3 model names
             return result
@@ -93,9 +93,11 @@ def models_selection(
     train_data_df = pd.read_csv(train_data.path)
     test_data_df = pd.read_csv(test_data.path)
 
+    eval_metric = "r2" if task_type == "regression" else "accuracy"
     predictor = TabularPredictor(
-        problem_type=problem_type,
-        label=target_column,
+        problem_type=task_type,
+        label=label_column,
+        eval_metric=eval_metric,
         path=model_artifact.path,
         verbosity=2,
     ).fit(

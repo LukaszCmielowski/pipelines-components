@@ -62,15 +62,14 @@ def leaderboard_evaluation(
             )
             return leaderboard
     """
+    import json
     import os
 
     import pandas as pd
-    from autogluon.tabular import TabularPredictor
 
     results = []
     for model in models:
-        predictor = TabularPredictor.load(os.path.join(model.path, model.metadata["model_name"]))
-        eval_results = predictor.evaluate(full_dataset.path)
+        eval_results = json.load(open(os.path.join(model.path, "metrics", "metrics.json")))
         results.append({"model": model.metadata["model_name"]} | eval_results)
 
     with open(html_artifact.path, "w") as f:

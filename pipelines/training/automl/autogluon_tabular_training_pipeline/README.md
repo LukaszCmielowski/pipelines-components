@@ -51,24 +51,12 @@ Selecting optimal ensemble configurations
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `bucket_name` | `str` | `None` | The name of the S3-compatible bucket containing the tabular data file.
-The bucket should be accessible using the AWS credentials configured in the
-'kubeflow-aws-secrets' Kubernetes secret. |
-| `file_key` | `str` | `None` | The key (path) of the data file within the S3 bucket. The file should
-be in CSV format and contain both feature columns and the target column. |
-| `target_column` | `str` | `None` | The name of the target/label column in the dataset. This column
-will be used as the prediction target for model training. The column must
-exist in the loaded dataset. |
-| `problem_type` | `str` | `None` | The type of machine learning problem. Supported values:
-
-- "binary" or "multiclass": For classification tasks
-- "regression": For regression tasks (predicting continuous values)
-This parameter determines the evaluation metrics and model types AutoGluon
-will use during training. |
-| `top_n` | `int` | `3` | The number of top-performing models to select and refit (default: 3).
-Must be a positive integer. Only the top N models from the initial training
-stage will be promoted to the refitting stage. Higher values increase pipeline
-execution time but provide more model options for final selection. |
+| `secret_name` | `str` | — | The Kubernetes secret name with S3-compatible credentials for data access. Required keys: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`, `AWS_REGION`. |
+| `bucket_name` | `str` | — | The name of the S3-compatible bucket containing the tabular data file. The bucket must be accessible using the credentials from `secret_name`. |
+| `file_key` | `str` | — | The key (path) of the data file within the S3 bucket. The file should be in CSV format and contain both feature columns and the label column. |
+| `label_column` | `str` | — | The name of the target/label column in the dataset. This column will be used as the prediction target for model training. Must exist in the loaded dataset. |
+| `task_type` | `str` | — | The type of machine learning task. Supported values: `"binary"` or `"multiclass"` (classification), `"regression"` (continuous targets). Determines evaluation metrics and model types AutoGluon uses. |
+| `top_n` | `int` | `3` | The number of top-performing models to select and refit. Must be a positive integer. Only the top N models from the initial stage are refitted on the full dataset. Higher values increase execution time but provide more final options. |
 
 ## Metadata 🗂️
 
@@ -76,7 +64,8 @@ execution time but provide more model options for final selection. |
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
+    - Name: Pipelines, Version: >=2.14.4
+    - Name: Kubernetes, Version: ">=1.28.0"
 - **Tags**:
   - training
   - pipeline
