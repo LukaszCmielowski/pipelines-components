@@ -19,6 +19,7 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
 )
 def autogluon_tabular_training_pipeline(
+    secret_name: str,
     bucket_name: str,
     file_key: str,
     target_column: str,
@@ -84,9 +85,11 @@ def autogluon_tabular_training_pipeline(
     - Selecting optimal ensemble configurations
 
     Args:
+        secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
+            The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_REGION.
         bucket_name: The name of the S3-compatible bucket containing the tabular data file.
             The bucket should be accessible using the AWS credentials configured in the
-            'kubeflow-aws-secrets' Kubernetes secret.
+            'secret_name' Kubernetes secret.
         file_key: The key (path) of the data file within the S3 bucket. The file should
             be in CSV format and contain both feature columns and the target column.
         target_column: The name of the target/label column in the dataset. This column
@@ -134,12 +137,12 @@ def autogluon_tabular_training_pipeline(
 
     use_secret_as_env(
         tabular_loader_task,
-        secret_name="kubeflow-aws-secrets",
+        secret_name=secret_name,
         secret_key_to_env={
-            "aws_access_key_id": "AWS_ACCESS_KEY_ID",
-            "aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-            "endpoint_url": "AWS_ENDPOINT_URL",
-            "aws_region_name": "AWS_REGION",
+            "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
+            "AWS_ENDPOINT_URL": "AWS_ENDPOINT_URL",
+            "AWS_REGION": "AWS_REGION",
         },
     )
 

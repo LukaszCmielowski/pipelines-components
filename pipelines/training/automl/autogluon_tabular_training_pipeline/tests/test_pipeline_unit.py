@@ -41,6 +41,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         # Test that the pipeline can be called with required parameters and defaults
         try:
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
@@ -55,6 +56,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         """Test pipeline with custom top_n parameter."""
         try:
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
@@ -69,6 +71,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         """Test pipeline with binary classification problem type."""
         try:
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
@@ -83,6 +86,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         """Test pipeline with multiclass classification problem type."""
         try:
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
@@ -97,6 +101,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         """Test pipeline with regression problem type."""
         try:
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
@@ -115,6 +120,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         try:
             # Create pipeline instance with all parameters
             pipeline_instance = autogluon_tabular_training_pipeline(
+                secret_name="train-data-secret",
                 bucket_name="test-bucket",
                 file_key="test-data.csv",
                 target_column="target",
