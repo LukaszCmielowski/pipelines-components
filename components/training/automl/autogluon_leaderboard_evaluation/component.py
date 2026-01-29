@@ -16,14 +16,14 @@ def leaderboard_evaluation(
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
     This component evaluates a list of trained AutoGluon TabularPredictor models
-    on a full dataset and generates a markdown-formatted leaderboard ranking
+    on a full dataset and generates a html-formatted leaderboard ranking
     the models by their performance metrics. Each model is loaded, evaluated
     on the provided dataset, and the results are compiled into a sorted
     leaderboard table.
 
     The leaderboard is sorted by the specified evaluation metric in descending
     order, making it easy to identify the best-performing models. The output
-    is written as a markdown table that can be used for reporting and
+    is written as a html table that can be used for reporting and
     model selection decisions.
 
     Args:
