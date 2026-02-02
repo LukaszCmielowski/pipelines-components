@@ -2,12 +2,12 @@ from kfp.dsl import component, Input, Output, Artifact
 
 
 @component(
-    base_image="quay.io/openshift_trial/custom_images:docling"
+    base_image="quay.io/wnowogorski-org/autorag_data_loading:latest"
 )
 def text_extraction(
     documents: Input[Artifact],
     extracted_text: Output[Artifact],
-) -> str:
+):
     """Text Extraction component.
 
     Extracts text from provided documents (PDF, DOCX, PPTX, MD, HTML, TXT) using the docling library.

@@ -2,8 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="python:3.11",
-    packages_to_install=["boto3"],
+    base_image="quay.io/wnowogorski-org/autorag_data_loading:latest"
 )
 def test_data_loader(
     test_data_bucket_name: str,
@@ -59,7 +58,7 @@ def test_data_loader(
             aws_secret_access_key=secret_key,
         )
 
-        if test_data_path.path.endswith(".json"):
+        if test_data_path.endswith(".json"):
             logger.info(f"Fetching test data from S3: bucket={test_data_bucket_name}, path={test_data_path}")
             try:
                 logger.info(f"Starting download to {test_data.path}")

@@ -2,28 +2,34 @@ from kfp.dsl import component, Input, Output, Artifact
 
 
 @component(
-    base_image="python:3.11",
-    packages_to_install=["numpy", "pandas", "boto3"],
+    base_image="quay.io/wnowogorski-org/autorag_data_loading:latest"
 )
 def document_loader(
     input_data_bucket_name: str,
     input_data_path: str,
     test_data: Input[Artifact] = None,
-    sampling_config: dict = {},
+    sampling_config: dict = None,
     sampled_documents: Output[Artifact] = None,
-) -> str:
+):
     """Document Loader component.
 
     Loads documents from S3 and performs sampling.
 
     Args:
-        input_data_reference: Data source with keys: connection_id, bucket, path.
-        test_data: Optional artifact containing test data for sampling.
-        sampling_config: Optional sampling configuration dictionary.
-        sampled_documents: Output artifact containing sampled documents.
+        input_data_bucket_name: str
+            Name of the S3 bucket containing input data.
 
-    Returns:
-        Message indicating completion status of document loading.
+        input_data_path: str
+            Path to folder with input documents within bucket.
+
+        test_data: dict
+            Optional artifact containing test data for sampling.
+
+        sampling_config: dict
+            Optional sampling configuration dictionary.
+
+        sampled_documents: Output[Artifact]
+            artifact containing downloaded documents.
     """
     import os
     import sys
@@ -42,8 +48,11 @@ def document_loader(
         handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(handler)
 
-    def get_test_data_docs_names(test_data: Input[Artifact]) -> list[str]:
-        if test_data is None:
+    if sampling_config is None:
+        sampling_config = {}
+
+    def get_test_data_docs_names(test_data_artifact: Input[Artifact]) -> list[str]:
+        if test_data_artifact is None:
             return []
         with open(test_data.path, "r") as f:
             benchmark = json.load(f)
