@@ -2,8 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    # base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",  # Add your dependencies here
-    base_image="localhost:5000/autogluon-py312:v3",
+    base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",  # Add your dependencies here
 )
 def autogluon_models_full_refit(
     # Add your component parameters here
