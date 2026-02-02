@@ -6,7 +6,8 @@ from kfp.dsl import component, Input, Output, Artifact
     packages_to_install=["numpy", "pandas", "boto3"],
 )
 def document_loader(
-    input_data_reference: dict,
+    input_data_bucket_name: str,
+    input_data_path: str,
     test_data: Input[Artifact] = None,
     sampling_config: dict = {},
     sampled_documents: Output[Artifact] = None,
@@ -28,7 +29,6 @@ def document_loader(
     import sys
     import json
     import logging
-    from dataclasses import dataclass
 
     import boto3
 
@@ -41,15 +41,6 @@ def document_loader(
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(handler)
-
-    @dataclass
-    class DataReference:
-        endpoint: str
-        region: str
-        bucket: str
-        path: str
-
-    input_data_reference = DataReference(**input_data_reference)
 
     def get_test_data_docs_names(test_data: Input[Artifact]) -> list[str]:
         if test_data is None:
@@ -66,6 +57,8 @@ def document_loader(
     def download_docs_s3():
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+        endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
+        region = os.environ.get("AWS_REGION")
 
         if (access_key and not secret_key) or (secret_key and not access_key):
             raise ValueError(
@@ -80,15 +73,15 @@ def document_loader(
 
         s3_client = boto3.client(
             "s3",
-            endpoint_url=input_data_reference.endpoint,
-            region_name=input_data_reference.region,
+            endpoint_url=endpoint_url,
+            region_name=region,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
 
         contents = s3_client.list_objects_v2(
-            Bucket=input_data_reference.bucket,
-            Prefix=input_data_reference.path
+            Bucket=input_data_bucket_name,
+            Prefix=input_data_path,
         ).get("Contents", [])
 
         supported_files = [
@@ -120,7 +113,7 @@ def document_loader(
             try:
                 logger.info(f"Downloading {key} to {local_path}")
                 s3_client.download_file(
-                    input_data_reference.bucket,
+                    input_data_bucket_name,
                     key,
                     local_path
                 )
@@ -129,8 +122,6 @@ def document_loader(
                 raise
 
     download_docs_s3()
-
-    return "Document loading completed."
 
 
 

@@ -94,8 +94,6 @@ def text_extraction(
     summary = f"Text extraction completed. Total processed: {processed_count}, Errors: {error_count}."
     logger.info(summary)
 
-    return summary
-
 
 if __name__ == "__main__":
     from kfp.compiler import Compiler
