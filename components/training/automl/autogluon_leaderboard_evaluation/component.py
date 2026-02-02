@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:srhoai-3.2",
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
 def leaderboard_evaluation(
     models: List[dsl.Model],
@@ -63,12 +63,14 @@ def leaderboard_evaluation(
     """
     import json
     import os
-
+    from pathlib import Path
     import pandas as pd
 
     results = []
     for model in models:
-        eval_results = json.load(open(os.path.join(model.path, "metrics", "metrics.json")))
+        eval_results = json.load(
+            (Path(model.path) / model.metadata["model_name"] / "metrics" / "metrics.json").open("r")
+        )
         results.append({"model": model.metadata["model_name"]} | eval_results)
 
     with open(html_artifact.path, "w") as f:

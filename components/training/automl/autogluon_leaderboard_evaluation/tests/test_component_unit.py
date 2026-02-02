@@ -9,11 +9,11 @@ from unittest import mock
 from ..component import leaderboard_evaluation
 
 
-def _create_model_metrics_dir(metrics_dict):
-    """Create a temp dir with metrics/metrics.json containing the given dict. Returns path."""
+def _create_model_metrics_dir(metrics_dict, model_name="Model1"):
+    """Create a temp dir with model_name/metrics/metrics.json containing the given dict. Returns path."""
     tmp_dir = tempfile.mkdtemp()
-    metrics_dir = Path(tmp_dir) / "metrics"
-    metrics_dir.mkdir()
+    metrics_dir = Path(tmp_dir) / model_name / "metrics"
+    metrics_dir.mkdir(parents=True)
     (metrics_dir / "metrics.json").write_text(json.dumps(metrics_dict))
     return tmp_dir
 
@@ -29,7 +29,7 @@ class TestLeaderboardEvaluationUnitTests:
             "mean_absolute_error": 0.4,
             "r2": 0.9,
         }
-        model_dir = _create_model_metrics_dir(metrics)
+        model_dir = _create_model_metrics_dir(metrics, model_name="Model1")
         try:
             expected_html = "| model | rmse |\n|-------|------|\n| Model1 | 0.5 |"
             mock_df_sorted = mock.MagicMock()
@@ -82,8 +82,8 @@ class TestLeaderboardEvaluationUnitTests:
                 {"root_mean_squared_error": 0.3, "mean_absolute_error": 0.2},
                 {"root_mean_squared_error": 0.5, "mean_absolute_error": 0.4},
             ]
-            for m in metrics_list:
-                model_dirs.append(_create_model_metrics_dir(m))
+            for i, m in enumerate(metrics_list):
+                model_dirs.append(_create_model_metrics_dir(m, model_name=f"Model{i + 1}"))
 
             mock_df_sorted = mock.MagicMock()
             mock_df_sorted.to_html.return_value = "<table></table>"
@@ -135,8 +135,10 @@ class TestLeaderboardEvaluationUnitTests:
         """Test that leaderboard is sorted by RMSE in descending order."""
         model_dirs = []
         try:
-            for rmse in (0.9, 0.1, 0.5):
-                model_dirs.append(_create_model_metrics_dir({"root_mean_squared_error": rmse}))
+            for i, rmse in enumerate((0.9, 0.1, 0.5)):
+                model_dirs.append(
+                    _create_model_metrics_dir({"root_mean_squared_error": rmse}, model_name=f"Model{i + 1}")
+                )
 
             sorted_html = "<table>sorted</table>"
             mock_df_sorted = mock.MagicMock()
@@ -180,7 +182,7 @@ class TestLeaderboardEvaluationUnitTests:
     def test_leaderboard_evaluation_writes_html_file(self, mock_dataframe_class):
         """Test that HTML file is written correctly."""
         metrics = {"root_mean_squared_error": 0.5, "mean_absolute_error": 0.4}
-        model_dir = _create_model_metrics_dir(metrics)
+        model_dir = _create_model_metrics_dir(metrics, model_name="Model1")
         try:
             expected_html = "<table><tr><td>Model1</td><td>0.5</td><td>0.4</td></tr></table>"
             mock_df_sorted = mock.MagicMock()
