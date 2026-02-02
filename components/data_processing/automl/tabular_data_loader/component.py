@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="python:3.11",
+    base_image="python:3.12",
     packages_to_install=["numpy", "pandas", "boto3"],
 )
 def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):

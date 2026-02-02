@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="python:3.11",
+    base_image="python:3.12",
     packages_to_install=["pandas", "scikit-learn"],
 )
 def train_test_split(
