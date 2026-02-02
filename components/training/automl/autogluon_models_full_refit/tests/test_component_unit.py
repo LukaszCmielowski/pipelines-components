@@ -25,9 +25,9 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor.clone.return_value = mock_predictor_clone
         mock_predictor_class.load.return_value = mock_predictor
         eval_results = {"r2": 0.9, "root_mean_squared_error": 0.5}
-        mock_predictor.evaluate.return_value = eval_results
+        mock_predictor_clone.evaluate.return_value = eval_results
         feature_importance_dict = {"feature1": 0.1, "feature2": 0.05}
-        mock_predictor.feature_importance.return_value = mock.MagicMock(to_dict=lambda: feature_importance_dict)
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: feature_importance_dict)
         mock_predictor.problem_type = "regression"
 
         # Mock DataFrame for dataset
@@ -64,9 +64,9 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Verify refit_full was called with correct parameters
             mock_predictor.refit_full.assert_called_once_with(train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1")
 
-            # Verify evaluate and feature_importance called with full dataset dataframe
-            mock_predictor.evaluate.assert_called_once_with(mock_dataset_df)
-            mock_predictor.feature_importance.assert_called_once_with(mock_dataset_df)
+            # Verify evaluate and feature_importance called with full dataset dataframe (on clone)
+            mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
+            mock_predictor_clone.feature_importance.assert_called_once_with(mock_dataset_df)
 
             # Verify clone was called with correct parameters (path includes model_name_FULL)
             mock_predictor.clone.assert_called_once_with(
@@ -170,8 +170,8 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
         mock_predictor_class.load.return_value = mock_predictor
-        mock_predictor.evaluate.return_value = {"r2": 0.9}
-        mock_predictor.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
+        mock_predictor_clone.evaluate.return_value = {"r2": 0.9}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
         mock_predictor.problem_type = "regression"
 
         mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -192,11 +192,11 @@ class TestAutogluonModelsFullRefitUnitTests:
             model_artifact=mock_model_artifact,
         )
 
-        # Verify call order: load -> refit_full -> evaluate -> feature_importance -> clone -> ...
+        # Verify call order: load -> refit_full -> clone -> evaluate -> feature_importance (on clone) -> ...
         assert mock_predictor_class.load.called
         assert mock_predictor.refit_full.called
-        mock_predictor.evaluate.assert_called_once_with(mock_dataset_df)
-        mock_predictor.feature_importance.assert_called_once_with(mock_dataset_df)
+        mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
+        mock_predictor_clone.feature_importance.assert_called_once_with(mock_dataset_df)
         assert mock_predictor.clone.called
         assert mock_predictor_clone.delete_models.called
         assert mock_predictor_clone.set_model_best.called
@@ -215,10 +215,10 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
         mock_predictor_class.load.return_value = mock_predictor
-        mock_predictor.evaluate.return_value = {"accuracy": 0.95}
-        mock_predictor.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
+        mock_predictor_clone.evaluate.return_value = {"accuracy": 0.95}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
         mock_predictor.problem_type = "binary"
-        mock_predictor.predict.return_value = pd.Series([0, 1, 0])
+        mock_predictor_clone.predict.return_value = pd.Series([0, 1, 0])
         mock_predictor.label = "target"
 
         mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 0]})

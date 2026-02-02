@@ -2,7 +2,8 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",  # Add your dependencies here
+    # base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",  # Add your dependencies here
+    base_image="localhost:5000/autogluon-py312:v3",
 )
 def autogluon_models_full_refit(
     # Add your component parameters here
@@ -82,9 +83,6 @@ def autogluon_models_full_refit(
     predictor = TabularPredictor.load(predictor_artifact.path)
     predictor.refit_full(train_data_extra=full_dataset_df, model=model_name)
 
-    eval_results = predictor.evaluate(full_dataset_df)
-    feature_importance = predictor.feature_importance(full_dataset_df)
-
     model_name_full = model_name + "_FULL"
     path = os.path.join(model_artifact.path, model_name_full)
     models_to_keep = [model_name, model_name_full]
@@ -95,6 +93,9 @@ def autogluon_models_full_refit(
     predictor_clone.delete_models(models_to_keep=models_to_keep)
     predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
     predictor_clone.save_space()
+
+    eval_results = predictor_clone.evaluate(full_dataset_df)
+    feature_importance = predictor_clone.feature_importance(full_dataset_df)
 
     # save evaluation results to output artifact
     os.makedirs(os.path.join(model_artifact.path, "metrics"), exist_ok=True)
@@ -110,7 +111,7 @@ def autogluon_models_full_refit(
         from autogluon.core.metrics import confusion_matrix
 
         confusion_matrix_res = confusion_matrix(
-            solution=predictor.predict(full_dataset_df),
+            solution=predictor_clone.predict(full_dataset_df),
             prediction=full_dataset_df[predictor.label],
             output_format="pandas_dataframe",
         )
