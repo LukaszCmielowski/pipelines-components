@@ -2,7 +2,8 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11",  # Add your dependencies here
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:srhoai-3.2",
+    packages_to_install=["autogluon==1.5.0"],
 )
 def autogluon_models_full_refit(
     # Add your component parameters here
