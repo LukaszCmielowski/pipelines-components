@@ -36,9 +36,9 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
         """Test that the pipeline has the expected parameters."""
         # KFP pipelines expose parameters via component_spec.inputs, not inspect.signature
         expected_params = {
-            "secret_name",
-            "bucket_name",
-            "file_key",
+            "train_data_secret_name",
+            "train_data_bucket_name",
+            "train_data_file_key",
             "label_column",
             "task_type",
             "top_n",
@@ -59,7 +59,7 @@ class TestAutogluonTabularTrainingPipelineUnitTests:
                 package_path=tmp_path,
             )
             content = Path(tmp_path).read_text()
-            for name in ("secret_name", "bucket_name", "file_key", "label_column", "task_type", "top_n"):
+            for name in ("train_data_secret_name", "train_data_bucket_name", "train_data_file_key", "label_column", "task_type", "top_n"):
                 assert name in content, f"Expected pipeline input '{name}' in compiled YAML"
         except Exception as e:
             pytest.fail(f"Pipeline compilation or validation failed: {e}")

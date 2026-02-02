@@ -21,7 +21,7 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
 )
 def autogluon_tabular_training_pipeline(
-    secret_name: str, bucket_name: str, file_key: str, label_column: str, task_type: str, top_n: int = 3
+    train_data_secret_name: str, train_data_bucket_name: str, train_data_file_key: str, label_column: str, task_type: str, top_n: int = 3
 ):
     """AutoGluon Tabular Training Pipeline.
 
@@ -82,12 +82,12 @@ def autogluon_tabular_training_pipeline(
     - Selecting optimal ensemble configurations
 
     Args:
-        secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
+        train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
             The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_REGION.
-        bucket_name: The name of the S3-compatible bucket containing the tabular data file.
+        train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file.
             The bucket should be accessible using the AWS credentials configured in the
-            'secret_name' Kubernetes secret.
-        file_key: The key (path) of the data file within the S3 bucket. The file should
+            'train_data_secret_name' Kubernetes secret.
+        train_data_file_key: The key (path) of the data file within the S3 bucket. The file should
             be in CSV format and contain both feature columns and the target column.
         label_column: The name of the target/label column in the dataset. This column
             will be used as the prediction target for model training. The column must
@@ -123,19 +123,19 @@ def autogluon_tabular_training_pipeline(
 
         # Compile and run the pipeline
         pipeline = autogluon_tabular_training_pipeline(
-            secret_name="my-s3-secret",
-            bucket_name="my-data-bucket",
-            file_key="datasets/housing_prices.csv",
+            train_data_secret_name="my-s3-secret",
+            train_data_bucket_name="my-data-bucket",
+            train_data_file_key="datasets/housing_prices.csv",
             label_column="price",
             task_type="regression",
             top_n=3,
         )
     """
-    tabular_loader_task = automl_data_loader(bucket_name=bucket_name, file_key=file_key)
+    tabular_loader_task = automl_data_loader(bucket_name=train_data_bucket_name, file_key=train_data_file_key)
 
     use_secret_as_env(
         tabular_loader_task,
-        secret_name=secret_name,
+        secret_name=train_data_secret_name,
         secret_key_to_env={
             "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
