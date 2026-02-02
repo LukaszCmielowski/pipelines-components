@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:srhoai-3.2",
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=["autogluon==1.5.0"],
 )
 def autogluon_models_full_refit(
