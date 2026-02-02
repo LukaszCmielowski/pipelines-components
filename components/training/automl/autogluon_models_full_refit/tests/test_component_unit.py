@@ -68,12 +68,12 @@ class TestAutogluonModelsFullRefitUnitTests:
             mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
             mock_predictor_clone.feature_importance.assert_called_once_with(mock_dataset_df)
 
-            # Verify clone was called with correct parameters (path includes model_name_FULL)
-            mock_predictor.clone.assert_called_once_with(
-                path=f"{model_output_dir}/LightGBM_BAG_L1_FULL",
-                return_clone=True,
-                dirs_exist_ok=True,
-            )
+            # Verify clone was called with correct parameters (path is Path; includes model_name_FULL)
+            mock_predictor.clone.assert_called_once()
+            call_kw = mock_predictor.clone.call_args[1]
+            assert Path(call_kw["path"]) == Path(model_output_dir) / "LightGBM_BAG_L1_FULL"
+            assert call_kw["return_clone"] is True
+            assert call_kw["dirs_exist_ok"] is True
 
             # Verify delete_models was called with correct models to keep
             mock_predictor_clone.delete_models.assert_called_once_with(
@@ -89,8 +89,8 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Verify metadata was set correctly
             assert mock_model_artifact.metadata["model_name"] == "LightGBM_BAG_L1_FULL"
 
-            # Verify metrics files were written
-            metrics_dir = Path(model_output_dir) / "metrics"
+            # Verify metrics files were written (under model_name_FULL/metrics/)
+            metrics_dir = Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "metrics"
             assert metrics_dir.exists()
             metrics_path = metrics_dir / "metrics.json"
             assert metrics_path.exists()
@@ -243,7 +243,7 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_artifact=mock_model_artifact,
             )
 
-            metrics_dir = Path(model_output_dir) / "metrics"
+            metrics_dir = Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "metrics"
             cm_path = metrics_dir / "confusion_matrix.json"
             assert cm_path.exists()
             assert json.loads(cm_path.read_text()) == confusion_matrix_dict

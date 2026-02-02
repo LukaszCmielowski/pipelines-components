@@ -74,6 +74,7 @@ def autogluon_models_full_refit(
     """
     import json
     import os
+    from pathlib import Path
 
     import pandas as pd
     from autogluon.tabular import TabularPredictor
@@ -84,7 +85,7 @@ def autogluon_models_full_refit(
     predictor.refit_full(train_data_extra=full_dataset_df, model=model_name)
 
     model_name_full = model_name + "_FULL"
-    path = os.path.join(model_artifact.path, model_name_full)
+    path = Path(model_artifact.path) / model_name_full
     models_to_keep = [model_name, model_name_full]
     model_artifact.metadata["model_name"] = model_name_full
 
@@ -98,12 +99,12 @@ def autogluon_models_full_refit(
     feature_importance = predictor_clone.feature_importance(full_dataset_df)
 
     # save evaluation results to output artifact
-    os.makedirs(os.path.join(model_artifact.path, "metrics"), exist_ok=True)
-    with open(os.path.join(model_artifact.path, "metrics", "metrics.json"), "w") as f:
+    os.makedirs(str(path / "metrics"), exist_ok=True)
+    with (path / "metrics" / "metrics.json").open("w") as f:
         json.dump(eval_results, f)
 
     # save feature importance to output artifact
-    with open(os.path.join(model_artifact.path, "metrics", "feature_importance.json"), "w") as f:
+    with (path / "metrics" / "feature_importance.json").open("w") as f:
         json.dump(feature_importance.to_dict(), f)
 
     # generate confusion matrix for classification problem types
@@ -115,7 +116,7 @@ def autogluon_models_full_refit(
             prediction=full_dataset_df[predictor.label],
             output_format="pandas_dataframe",
         )
-        with open(os.path.join(model_artifact.path, "metrics", "confusion_matrix.json"), "w") as f:
+        with (path / "metrics" / "confusion_matrix.json").open("w") as f:
             json.dump(confusion_matrix_res.to_dict(), f)
 
 

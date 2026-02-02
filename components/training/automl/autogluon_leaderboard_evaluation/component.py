@@ -63,12 +63,14 @@ def leaderboard_evaluation(
     """
     import json
     import os
-
+    from pathlib import Path
     import pandas as pd
 
     results = []
     for model in models:
-        eval_results = json.load(open(os.path.join(model.path, "metrics", "metrics.json")))
+        eval_results = json.load(
+            (Path(model.path) / model.metadata["model_name"] / "metrics" / "metrics.json").open("r")
+        )
         results.append({"model": model.metadata["model_name"]} | eval_results)
 
     with open(html_artifact.path, "w") as f:
