@@ -6,13 +6,13 @@
 
 Evaluate multiple AutoGluon models and generate a leaderboard.
 
-This component evaluates a list of trained AutoGluon TabularPredictor models on a full dataset and generates a
-markdown-formatted leaderboard ranking the models by their performance metrics. Each model is loaded, evaluated on the
-provided dataset, and the results are compiled into a sorted leaderboard table.
+This component aggregates evaluation results from a list of Model artifacts and generates an HTML-formatted leaderboard
+ranking the models by their performance metrics. Each model artifact is expected to contain pre-computed metrics at
+`model.path / model.metadata["model_name"] / metrics / metrics.json` (e.g. as produced by the autogluon_models_full_refit
+component). The component reads these metrics and compiles them into a sorted leaderboard table.
 
 The leaderboard is sorted by the specified evaluation metric in descending order, making it easy to identify the
-best-performing models. The output is written as a markdown table that can be used for reporting and model selection
-decisions.
+best-performing models. The output is written as HTML that can be used for reporting and model selection decisions.
 
 ## Inputs 📥
 
@@ -20,22 +20,20 @@ decisions.
 |-----------|------|---------|-------------|
 | `models` | `List[dsl.Model]` | `None` | A list of Model artifacts containing trained AutoGluon
 TabularPredictor models to evaluate. Each model should have
-metadata containing a "model_name" field. |
+metadata containing a "model_name" field and metrics at
+`model.path / model_name / metrics / metrics.json`. |
 | `eval_metric` | `str` | `None` | The name of the evaluation metric to use for ranking
-models in the leaderboard. This should match one of the metrics
-returned by the TabularPredictor's evaluate method (e.g., "accuracy"
-for classification, "root_mean_squared_error" for regression).
-The leaderboard will be sorted by this metric in descending order. |
-| `full_dataset` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the evaluation dataset
-on which all models will be evaluated. The dataset should be
-compatible with the models' training data format. |
-| `markdown_artifact` | `dsl.Output[dsl.Markdown]` | `None` | Output artifact where the markdown-formatted
+models in the leaderboard. This should match one of the keys
+in the metrics JSON (e.g., "accuracy" for classification,
+"root_mean_squared_error" for regression). The leaderboard
+will be sorted by this metric in descending order. |
+| `html_artifact` | `dsl.Output[dsl.HTML]` | `None` | Output artifact where the HTML-formatted
 leaderboard will be written. The leaderboard contains model names
 and their evaluation metrics. |
 
 ## Outputs 📤
 
-This component does not return any outputs. The leaderboard is written directly to the `markdown_artifact` output.
+This component does not return any outputs. The leaderboard is written directly to the `html_artifact` output.
 
 ## Metadata 🗂️
 

@@ -21,7 +21,12 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
 )
 def autogluon_tabular_training_pipeline(
-    train_data_secret_name: str, train_data_bucket_name: str, train_data_file_key: str, label_column: str, task_type: str, top_n: int = 3
+    train_data_secret_name: str,
+    train_data_bucket_name: str,
+    train_data_file_key: str,
+    label_column: str,
+    task_type: str,
+    top_n: int = 3,
 ):
     """AutoGluon Tabular Training Pipeline.
 
@@ -170,7 +175,6 @@ def autogluon_tabular_training_pipeline(
     leaderboard_evaluation_task = leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
-        full_dataset=tabular_loader_task.outputs["full_dataset"],
     )
 
 

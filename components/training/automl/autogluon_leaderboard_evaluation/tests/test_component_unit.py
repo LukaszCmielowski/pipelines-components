@@ -41,8 +41,6 @@ class TestLeaderboardEvaluationUnitTests:
             mock_model = mock.MagicMock()
             mock_model.path = model_dir
             mock_model.metadata = {"model_name": "Model1"}
-            mock_dataset = mock.MagicMock()
-            mock_dataset.path = "/tmp/test_data.csv"
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name
@@ -53,7 +51,6 @@ class TestLeaderboardEvaluationUnitTests:
                 leaderboard_evaluation.python_func(
                     models=[mock_model],
                     eval_metric="root_mean_squared_error",
-                    full_dataset=mock_dataset,
                     html_artifact=mock_html,
                 )
 
@@ -97,8 +94,6 @@ class TestLeaderboardEvaluationUnitTests:
                 m.path = path
                 m.metadata = {"model_name": f"Model{i + 1}"}
                 mock_models.append(m)
-            mock_dataset = mock.MagicMock()
-            mock_dataset.path = "/tmp/test_data.csv"
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name
@@ -109,7 +104,6 @@ class TestLeaderboardEvaluationUnitTests:
                 leaderboard_evaluation.python_func(
                     models=mock_models,
                     eval_metric="root_mean_squared_error",
-                    full_dataset=mock_dataset,
                     html_artifact=mock_html,
                 )
 
@@ -153,8 +147,6 @@ class TestLeaderboardEvaluationUnitTests:
                 m.path = path
                 m.metadata = {"model_name": f"Model{i + 1}"}
                 mock_models.append(m)
-            mock_dataset = mock.MagicMock()
-            mock_dataset.path = "/tmp/test_data.csv"
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name
@@ -165,7 +157,6 @@ class TestLeaderboardEvaluationUnitTests:
                 leaderboard_evaluation.python_func(
                     models=mock_models,
                     eval_metric="root_mean_squared_error",
-                    full_dataset=mock_dataset,
                     html_artifact=mock_html,
                 )
 
@@ -194,8 +185,6 @@ class TestLeaderboardEvaluationUnitTests:
             mock_model = mock.MagicMock()
             mock_model.path = model_dir
             mock_model.metadata = {"model_name": "Model1"}
-            mock_dataset = mock.MagicMock()
-            mock_dataset.path = "/tmp/test_data.csv"
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name
@@ -206,7 +195,6 @@ class TestLeaderboardEvaluationUnitTests:
                 leaderboard_evaluation.python_func(
                     models=[mock_model],
                     eval_metric="root_mean_squared_error",
-                    full_dataset=mock_dataset,
                     html_artifact=mock_html,
                 )
 

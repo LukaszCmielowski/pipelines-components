@@ -9,21 +9,12 @@ from kfp import dsl
 def leaderboard_evaluation(
     models: List[dsl.Model],
     eval_metric: str,
-    full_dataset: dsl.Input[dsl.Dataset],
     html_artifact: dsl.Output[dsl.HTML],
 ):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
-    This component evaluates a list of trained AutoGluon TabularPredictor models
-    on a full dataset and generates a html-formatted leaderboard ranking
-    the models by their performance metrics. Each model is loaded, evaluated
-    on the provided dataset, and the results are compiled into a sorted
-    leaderboard table.
-
-    The leaderboard is sorted by the specified evaluation metric in descending
-    order, making it easy to identify the best-performing models. The output
-    is written as a html table that can be used for reporting and
-    model selection decisions.
+    This component aggregates the evaluation results of a list of trained AutoGluon TabularPredictor models
+    and generates a html-formatted leaderboard ranking the models by their performance metrics.
 
     Args:
         models: A list of Model artifacts containing trained AutoGluon
@@ -34,9 +25,6 @@ def leaderboard_evaluation(
             returned by the TabularPredictor's evaluate method (e.g., "accuracy"
             for classification, "root_mean_squared_error" for regression).
             The leaderboard will be sorted by this metric in descending order.
-        full_dataset: A Dataset artifact containing the evaluation dataset
-            on which all models will be evaluated. The dataset should be
-            compatible with the models' training data format.
         html_artifact: Output artifact where the html-formatted
             leaderboard will be written. The leaderboard contains model names
             and their evaluation metrics.
@@ -57,13 +45,12 @@ def leaderboard_evaluation(
             leaderboard = leaderboard_evaluation(
                 models=trained_models,
                 eval_metric="root_mean_squared_error",
-                full_dataset=test_data
             )
             return leaderboard
     """
     import json
-    import os
     from pathlib import Path
+
     import pandas as pd
 
     results = []
