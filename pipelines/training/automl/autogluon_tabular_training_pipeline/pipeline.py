@@ -1,4 +1,3 @@
-from typing import Dict
 
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
@@ -21,7 +20,12 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
 )
 def autogluon_tabular_training_pipeline(
-    train_data_secret_name: str, train_data_bucket_name: str, train_data_file_key: str, label_column: str, task_type: str, top_n: int = 3
+    train_data_secret_name: str,
+    train_data_bucket_name: str,
+    train_data_file_key: str,
+    label_column: str,
+    task_type: str,
+    top_n: int = 3,
 ):
     """AutoGluon Tabular Training Pipeline.
 

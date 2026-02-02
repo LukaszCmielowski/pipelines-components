@@ -62,8 +62,8 @@ def leaderboard_evaluation(
             return leaderboard
     """
     import json
-    import os
     from pathlib import Path
+
     import pandas as pd
 
     results = []
