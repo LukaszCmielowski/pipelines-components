@@ -5,13 +5,13 @@ from kfp import dsl
     base_image="python:3.11",
     # packages_to_install=["numpy", "pandas"],  # Add your dependencies here
 )
-def autogluon_mlflow_registry(
+def autogluon_kubeflow_registry(
     # Add your component parameters here
     input_param: str,
     # Add your output artifacts here
     # output_artifact: dsl.Output[dsl.Artifact]
 ) -> str:  # Specify your return type
-    """Autogluon Mlflow Registry component.
+    """Autogluon Kubeflow Registry component.
 
     TODO: Add a detailed description of what this component does.
 
@@ -29,6 +29,6 @@ if __name__ == "__main__":
     from kfp.compiler import Compiler
 
     Compiler().compile(
-        autogluon_mlflow_registry,
+        autogluon_kubeflow_registry,
         package_path=__file__.replace(".py", "_component.yaml"),
     )
