@@ -9,16 +9,25 @@ def test_data_loader(
     test_data_path: str,
     test_data: dsl.Output[dsl.Artifact] = None
 ):
-    """Test Data Loader component.
+    """Download test data json file from S3 into a KFP artifact.
 
-    TODO: Add a detailed description of what this component does.
+    The component fetches S3 credentials from environment variables and
+    downloads a JSON test data file from the provided bucket and path to the
+    output artifact location.
 
     Args:
-        input_param: Description of the component parameter.
-        # Add descriptions for other parameters
+        test_data_bucket_name: str
+            S3 bucket that contains the test data file.
 
-    Returns:
-        Description of what the component returns.
+        test_data_path: str
+            S3 object key to the JSON test data file.
+
+        test_data: Output[Artifact]
+            Output artifact that receives the downloaded file.
+
+    Raises:
+        ValueError: If S3 credentials are missing or misconfigured.
+        Exception: If the download fails or the path is not a JSON file.
     """
     import os
     import sys
@@ -34,6 +43,7 @@ def test_data_loader(
         logger.addHandler(handler)
 
     def get_test_data_s3():
+        """Validate S3 credentials and download the JSON test data file."""
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
@@ -76,7 +86,6 @@ def test_data_loader(
             raise
 
     get_test_data_s3()
-
 
 
 if __name__ == "__main__":
