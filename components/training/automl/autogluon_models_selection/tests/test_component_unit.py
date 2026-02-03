@@ -1,5 +1,6 @@
 """Tests for the autogluon_models_selection component."""
 
+from pathlib import Path
 from unittest import mock
 
 import pandas as pd
@@ -42,9 +43,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
         result = models_selection.python_func(
@@ -53,7 +52,7 @@ class TestModelsSelectionUnitTests:
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify read_csv was called with correct paths
@@ -66,7 +65,7 @@ class TestModelsSelectionUnitTests:
             problem_type="regression",
             label="target",
             eval_metric="r2",
-            path="/tmp/model",
+            path=Path(workspace_path) / "autogluon_predictor",
             verbosity=2,
         )
 
@@ -81,12 +80,10 @@ class TestModelsSelectionUnitTests:
         # Verify leaderboard was called with test data
         mock_predictor.leaderboard.assert_called_once_with(mock_test_df)
 
-        # Verify metadata was set correctly
-        assert mock_model_artifact.metadata["top_models"] == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
-
         # Verify return values
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
         assert result.eval_metric == "r2"
+        assert result.predictor_path == str(Path(workspace_path) / "autogluon_predictor")
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
@@ -120,9 +117,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
         result = models_selection.python_func(
@@ -131,7 +126,7 @@ class TestModelsSelectionUnitTests:
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify TabularPredictor was created with binary problem type
@@ -139,7 +134,7 @@ class TestModelsSelectionUnitTests:
             problem_type="binary",
             label="target",
             eval_metric="accuracy",
-            path="/tmp/model",
+            path=Path(workspace_path) / "autogluon_predictor",
             verbosity=2,
         )
 
@@ -179,9 +174,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
         result = models_selection.python_func(
@@ -190,7 +183,7 @@ class TestModelsSelectionUnitTests:
             top_n=3,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify TabularPredictor was created with multiclass problem type
@@ -198,7 +191,7 @@ class TestModelsSelectionUnitTests:
             problem_type="multiclass",
             label="target",
             eval_metric="accuracy",
-            path="/tmp/model",
+            path=Path(workspace_path) / "autogluon_predictor",
             verbosity=2,
         )
 
@@ -244,9 +237,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function with top_n=1
         result = models_selection.python_func(
@@ -255,16 +246,12 @@ class TestModelsSelectionUnitTests:
             top_n=1,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify only top 1 model was selected
         assert len(result.top_models) == 1
         assert result.top_models == ["LightGBM_BAG_L1"]
-
-        # Verify metadata contains only top 1 model
-        assert len(mock_model_artifact.metadata["top_models"]) == 1
-        assert mock_model_artifact.metadata["top_models"] == ["LightGBM_BAG_L1"]
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
@@ -279,9 +266,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Verify FileNotFoundError is raised
         with pytest.raises(FileNotFoundError):
@@ -291,7 +276,7 @@ class TestModelsSelectionUnitTests:
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
-                model_artifact=mock_model_artifact,
+                workspace_path=workspace_path,
             )
 
     @mock.patch("pandas.read_csv")
@@ -308,9 +293,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/nonexistent/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Verify FileNotFoundError is raised
         with pytest.raises(FileNotFoundError):
@@ -320,7 +303,7 @@ class TestModelsSelectionUnitTests:
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
-                model_artifact=mock_model_artifact,
+                workspace_path=workspace_path,
             )
 
     @mock.patch("pandas.read_csv")
@@ -343,9 +326,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Verify ValueError is raised
         with pytest.raises(ValueError, match="Target column not found in dataset"):
@@ -355,7 +336,7 @@ class TestModelsSelectionUnitTests:
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
-                model_artifact=mock_model_artifact,
+                workspace_path=workspace_path,
             )
 
     @mock.patch("pandas.read_csv")
@@ -379,9 +360,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Verify ValueError is raised
         with pytest.raises(ValueError, match="Test data schema mismatch"):
@@ -391,7 +370,7 @@ class TestModelsSelectionUnitTests:
                 top_n=2,
                 train_data=mock_train_data,
                 test_data=mock_test_data,
-                model_artifact=mock_model_artifact,
+                workspace_path=workspace_path,
             )
 
     @mock.patch("pandas.read_csv")
@@ -425,9 +404,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
         models_selection.python_func(
@@ -436,7 +413,7 @@ class TestModelsSelectionUnitTests:
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify call order: read_csv (train) -> read_csv (test) -> TabularPredictor -> fit -> leaderboard
@@ -452,7 +429,7 @@ class TestModelsSelectionUnitTests:
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_sets_metadata_correctly(self, mock_predictor_class, mock_read_csv):
-        """Test that model artifact metadata is set correctly."""
+        """Test that return value (top_models, eval_metric, predictor_path) is correct."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
@@ -480,28 +457,27 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
-        models_selection.python_func(
+        result = models_selection.python_func(
             label_column="target",
             task_type="regression",
             top_n=3,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
-        # Verify metadata was set correctly
-        assert "top_models" in mock_model_artifact.metadata
-        assert mock_model_artifact.metadata["top_models"] == [
+        # Verify return value was set correctly
+        assert result.top_models == [
             "LightGBM_BAG_L1",
             "NeuralNetFastAI_BAG_L1",
             "CatBoost_BAG_L1",
         ]
-        assert len(mock_model_artifact.metadata["top_models"]) == 3
+        assert len(result.top_models) == 3
+        assert result.eval_metric == "r2"
+        assert result.predictor_path == str(Path(workspace_path) / "autogluon_predictor")
 
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
@@ -534,9 +510,7 @@ class TestModelsSelectionUnitTests:
         mock_test_data = mock.MagicMock()
         mock_test_data.path = "/tmp/test_data.csv"
 
-        mock_model_artifact = mock.MagicMock()
-        mock_model_artifact.path = "/tmp/model"
-        mock_model_artifact.metadata = {}
+        workspace_path = "/tmp/model"
 
         # Call the component function
         result = models_selection.python_func(
@@ -545,16 +519,19 @@ class TestModelsSelectionUnitTests:
             top_n=2,
             train_data=mock_train_data,
             test_data=mock_test_data,
-            model_artifact=mock_model_artifact,
+            workspace_path=workspace_path,
         )
 
         # Verify return type and fields
         assert hasattr(result, "top_models")
         assert hasattr(result, "eval_metric")
+        assert hasattr(result, "predictor_path")
         assert isinstance(result.top_models, list)
         assert isinstance(result.eval_metric, str)
+        assert isinstance(result.predictor_path, str)
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
         assert result.eval_metric == "r2"
+        assert result.predictor_path == str(Path(workspace_path) / "autogluon_predictor")
 
     def test_component_imports_correctly(self):
         """Test that the component can be imported and has required attributes."""

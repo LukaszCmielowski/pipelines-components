@@ -19,6 +19,11 @@ from kfp_components.components.training.automl.autogluon_models_selection import
         "top N performers, refits each on the complete training data in parallel, and finally "
         "evaluates all refitted models to generate a comprehensive leaderboard with performance metrics."
     ),
+    pipeline_config=dsl.PipelineConfig(
+        workspace=dsl.WorkspaceConfig(
+            size='100Mi', # TODO: change to recommended size
+        ),
+    ),
 )
 def autogluon_tabular_training_pipeline(
     train_data_secret_name: str,
@@ -59,10 +64,11 @@ def autogluon_tabular_training_pipeline(
        is saved with a "_FULL" suffix and optimized for deployment by removing unnecessary
        models and files.
 
-    5. **Leaderboard Evaluation**: Evaluates all refitted models on the full dataset and
-       generates a markdown-formatted leaderboard ranking models by their performance
-       metrics. The leaderboard provides comprehensive evaluation results for model
-       comparison and selection.
+    5. **Leaderboard Evaluation**: Aggregates evaluation results from all refitted model
+       artifacts (each refit component writes metrics to model_artifact.path /
+       model_name_FULL / metrics). The leaderboard component reads these pre-computed
+       metrics and generates an HTML-formatted leaderboard ranking models by their
+       performance metrics for comparison and selection.
 
     **Two-Stage Training Benefits:**
 
@@ -108,7 +114,7 @@ def autogluon_tabular_training_pipeline(
             execution time but provide more model options for final selection.
 
     Returns:
-        A Markdown artifact containing the leaderboard with evaluation metrics for all
+        An HTML artifact containing the leaderboard with evaluation metrics for all
         refitted models, ranked by performance. The leaderboard uses the metric
         determined by task_type (e.g., accuracy for classification, r2 for regression)
         and can be used for model comparison and selection decisions.
@@ -149,26 +155,29 @@ def autogluon_tabular_training_pipeline(
         },
     )
 
-    train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
 
+    train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
+
     selection_task = models_selection(
         label_column=label_column,
         task_type=task_type,
         train_data=train_test_split_task.outputs["sampled_train_dataset"],
         test_data=train_test_split_task.outputs["sampled_test_dataset"],
         top_n=top_n,
+        workspace_path=dsl.WORKSPACE_PATH_PLACEHOLDER,
     )
 
     # Stage 2: Model Refitting
     # Refit each top model on the full training dataset
+    
 
     with dsl.ParallelFor(items=selection_task.outputs["top_models"], parallelism=2) as model_name:
         refit_full_task = autogluon_models_full_refit(
             model_name=model_name,
             full_dataset=tabular_loader_task.outputs["full_dataset"],
-            predictor_artifact=selection_task.outputs["model_artifact"],
+            predictor_path=selection_task.outputs["predictor_path"],
         )
 
     # Generate leaderboard

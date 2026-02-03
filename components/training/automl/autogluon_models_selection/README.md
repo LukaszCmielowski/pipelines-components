@@ -12,7 +12,8 @@ sampled training data, then evaluates them on test data to identify the top N pe
 The component uses AutoGluon's TabularPredictor which automatically trains various model types (neural networks,
 tree-based models, linear models, etc.) and combines them using stacking with multiple levels and bagging. After
 training, models are evaluated on the test dataset and ranked by performance. The top N models are selected and their
-names are returned for use in subsequent refitting stages.
+names are returned (with eval_metric and predictor_path) for use in subsequent refitting stages. The predictor is
+saved under the provided workspace_path (workspace_path / autogluon_predictor).
 
 This component is part of a two-stage training pipeline where models are first built and evaluated on sampled data (for
 efficiency), then the best candidates are refitted on the full dataset for optimal performance.
@@ -26,7 +27,7 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 | `top_n` | `int` | — | The number of top-performing models to select from the leaderboard. Only the top N models will be returned and promoted to the refit stage. Must be a positive integer. |
 | `train_data` | `dsl.Input[dsl.Dataset]` | — | A Dataset artifact containing the training data in CSV format. This data is used to train the AutoGluon models. The dataset should include the `label_column` and all feature columns. |
 | `test_data` | `dsl.Input[dsl.Dataset]` | — | A Dataset artifact containing the test data in CSV format. This data is used to evaluate model performance and generate the leaderboard. The dataset should match the schema of the training data. |
-| `model_artifact` | `dsl.Output[dsl.Model]` | — | Output Model artifact where the trained TabularPredictor will be saved. The artifact metadata will contain a `"top_models"` key with the list of selected model names. |
+| `workspace_path` | `str` | — | Path to the workspace directory where the trained TabularPredictor will be saved (under `workspace_path / autogluon_predictor`). This path is returned as `predictor_path` for use by downstream components. |
 
 ## Outputs 📤
 
@@ -34,6 +35,7 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 |------|------|-------------|
 | `top_models` | `List[str]` | A list of model names representing the top N performing models selected from the leaderboard, ranked by performance on the test dataset. |
 | `eval_metric` | `str` | The evaluation metric name used by the TabularPredictor to assess model performance. Automatically determined from `task_type` (e.g., `"accuracy"` for classification, `"r2"` for regression). |
+| `predictor_path` | `str` | The path to the saved TabularPredictor (`workspace_path / autogluon_predictor`), for use by downstream components such as autogluon_models_full_refit. |
 
 ## Metadata 🗂️
 

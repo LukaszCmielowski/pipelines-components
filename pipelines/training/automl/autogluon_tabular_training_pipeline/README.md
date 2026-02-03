@@ -13,39 +13,44 @@ to final model evaluation.
 **Pipeline Stages:**
 
 1. **Data Loading**: Loads tabular data from an S3-compatible object storage bucket using AWS credentials configured via
-Kubernetes secrets.
+   Kubernetes secrets. Produces a `full_dataset` artifact used for splitting and for refitting.
 
 2. **Data Splitting**: Splits the loaded dataset into training and test sets using a configurable test size (default:
-20% test, 80% train).
+   20% test, 80% train). Outputs `sampled_train_dataset` and `sampled_test_dataset` for model selection.
 
 3. **Model Selection**: Trains multiple AutoGluon models on the training data using AutoGluon's ensembling approach
-(stacking with 3 levels and bagging with 2 folds). The component automatically trains various model types including
-neural networks, tree-based models (XGBoost, LightGBM, CatBoost), and linear models. All models are evaluated on the
-test set and ranked by performance. The top N models are selected for the refitting stage.
+   (stacking with 3 levels and bagging with 2 folds). The component automatically trains various model types including
+   neural networks, tree-based models (XGBoost, LightGBM, CatBoost), and linear models. All models are evaluated on the
+   test set and ranked by performance. The top N models are selected; the component returns `top_models`, `eval_metric`,
+   and `predictor_path` (workspace path where the predictor is saved) for the refitting stage.
 
-4. **Model Refitting**: Refits each of the top N selected models on the full training dataset. This stage runs in
-parallel (with configurable parallelism) to efficiently retrain multiple models. Each refitted model is saved with a
-"_FULL" suffix and optimized for deployment by removing unnecessary models and files.
+4. **Model Refitting**: Refits each of the top N selected models on the full training dataset. Each refit task receives
+   `predictor_path` from the selection stage (not a model artifact). This stage runs in parallel (parallelism=2) to
+   efficiently retrain multiple models. Each refitted model is saved with a "_FULL" suffix and metrics are written under
+   `model_artifact.path / model_name_FULL / metrics`. Outputs are collected for the leaderboard.
 
-5. **Leaderboard Evaluation**: Evaluates all refitted models on the full dataset and generates a markdown-formatted
-leaderboard ranking models by their performance metrics. The leaderboard provides comprehensive evaluation results for
-model comparison and selection.
+5. **Leaderboard Evaluation**: Aggregates evaluation results from all refitted model artifacts by reading pre-computed
+   metrics from each model's path (`model.path / model_name / metrics / metrics.json`). Generates an HTML-formatted
+   leaderboard ranking models by their performance metrics for comparison and selection.
 
 **Two-Stage Training Benefits:**
 
-- **Reduced Computational Cost**: Initial model exploration happens on the full dataset but with efficient ensembling
-rather than expensive hyperparameter optimization - **Maintained Quality**: Final models are refitted on the complete
-training dataset for optimal performance - **Parallel Efficiency**: Top models are refitted in parallel to minimize
-total pipeline execution time - **Production-Ready**: Refitted models are AutoGluon Predictors optimized and ready for
-deployment
+- **Efficient Exploration**: Initial model training uses the split training data with efficient ensembling rather than
+  expensive hyperparameter optimization.
+- **Optimal Performance**: Final models are refitted on the complete original dataset for maximum performance.
+- **Parallel Efficiency**: Top models are refitted in parallel to minimize total pipeline execution time.
+- **Production-Ready**: Refitted models are AutoGluon Predictors optimized and ready for deployment.
 
 **AutoGluon Ensembling Approach:**
 
 The pipeline leverages AutoGluon's unique ensembling strategy that combines multiple model types using stacking and
 bagging rather than traditional hyperparameter optimization. This approach is more efficient and typically produces
-better results for tabular data by automatically: - Training diverse model families (neural networks, tree-based,
-linear) - Combining predictions using multi-level stacking - Using bootstrap aggregation (bagging) for robustness -
-Selecting optimal ensemble configurations
+better results for tabular data by automatically:
+
+- Training diverse model families (neural networks, tree-based, linear)
+- Combining predictions using multi-level stacking
+- Using bootstrap aggregation (bagging) for robustness
+- Selecting optimal ensemble configurations
 
 ## Inputs 📥
 

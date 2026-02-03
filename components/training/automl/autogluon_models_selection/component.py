@@ -5,7 +5,7 @@ from kfp import dsl
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["autogluon==1.5.0"],
+    packages_to_install=["autogluon.tabular[all]==1.5.0"],
 )
 def models_selection(
     label_column: str,
@@ -13,8 +13,8 @@ def models_selection(
     top_n: int,
     train_data: dsl.Input[dsl.Dataset],
     test_data: dsl.Input[dsl.Dataset],
-    model_artifact: dsl.Output[dsl.Model],
-) -> NamedTuple("outputs", top_models=List[str], eval_metric=str):
+    workspace_path: str,
+) -> NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str):
     """Build multiple AutoGluon models and select top performers.
 
     This component trains multiple machine learning models using AutoGluon's
@@ -26,7 +26,7 @@ def models_selection(
     and combines them using stacking with multiple levels and bagging. After
     training, models are evaluated on the test dataset and ranked by performance.
     The top N models are selected and their names are returned for use in
-    subsequent refitting stages.
+    subsequent refitting stages. The predictor is saved under workspace_path.
 
     This component is part of a two-stage training pipeline where models are
     first built and evaluated on sampled data (for efficiency), then the best
@@ -48,9 +48,10 @@ def models_selection(
             CSV format. This data is used to evaluate model performance and
             generate the leaderboard. The dataset should match the schema of
             the training data.
-        model_artifact: Output Model artifact where the trained TabularPredictor
-            will be saved. The artifact metadata will contain a "top_models" key
-            with the list of selected model names.
+        workspace_path: Path (string) to the workspace directory where the
+            trained TabularPredictor will be saved (under workspace_path /
+            autogluon_predictor). This path is also returned as predictor_path
+            for use by downstream components.
 
     Returns:
         A NamedTuple with the following fields:
@@ -61,6 +62,9 @@ def models_selection(
               to assess model performance. This metric is automatically determined
               based on the task_type (e.g., "accuracy" for classification,
               "r2" for regression).
+            - predictor_path (str): The path to the saved TabularPredictor
+              (workspace_path / autogluon_predictor), for use by downstream
+              components such as autogluon_models_full_refit.
 
     Raises:
         FileNotFoundError: If the train_data or test_data
@@ -76,7 +80,7 @@ def models_selection(
         )
 
         @dsl.pipeline(name="model-selection-pipeline")
-        def selection_pipeline(train_data, test_data):
+        def selection_pipeline(train_data, test_data, workspace_path):
             "Select top 3 models from training."
             result = models_selection(
                 label_column="price",
@@ -84,10 +88,13 @@ def models_selection(
                 top_n=3,
                 train_data=train_data,
                 test_data=test_data,
+                workspace_path=workspace_path,
             )
-            # result.top_models contains list of top 3 model names
+            # result.top_models, result.eval_metric, result.predictor_path
             return result
     """
+    from pathlib import Path
+
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
@@ -95,11 +102,13 @@ def models_selection(
     test_data_df = pd.read_csv(test_data.path)
 
     eval_metric = "r2" if task_type == "regression" else "accuracy"
+
+    predictor_path = Path(workspace_path) / "autogluon_predictor"
     predictor = TabularPredictor(
         problem_type=task_type,
         label=label_column,
         eval_metric=eval_metric,
-        path=model_artifact.path,
+        path=predictor_path,
         verbosity=2,
     ).fit(
         train_data=train_data_df,
@@ -110,10 +119,9 @@ def models_selection(
 
     leaderboard = predictor.leaderboard(test_data_df)
     top_n_models = leaderboard.head(top_n)["model"].values.tolist()
-    model_artifact.metadata["top_models"] = top_n_models
 
-    outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str)
-    return outputs(top_models=top_n_models, eval_metric=str(predictor.eval_metric))
+    outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str)
+    return outputs(top_models=top_n_models, eval_metric=str(predictor.eval_metric), predictor_path=str(predictor_path))
 
 
 if __name__ == "__main__":
