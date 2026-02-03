@@ -1,0 +1,17 @@
+---
+name: notebook_generation
+stability: alpha  # New component without proven track record
+dependencies:
+  kubeflow:
+    - name: Pipelines
+      version: '>=2.15.2'
+  # external_services:  # Add if component uses external services
+  #   - name: Example Service
+  #     version: ">=1.0.0"
+tags:
+  - deployment
+  # Add more relevant tags here
+lastVerified: 2026-02-03T00:00:00Z
+# links:  # Add relevant links
+#   documentation: https://your-docs-url.com
+#   issue_tracker: https://github.com/kubeflow/pipelines-components/issues
