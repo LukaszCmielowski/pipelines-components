@@ -75,7 +75,10 @@ Pipeline outputs are written to the artifact store (S3-compatible storage config
     ├── leaderboard-evaluation/
     │   └── <task_id>/
     │       └── html_artifact                        # HTML leaderboard (model names + metrics)
-    │
+    ├── notebook-generation/
+    │   └── <task_id>/
+    |       └── notebook_artifact/
+    |           └── automl_predictor_notebook.ipynb  # jupyter notebook for interaction with TabularPredictor
     └── autogluon-models-full-refit/
         └── <task_id>/                               # one per top-N model
             └── model_artifact/
@@ -85,6 +88,7 @@ Pipeline outputs are written to the artifact store (S3-compatible storage config
                     │   ├── feature_importance.json
                     │   └── confusion_matrix.json    # classification only
                     └── [AutoGluon predictor files]  # TabularPredictor serialization
+
 ```
 
 - **Leaderboard**: Single HTML file
