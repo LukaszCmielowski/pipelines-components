@@ -51,7 +51,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
+                predictor_path=mock_predictor_artifact.path,
                 model_artifact=mock_model_artifact,
             )
 
@@ -61,8 +61,10 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Verify TabularPredictor.load was called with correct path
             mock_predictor_class.load.assert_called_once_with("/tmp/predictor")
 
-            # Verify refit_full was called with correct parameters
-            mock_predictor.refit_full.assert_called_once_with(train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1")
+            # Verify refit_full was called with correct parameters (on clone)
+            mock_predictor_clone.refit_full.assert_called_once_with(
+                train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1"
+            )
 
             # Verify evaluate and feature_importance called with full dataset dataframe (on clone)
             mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
@@ -76,9 +78,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             assert call_kw["dirs_exist_ok"] is True
 
             # Verify delete_models was called with correct models to keep
-            mock_predictor_clone.delete_models.assert_called_once_with(
-                models_to_keep=["LightGBM_BAG_L1", "LightGBM_BAG_L1_FULL"]
-            )
+            mock_predictor_clone.delete_models.assert_called_once_with(models_to_keep=["LightGBM_BAG_L1"])
 
             # Verify set_model_best was called with correct model
             mock_predictor_clone.set_model_best.assert_called_once_with(model="LightGBM_BAG_L1_FULL", save_trainer=True)
@@ -125,7 +125,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
+                predictor_path="/nonexistent/predictor",
                 model_artifact=mock_model_artifact,
             )
 
@@ -135,7 +135,9 @@ class TestAutogluonModelsFullRefitUnitTests:
         """Test that ValueError is raised when refit_full fails."""
         # Setup mocks
         mock_predictor = mock.MagicMock()
-        mock_predictor.refit_full.side_effect = ValueError("Model not found in predictor")
+        mock_predictor_clone = mock.MagicMock()
+        mock_predictor.clone.return_value = mock_predictor_clone
+        mock_predictor_clone.refit_full.side_effect = ValueError("Model not found in predictor")
         mock_predictor_class.load.return_value = mock_predictor
 
         # Mock DataFrame for dataset
@@ -144,9 +146,6 @@ class TestAutogluonModelsFullRefitUnitTests:
 
         mock_full_dataset = mock.MagicMock()
         mock_full_dataset.path = "/tmp/full_dataset.csv"
-
-        mock_predictor_artifact = mock.MagicMock()
-        mock_predictor_artifact.path = "/tmp/predictor"
 
         mock_model_artifact = mock.MagicMock()
         mock_model_artifact.path = "/tmp/refitted_model"
@@ -157,7 +156,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             autogluon_models_full_refit.python_func(
                 model_name="NonexistentModel",
                 full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
+                predictor_path="/tmp/predictor",
                 model_artifact=mock_model_artifact,
             )
 
@@ -188,20 +187,20 @@ class TestAutogluonModelsFullRefitUnitTests:
         autogluon_models_full_refit.python_func(
             model_name="LightGBM_BAG_L1",
             full_dataset=mock_full_dataset,
-            predictor_artifact=mock_predictor_artifact,
+            predictor_path=mock_predictor_artifact.path,
             model_artifact=mock_model_artifact,
         )
 
-        # Verify call order: load -> refit_full -> clone -> evaluate -> feature_importance (on clone) -> ...
+        # Verify call order: load -> clone -> delete_models -> refit_full (on clone) -> ... -> evaluate -> feature_importance
         assert mock_predictor_class.load.called
-        assert mock_predictor.refit_full.called
+        assert mock_predictor.clone.called
+        assert mock_predictor_clone.refit_full.called
         mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
         mock_predictor_clone.feature_importance.assert_called_once_with(mock_dataset_df)
-        assert mock_predictor.clone.called
         assert mock_predictor_clone.delete_models.called
         assert mock_predictor_clone.set_model_best.called
         assert mock_predictor_clone.save_space.called
-        assert mock_predictor.refit_full.call_count == 1
+        assert mock_predictor_clone.refit_full.call_count == 1
         assert mock_predictor.clone.call_count == 1
 
     @mock.patch("autogluon.core.metrics.confusion_matrix")
@@ -239,7 +238,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
-                predictor_artifact=mock_predictor_artifact,
+                predictor_path=mock_predictor_artifact.path,
                 model_artifact=mock_model_artifact,
             )
 

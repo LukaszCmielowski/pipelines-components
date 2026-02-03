@@ -3,7 +3,6 @@ from kfp import dsl
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["numpy", "pandas", "boto3"],
 )
 def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):
     """Automl Data Loader component.
