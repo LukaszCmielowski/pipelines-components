@@ -1,10 +1,6 @@
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-import os
 
-import sys
-import pathlib
-sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
 from components.data_processing.autorag.document_loader.component import document_loader
 from components.data_processing.autorag.test_data_loader.component import test_data_loader
 from components.data_processing.autorag.text_extraction.component import text_extraction
@@ -14,13 +10,13 @@ from components.data_processing.autorag.text_extraction.component import text_ex
     name="AutoRAG Data Processing Pipeline",
     description="Pipeline to load test data and documents for AutoRAG."
 )
-def autorag_pipeline(
-    secret_name: str = "kubeflow-aws-secrets",
-    test_data_bucket_name: str = "wnowogorski-test-bucket",
-    test_data_path: str = "benchmark.json",
-    input_data_bucket_name: str = "wnowogorski-test-bucket",
-    input_data_path: str = "",
-    sampling_config: dict = {},
+def autorag_data_loading_pipeline(
+    secret_name: str,
+    test_data_bucket_name: str,
+    test_data_path: str,
+    input_data_bucket_name: str,
+    input_data_path: str,
+    sampling_config: dict,
 ):
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,
@@ -56,7 +52,7 @@ if __name__ == "__main__":
 
     output_path = pathlib.Path(__file__).with_name("autorag_data_loading_pipeline.yaml")
     Compiler().compile(
-        pipeline_func=autorag_pipeline,
+        pipeline_func=autorag_data_loading_pipeline,
         package_path=str(output_path)
     )
     print(f"Pipeline compiled to {output_path}")
