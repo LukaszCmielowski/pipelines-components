@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Test Data Loader 📊
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
@@ -16,29 +17,28 @@ AutoRAG pipeline, as the test data is needed for document sampling in subsequent
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `test_data` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the loaded test data as a pandas DataFrame. |
-| `test_data_reference` | `dict` | `None` | Dictionary defining test data source. Required keys: `connection_id` (str), `bucket` (str), `path` (str). |
+|Parameter|Type|Default|Description|
+|---------|----|------|-----------|
+|`test_data`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the loaded test data as a pandas DataFrame.|
+|`test_data_bucket_name`|`str`|`None`|S3 bucket that contains the test data file.|
+|`test_data_path`|`str`|`None`|S3 object key to the JSON test data file.|
 
 ### Test Data Reference Structure
 
-The `test_data_reference` dictionary should contain:
+To access the test data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
 
-```python
-{
-    "connection_id": "s3-benchmarks-connection",  # RHOAI Connection ID for S3 access
-    "bucket": "autorag_benchmarks",              # Bucket name containing the test data
-    "path": "my-folder/test_data.json"           # Path within bucket/filesystem to JSON file
-}
-```
+| Environment variable name | Description                                         |
+|---------------------------|-----------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`       | access key used to authenticate with the S3 service |
+| `AWS_SECRET_ACCESS_KEY`   | secret key used to authenticate with the S3 service |
+| `AWS_ENDPOINT_URL`        | endpoint URL of the S3 instance                     |
+| `AWS_REGION`              | region in which the S3 instance is deployed         |
 
 ## Outputs 📤
 
-| Output | Type | Description |
-|--------|------|-------------|
+| Output c    | Type           | Description                                          |
+|-------------|----------------|------------------------------------------------------|
 | `test_data` | `dsl.Artifact` | The loaded test data as a pandas DataFrame artifact. |
-| Return value | `str` | A message indicating the completion status of test data loading. |
 
 ## Usage Examples 💡
 
@@ -52,11 +52,8 @@ from kfp_components.components.data_processing.autorag.test_data_loader import t
 def my_pipeline():
     """Example pipeline demonstrating test data loading."""
     load_task = test_data_loader(
-        test_data_reference={
-            "connection_id": "s3-benchmarks-connection",
-            "bucket": "autorag_benchmarks",
-            "path": "my-folder/test_data.json"
-        }
+        test_data_bucket_name="s3-test-data-bucket",
+        test_data_path="s3-test-data-path"
     )
     return load_task
 ```
@@ -68,11 +65,8 @@ def my_pipeline():
 def my_pipeline():
     """Example pipeline loading from local filesystem."""
     load_task = test_data_loader(
-        test_data_reference={
-            "connection_id": None,
-            "bucket": None,
-            "path": "/local/path/to/test_data.json"
-        }
+        test_data_bucket_name="s3-test-data-bucket",
+        test_data_path="s3-test-data-path"
     )
     return load_task
 ```

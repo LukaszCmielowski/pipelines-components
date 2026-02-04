@@ -50,11 +50,18 @@ for target_dir in "${TARGET_DIRS[@]}"; do
     # Determine if it's a component or pipeline
     if [[ "$target_dir" == components/* ]]; then
         TYPE_FLAG="--component"
+        REQUIRED_FILE="$target_dir/component.py"
     elif [[ "$target_dir" == pipelines/* ]]; then
         TYPE_FLAG="--pipeline"
+        REQUIRED_FILE="$target_dir/pipeline.py"
     else
         print_error "Invalid directory: $target_dir. Must be in components/ or pipelines/"
         exit 2
+    fi
+
+    if [ ! -f "$REQUIRED_FILE" ]; then
+        echo "Skipping $target_dir (missing $(basename "$REQUIRED_FILE"))"
+        continue
     fi
 
     echo "Checking $target_dir..."

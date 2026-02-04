@@ -1,41 +1,46 @@
+<!-- markdownlint-disable MD013 -->
 # Document Loader 📄
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
 
 ## Overview 🧾
 
-Reads unstructured data from data sources (S3, local filesystem) and performs document sampling.
+Reads unstructured data from data sources
+(S3, local filesystem) and performs document sampling.
 
-The Document Loader component is the first step in the AutoRAG pipeline workflow. It loads documents
-from various sources including S3 (via RHOAI Connections API) or local filesystem. The component
-supports multiple document formats and performs document sampling based on test data to prepare a
-subset of documents for processing. Document sampling functionality is integrated within this
-component.
+The Document Loader component is the first step in the AutoRAG pipeline workflow.
+It loads documents from various sources including S3
+(via RHOAI Connections API) or local filesystem.
+The component supports multiple document formats and performs
+document sampling based on test data to prepare a
+subset of documents for processing.
+Document sampling functionality is integrated within this component.
 
-This component integrates with RHOAI Connections API for accessing documents from S3 or other
-cloud storage systems. The component handles authentication and data retrieval transparently,
+This component integrates with RHOAI Connections
+API for accessing documents from S3 or other cloud storage systems.
+The component handles authentication and data retrieval transparently,
 allowing users to specify data sources through connection IDs.
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `sampled_documents` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the sampled documents. |
-| `input_data_reference` | `dict` | `None` | Dictionary defining document data source. Required keys: `connection_id` (str), `bucket` (str), `path` (str). |
-| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Optional input artifact containing test data for document sampling. |
-| `sampling_config` | `dict` | `None` | Optional dictionary with sampling configuration. |
+|Parameter|Type|Default|Description|
+|---------|----|------|-----------|
+|`input_data_bucket_name`|`str`|`None`|Name of the S3 bucket containing input data.|
+|`input_data_path`|`str`|`None`|Path to folder with input documents within bucket.|
+|`sampled_documents`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the sampled documents.|
+|`test_data`|`dsl.Input[dsl.Artifact]`|`None`|Optional input artifact containing test data for document sampling.|
+|`sampling_config`|`dict`|`None`|Optional dictionary with sampling configuration.|
 
-### Input Data Reference Structure
+### Input data
 
-The `input_data_reference` dictionary should contain:
+To access the input data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
 
-```python
-{
-    "connection_id": "s3-documents-connection",  # RHOAI Connection ID for S3 access
-    "bucket": "my-documents-bucket",              # Bucket name containing the documents
-    "path": "rh_documents/"                       # Path within bucket/filesystem to documents
-}
-```
+| Environment variable name | Description                                         |
+|---------------------------|-----------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`       | access key used to authenticate with the S3 service |
+| `AWS_SECRET_ACCESS_KEY`   | secret key used to authenticate with the S3 service |
+| `AWS_ENDPOINT_URL`        | endpoint URL of the S3 instance                     |
+| `AWS_REGION`              | region in which the S3 instance is deployed         |
 
 ### Sampling Configuration
 
@@ -46,10 +51,9 @@ The `sampling_config` dictionary supports test data driven sampling:
 
 ## Outputs 📤
 
-| Output | Type | Description |
-|--------|------|-------------|
+| Output              | Type           | Description                                               |
+|---------------------|----------------|-----------------------------------------------------------|
 | `sampled_documents` | `dsl.Artifact` | The sampled documents artifact ready for text extraction. |
-| Return value | `str` | A message indicating the completion status of document loading. |
 
 ## Usage Examples 💡
 
@@ -63,11 +67,8 @@ from kfp_components.components.data_processing.autorag.document_loader import do
 def my_pipeline():
     """Example pipeline demonstrating document loading."""
     load_task = document_loader(
-        input_data_reference={
-            "connection_id": "s3-documents-connection",
-            "bucket": "my-documents-bucket",
-            "path": "rh_documents/"
-        }
+        input_data_bucket_name="s3-documents-bucket",
+        input_data_path="documents-path"
     )
     return load_task
 ```
@@ -79,11 +80,8 @@ def my_pipeline():
 def my_pipeline(test_data):
     """Example pipeline with document sampling."""
     load_task = document_loader(
-        input_data_reference={
-            "connection_id": "s3-documents-connection",
-            "bucket": "my-documents-bucket",
-            "path": "rh_documents/"
-        },
+        input_data_bucket_name="s3-documents-bucket",
+        input_data_path="documents-path",
         test_data=test_data,
         sampling_config={
             "method": "test_data_driven",
