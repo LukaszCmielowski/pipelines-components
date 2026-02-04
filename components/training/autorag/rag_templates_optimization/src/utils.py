@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TextIO
 
+from ai4rag.search_space.src.parameter import Parameter
 from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
 from langchain_core.documents import Document
 
@@ -18,7 +19,20 @@ def load_search_space_from(file: TextIO | Path) -> AI4RAGSearchSpace:
 
     """
 
-    pass
+    return AI4RAGSearchSpace(
+        [
+            Parameter("inference_model_id", "C", values=["mistral", "llama"]),
+            Parameter("embedding_model", "C", values=["mistral_emv", "llama_emb", "granite"]),
+            Parameter(
+                "retrieval",
+                "C",
+                values=[
+                    {"method": "simple", "window_size": "0", "number_of_chunks": "5"},
+                    {"method": "window", "window_size": "2", "number_of_chunks": "8"},
+                ],
+            ),
+        ]
+    )
 
 
 def load_as_langchain_doc(path: str | Path) -> list[Document]:
