@@ -4,7 +4,7 @@ from kfp import dsl
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
-def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):
+def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):  # noqa: D417
     """Automl Data Loader component.
 
     TODO: Add a detailed description of what this component does.
