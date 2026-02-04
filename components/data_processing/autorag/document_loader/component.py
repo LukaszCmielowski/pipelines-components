@@ -1,9 +1,7 @@
 from kfp.dsl import component, Input, Output, Artifact
 
 
-@component(
-    base_image="quay.io/wnowogorski-org/autorag_data_loading:latest"
-)
+@component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
 def document_loader(
     input_data_bucket_name: str,
     input_data_path: str,
@@ -38,9 +36,8 @@ def document_loader(
 
     import boto3
 
-
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
-    MAX_SIZE_BYTES = 1024 ** 3  # 1 GB
+    MAX_SIZE_BYTES = 1024**3  # 1 GB
 
     logger = logging.getLogger("Document Loader component logger")
     logger.setLevel(logging.INFO)
@@ -93,10 +90,7 @@ def document_loader(
             Prefix=input_data_path,
         ).get("Contents", [])
 
-        supported_files = [
-            c for c in contents
-            if c["Key"].endswith(tuple(SUPPORTED_EXTENSIONS))
-        ]
+        supported_files = [c for c in contents if c["Key"].endswith(tuple(SUPPORTED_EXTENSIONS))]
         if not supported_files:
             raise Exception("No supported documents found.")
 
@@ -121,17 +115,12 @@ def document_loader(
 
             try:
                 logger.info(f"Downloading {key} to {local_path}")
-                s3_client.download_file(
-                    input_data_bucket_name,
-                    key,
-                    local_path
-                )
+                s3_client.download_file(input_data_bucket_name, key, local_path)
             except Exception as e:
                 logger.error("Failed to fetch %s: %s", key, e)
                 raise
 
     download_docs_s3()
-
 
 
 if __name__ == "__main__":
@@ -142,5 +131,3 @@ if __name__ == "__main__":
         document_loader,
         package_path=__file__.replace(".py", "_component.yaml"),
     )
-
-

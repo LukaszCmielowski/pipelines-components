@@ -1,14 +1,8 @@
 from kfp import dsl
 
 
-@dsl.component(
-    base_image="quay.io/wnowogorski-org/autorag_data_loading:latest"
-)
-def test_data_loader(
-    test_data_bucket_name: str,
-    test_data_path: str,
-    test_data: dsl.Output[dsl.Artifact] = None
-):
+@dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
+def test_data_loader(test_data_bucket_name: str, test_data_path: str, test_data: dsl.Output[dsl.Artifact] = None):
     """Download test data json file from S3 into a KFP artifact.
 
     The component fetches S3 credentials from environment variables and
@@ -34,7 +28,6 @@ def test_data_loader(
     import logging
 
     import boto3
-
 
     logger = logging.getLogger("Test Data Loader component logger")
     logger.setLevel(logging.INFO)
@@ -72,11 +65,7 @@ def test_data_loader(
             logger.info(f"Fetching test data from S3: bucket={test_data_bucket_name}, path={test_data_path}")
             try:
                 logger.info(f"Starting download to {test_data.path}")
-                s3_client.download_file(
-                    test_data_bucket_name,
-                    test_data_path,
-                    test_data.path
-                )
+                s3_client.download_file(test_data_bucket_name, test_data_path, test_data.path)
                 logger.info("Download completed successfully")
             except Exception as e:
                 logger.error("Failed to fetch %s: %s", test_data_path, e)
