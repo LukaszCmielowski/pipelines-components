@@ -7,8 +7,7 @@ from components.data_processing.autorag.text_extraction.component import text_ex
 
 
 @dsl.pipeline(
-    name="AutoRAG Data Processing Pipeline",
-    description="Pipeline to load test data and documents for AutoRAG."
+    name="AutoRAG Data Processing Pipeline", description="Pipeline to load test data and documents for AutoRAG."
 )
 def autorag_data_loading_pipeline(
     secret_name: str,
@@ -22,17 +21,15 @@ def autorag_data_loading_pipeline(
         test_data_bucket_name=test_data_bucket_name,
         test_data_path=test_data_path,
     )
-    
+
     document_loader_task = document_loader(
         input_data_bucket_name=input_data_bucket_name,
         input_data_path=input_data_path,
         test_data=test_data_loader_task.outputs["test_data"],
-        sampling_config=sampling_config
+        sampling_config=sampling_config,
     )
 
-    text_extraction_task = text_extraction(
-        documents=document_loader_task.outputs["sampled_documents"]
-    )
+    text_extraction_task = text_extraction(documents=document_loader_task.outputs["sampled_documents"])
 
     for task in [test_data_loader_task, document_loader_task]:
         use_secret_as_env(
@@ -46,13 +43,11 @@ def autorag_data_loading_pipeline(
             },
         )
 
+
 if __name__ == "__main__":
     from kfp.compiler import Compiler
     import pathlib
 
     output_path = pathlib.Path(__file__).with_name("data_loading_pipeline.yaml")
-    Compiler().compile(
-        pipeline_func=autorag_data_loading_pipeline,
-        package_path=str(output_path)
-    )
+    Compiler().compile(pipeline_func=autorag_data_loading_pipeline, package_path=str(output_path))
     print(f"Pipeline compiled to {output_path}")
