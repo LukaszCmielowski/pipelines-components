@@ -21,9 +21,8 @@ def leaderboard_evaluation(
 
     Args:
         models: A list of Model artifacts. Each should have metadata containing
-            a "model_name" field and metrics at
-            model.path / model_name / metrics / metrics.json (e.g. from
-            autogluon_models_full_refit).
+            a "model_name" field and metrics file at
+            model.path / model_name / metrics / metrics.json.
         eval_metric: The name of the evaluation metric to use for ranking.
             Must match a key in the metrics JSON (e.g., "accuracy" for
             classification, "root_mean_squared_error" for regression).
