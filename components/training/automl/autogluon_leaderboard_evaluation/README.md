@@ -17,19 +17,10 @@ best-performing models. The output is written as HTML that can be used for repor
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `models` | `List[dsl.Model]` | `None` | A list of Model artifacts containing trained AutoGluon
-TabularPredictor models to evaluate. Each model should have
-metadata containing a "model_name" field and metrics at
-`model.path / model_name / metrics / metrics.json`. |
-| `eval_metric` | `str` | `None` | The name of the evaluation metric to use for ranking
-models in the leaderboard. This should match one of the keys
-in the metrics JSON (e.g., "accuracy" for classification,
-"root_mean_squared_error" for regression). The leaderboard
-will be sorted by this metric in descending order. |
-| `html_artifact` | `dsl.Output[dsl.HTML]` | `None` | Output artifact where the HTML-formatted
-leaderboard will be written. The leaderboard contains model names
-and their evaluation metrics. |
+| --------- | ---- | ------- | ----------- |
+| `models` | `List[dsl.Model]` | `None` | A list of Model artifacts with metadata "model_name" and metrics at `model.path / model_name / metrics / metrics.json`. |
+| `eval_metric` | `str` | `None` | Metric key for ranking (e.g. "accuracy", "root_mean_squared_error"). Leaderboard sorted by this metric descending. |
+| `html_artifact` | `dsl.Output[dsl.HTML]` | `None` | Output artifact where the HTML-formatted leaderboard will be written. |
 
 ## Outputs 📤
 

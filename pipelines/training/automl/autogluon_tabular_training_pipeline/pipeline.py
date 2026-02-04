@@ -1,5 +1,3 @@
-from typing import Dict
-
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
@@ -93,7 +91,7 @@ def autogluon_tabular_training_pipeline(
     model types using stacking and bagging rather than traditional hyperparameter optimization.
     This approach is more efficient and typically produces better results for tabular data
     by automatically:
-    - Training diverse model families (neural networks, tree-based, linear)
+    - Training diverse model families
     - Combining predictions using multi-level stacking
     - Using bootstrap aggregation (bagging) for robustness
     - Selecting optimal ensemble configurations
@@ -185,7 +183,7 @@ def autogluon_tabular_training_pipeline(
         )
 
     # Generate leaderboard
-    leaderboard_evaluation_task = leaderboard_evaluation(
+    leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
     )

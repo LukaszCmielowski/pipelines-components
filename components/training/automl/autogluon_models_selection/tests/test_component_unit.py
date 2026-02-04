@@ -3,7 +3,6 @@
 from pathlib import Path
 from unittest import mock
 
-import pandas as pd
 import pytest
 
 from ..component import models_selection
@@ -16,6 +15,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_regression(self, mock_predictor_class, mock_read_csv):
         """Test models selection with regression problem type."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
@@ -89,6 +90,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_binary_classification(self, mock_predictor_class, mock_read_csv):
         """Test models selection with binary classification problem type."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "accuracy"
@@ -146,6 +149,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_multiclass_classification(self, mock_predictor_class, mock_read_csv):
         """Test models selection with multiclass classification problem type."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "accuracy"
@@ -203,6 +208,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_different_top_n(self, mock_predictor_class, mock_read_csv):
         """Test models selection with different top_n values."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
@@ -283,6 +290,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_file_not_found_test_data(self, mock_predictor_class, mock_read_csv):
         """Test that FileNotFoundError is raised when test_data path doesn't exist."""
+        import pandas as pd
+
         # Setup mocks
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
         mock_read_csv.side_effect = [mock_train_df, FileNotFoundError("Test data file not found")]
@@ -310,6 +319,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_fit_failure(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when model fitting fails."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.fit.side_effect = ValueError("Target column not found in dataset")
@@ -343,6 +354,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_leaderboard_failure(self, mock_predictor_class, mock_read_csv):
         """Test that errors are raised when leaderboard generation fails."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.fit.return_value = mock_predictor
@@ -377,6 +390,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
         """Test that all required operations are called in correct order."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
@@ -430,6 +445,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_sets_metadata_correctly(self, mock_predictor_class, mock_read_csv):
         """Test that return value (top_models, eval_metric, predictor_path) is correct."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
@@ -483,6 +500,8 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_returns_correct_named_tuple(self, mock_predictor_class, mock_read_csv):
         """Test that the function returns a NamedTuple with correct fields."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"

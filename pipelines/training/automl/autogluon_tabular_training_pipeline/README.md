@@ -55,26 +55,26 @@ better results for tabular data by automatically:
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `train_data_secret_name` | `str` | — | The Kubernetes secret name with S3-compatible credentials for data access. Required keys: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`, `AWS_REGION`. |
-| `train_data_bucket_name` | `str` | — | The name of the S3-compatible bucket containing the tabular data file. The bucket must be accessible using the credentials from `secret_name`. |
-| `train_data_file_key` | `str` | — | The key (path) of the data file within the S3 bucket. The file should be in CSV format and contain both feature columns and the label column. |
-| `label_column` | `str` | — | The name of the target/label column in the dataset. This column will be used as the prediction target for model training. Must exist in the loaded dataset. |
-| `task_type` | `str` | — | The type of machine learning task. Supported values: `"binary"` or `"multiclass"` (classification), `"regression"` (continuous targets). Determines evaluation metrics and model types AutoGluon uses. |
-| `top_n` | `int` | `3` | The number of top-performing models to select and refit. Must be a positive integer. Only the top N models from the initial stage are refitted on the full dataset. Higher values increase execution time but provide more final options. |
+| --------- | ---- | ------- | ----------- |
+| `train_data_secret_name` | `str` | — | Kubernetes secret with S3 credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_REGION). |
+| `train_data_bucket_name` | `str` | — | S3-compatible bucket containing the tabular data file. |
+| `train_data_file_key` | `str` | — | Key (path) of the data file in the bucket; CSV with feature and label columns. |
+| `label_column` | `str` | — | Target/label column name for model training. Must exist in the dataset. |
+| `task_type` | `str` | — | Task type: `"binary"` or `"multiclass"` (classification), `"regression"` (continuous). |
+| `top_n` | `int` | `3` | Number of top models to select and refit (positive integer). |
 
 ## Outputs 📤
 
 | Output | Type | Description |
-|--------|------|-------------|
-| `leaderboard_evaluation_task.html_artifact` | `dsl.Output[dsl.HTML]` | HTML-formatted leaderboard ranking all refitted models by the evaluation metric (e.g., accuracy for classification, RMSE for regression). Use this artifact to compare model performance and select the best model for deployment. |
-| `refit_full_task.model_artifact` (per top-N model) | `dsl.Output[dsl.Model]` | Refitted AutoGluon TabularPredictor for each of the top N models. Each model is trained on the full dataset, optimized for deployment, and saved with a "_FULL" suffix. There are N such artifacts (one per `top_n`). Use these artifacts to deploy the selected model(s) for inference. |
+| ------ | ---- | ----------- |
+| `leaderboard_evaluation_task.html_artifact` | `dsl.Output[dsl.HTML]` | HTML leaderboard ranking refitted models by eval metric (e.g. accuracy, RMSE). |
+| `refit_full_task.model_artifact` (per top-N) | `dsl.Output[dsl.Model]` | Refitted TabularPredictor per top-N model (full dataset, "_FULL" suffix); N artifacts. |
 
 ### Files stored in user storage
 
 Pipeline outputs are written to the artifact store (S3-compatible storage configured for Kubeflow Pipelines). The layout below matches what components write and what downstream consumers expect when loading the leaderboard or a refitted model.
 
-```
+```text
 <pipeline_name>/
 └── <run_id>/
     ├── leaderboard-evaluation/

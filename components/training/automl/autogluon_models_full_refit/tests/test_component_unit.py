@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-import pandas as pd
 import pytest
 
 from ..component import autogluon_models_full_refit
@@ -19,6 +18,8 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_with_valid_model(self, mock_predictor_class, mock_read_csv):
         """Test full refit with a valid model name."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
@@ -133,6 +134,8 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_handles_refit_failure(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when refit_full fails."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
@@ -164,6 +167,8 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
         """Test that all required operations are called in correct order."""
+        import pandas as pd
+
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
@@ -191,7 +196,8 @@ class TestAutogluonModelsFullRefitUnitTests:
             model_artifact=mock_model_artifact,
         )
 
-        # Verify call order: load -> clone -> delete_models -> refit_full (on clone) -> ... -> evaluate -> feature_importance
+        # Verify call order:
+        # load -> clone -> delete_models -> refit_full (on clone) -> ... -> evaluate -> feature_importance
         assert mock_predictor_class.load.called
         assert mock_predictor.clone.called
         assert mock_predictor_clone.refit_full.called
@@ -210,6 +216,8 @@ class TestAutogluonModelsFullRefitUnitTests:
         self, mock_predictor_class, mock_read_csv, mock_confusion_matrix
     ):
         """Test that confusion matrix is written when problem_type is binary or multiclass."""
+        import pandas as pd
+
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
