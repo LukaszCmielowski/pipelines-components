@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Test Data Loader 📊
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
@@ -16,22 +17,27 @@ AutoRAG pipeline, as the test data is needed for document sampling in subsequent
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `test_data` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the loaded test data as a pandas DataFrame. |
-| `test_data_bucket_name` | `str` | `None` | S3 bucket that contains the test data file. |
-| `test_data_path` | `str` | `None` | S3 object key to the JSON test data file. |
+|Parameter|Type|Default|Description|
+|---------|----|------|-----------|
+|`test_data`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the loaded test data as a pandas DataFrame.|
+|`test_data_bucket_name`|`str`|`None`|S3 bucket that contains the test data file.|
+|`test_data_path`|`str`|`None`|S3 object key to the JSON test data file.|
+
 ### Test Data Reference Structure
+
 To access the test data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
-- `AWS_ACCESS_KEY_ID` – access key used to authenticate with the S3 service
-- `AWS_SECRET_ACCESS_KEY` – secret key used to authenticate with the S3 service
-- `AWS_ENDPOINT_URL` – endpoint URL of the S3 instance
-- `AWS_REGION` – region in which the S3 instance is deployed
+
+| Environment variable name | Description                                         |
+|---------------------------|-----------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`       | access key used to authenticate with the S3 service |
+| `AWS_SECRET_ACCESS_KEY`   | secret key used to authenticate with the S3 service |
+| `AWS_ENDPOINT_URL`        | endpoint URL of the S3 instance                     |
+| `AWS_REGION`              | region in which the S3 instance is deployed         |
 
 ## Outputs 📤
 
-| Output | Type | Description |
-|--------|------|-------------|
+| Output c    | Type           | Description                                          |
+|-------------|----------------|------------------------------------------------------|
 | `test_data` | `dsl.Artifact` | The loaded test data as a pandas DataFrame artifact. |
 
 ## Usage Examples 💡

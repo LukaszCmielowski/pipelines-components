@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Text Extraction 📝
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
@@ -16,17 +17,17 @@ into structured text that can be processed by downstream components.
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `extracted_text` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the extracted text content. |
-| `documents` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing the documents from document-loader. |
+|Parameter|Type|Default|Description|
+|---------|----|------|-----------|
+|`extracted_text`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the extracted text content.|
+|`documents`|`dsl.Input[dsl.Artifact]`|`None`|Input artifact containing the documents from document-loader.|
 
 ## Outputs 📤
 
-| Output | Type | Description |
-|--------|------|-------------|
+| Output           | Type           | Description                                                           |
+|------------------|----------------|-----------------------------------------------------------------------|
 | `extracted_text` | `dsl.Artifact` | The extracted text content artifact ready for chunking and embedding. |
-| Return value | `str` | A message indicating the completion status of text extraction. |
+| Return value     | `str`          | A message indicating the completion status of text extraction.        |
 
 ## Usage Examples 💡
 
