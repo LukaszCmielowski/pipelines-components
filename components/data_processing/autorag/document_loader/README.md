@@ -18,24 +18,20 @@ allowing users to specify data sources through connection IDs.
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `sampled_documents` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the sampled documents. |
-| `input_data_reference` | `dict` | `None` | Dictionary defining document data source. Required keys: `connection_id` (str), `bucket` (str), `path` (str). |
-| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Optional input artifact containing test data for document sampling. |
-| `sampling_config` | `dict` | `None` | Optional dictionary with sampling configuration. |
+| Parameter | Type | Default | Description                                                                                                   |
+|-----------|------|---------|---------------------------------------------------------------------------------------------------------------|
+| `input_data_bucket_name` | `str` | `None` | Name of the S3 bucket containing input data.                                                                  |
+| `input_data_path` | `str` | `None` | Path to folder with input documents within bucket. | 
+| `sampled_documents` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the sampled documents.                                                             |
+| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Optional input artifact containing test data for document sampling.                                           |
+| `sampling_config` | `dict` | `None` | Optional dictionary with sampling configuration.                                                              |
 
-### Input Data Reference Structure
-
-The `input_data_reference` dictionary should contain:
-
-```python
-{
-    "connection_id": "s3-documents-connection",  # RHOAI Connection ID for S3 access
-    "bucket": "my-documents-bucket",              # Bucket name containing the documents
-    "path": "rh_documents/"                       # Path within bucket/filesystem to documents
-}
-```
+### Input data
+To access the input data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
+- `AWS_ACCESS_KEY_ID` – access key used to authenticate with the S3 service
+- `AWS_SECRET_ACCESS_KEY` – secret key used to authenticate with the S3 service
+- `AWS_ENDPOINT_URL` – endpoint URL of the S3 instance
+- `AWS_REGION` – region in which the S3 instance is deployed
 
 ### Sampling Configuration
 
@@ -49,7 +45,6 @@ The `sampling_config` dictionary supports test data driven sampling:
 | Output | Type | Description |
 |--------|------|-------------|
 | `sampled_documents` | `dsl.Artifact` | The sampled documents artifact ready for text extraction. |
-| Return value | `str` | A message indicating the completion status of document loading. |
 
 ## Usage Examples 💡
 
@@ -63,11 +58,8 @@ from kfp_components.components.data_processing.autorag.document_loader import do
 def my_pipeline():
     """Example pipeline demonstrating document loading."""
     load_task = document_loader(
-        input_data_reference={
-            "connection_id": "s3-documents-connection",
-            "bucket": "my-documents-bucket",
-            "path": "rh_documents/"
-        }
+        input_data_bucket_name="s3-documents-bucket",
+        input_data_path="documents-path"
     )
     return load_task
 ```
@@ -79,11 +71,8 @@ def my_pipeline():
 def my_pipeline(test_data):
     """Example pipeline with document sampling."""
     load_task = document_loader(
-        input_data_reference={
-            "connection_id": "s3-documents-connection",
-            "bucket": "my-documents-bucket",
-            "path": "rh_documents/"
-        },
+        input_data_bucket_name="s3-documents-bucket",
+        input_data_path="documents-path",
         test_data=test_data,
         sampling_config={
             "method": "test_data_driven",
