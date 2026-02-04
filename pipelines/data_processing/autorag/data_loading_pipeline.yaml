@@ -5,7 +5,7 @@
 #    input_data_bucket_name: str [Default: 'wnowogorski-test-bucket']
 #    input_data_path: str [Default: '']
 #    sampling_config: dict [Default: {}]
-#    secret_name: str [Default: 'kubeflow-aws-secrets']
+#    secret_name: str [Default: 'wn-s3-secrets']
 #    test_data_bucket_name: str [Default: 'wnowogorski-test-bucket']
 #    test_data_path: str [Default: 'benchmark.json']
 components:
@@ -17,16 +17,25 @@ components:
           artifactType:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
-          description: Optional artifact containing test data for sampling.
+          description: 'dict
+
+            Optional artifact containing test data for sampling.'
           isOptional: true
       parameters:
         input_data_bucket_name:
+          description: 'str
+
+            Name of the S3 bucket containing input data.'
           parameterType: STRING
         input_data_path:
+          description: 'str
+
+            Path to folder with input documents within bucket.'
           parameterType: STRING
         sampling_config:
-          defaultValue: {}
-          description: Optional sampling configuration dictionary.
+          description: 'dict
+
+            Optional sampling configuration dictionary.'
           isOptional: true
           parameterType: STRUCT
     outputDefinitions:
@@ -35,9 +44,6 @@ components:
           artifactType:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
-      parameters:
-        Output:
-          parameterType: STRING
   comp-test-data-loader:
     executorLabel: exec-test-data-loader
     inputDefinitions:
@@ -67,9 +73,6 @@ components:
           artifactType:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
-      parameters:
-        Output:
-          parameterType: STRING
 deploymentSpec:
   executors:
     exec-document-loader:
@@ -84,10 +87,9 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'numpy' 'pandas'\
-          \ 'boto3'  &&  python3 -m pip install --quiet --no-warn-script-location\
-          \ 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
-          3.9\"' && \"$0\" \"$@\"\n"
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -101,46 +103,48 @@ deploymentSpec:
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef document_loader(\n    input_data_bucket_name: str,\n    input_data_path:\
           \ str,\n    test_data: Input[Artifact] = None,\n    sampling_config: dict\
-          \ = {},\n    sampled_documents: Output[Artifact] = None,\n) -> str:\n  \
-          \  \"\"\"Document Loader component.\n\n    Loads documents from S3 and performs\
-          \ sampling.\n\n    Args:\n        input_data_reference: Data source with\
-          \ keys: connection_id, bucket, path.\n        test_data: Optional artifact\
-          \ containing test data for sampling.\n        sampling_config: Optional\
-          \ sampling configuration dictionary.\n        sampled_documents: Output\
-          \ artifact containing sampled documents.\n\n    Returns:\n        Message\
-          \ indicating completion status of document loading.\n    \"\"\"\n    import\
-          \ os\n    import sys\n    import json\n    import logging\n\n    import\
-          \ boto3\n\n\n    SUPPORTED_EXTENSIONS = {\".pdf\", \".docx\", \".pptx\"\
-          , \".md\", \".html\", \".txt\"}\n    MAX_SIZE_BYTES = 1024 ** 3  # 1 GB\n\
-          \n    logger = logging.getLogger(\"Document Loader component logger\")\n\
-          \    logger.setLevel(logging.INFO)\n    if not logger.handlers:\n      \
-          \  handler = logging.StreamHandler(sys.stdout)\n        logger.addHandler(handler)\n\
-          \n    def get_test_data_docs_names(test_data: Input[Artifact]) -> list[str]:\n\
-          \        if test_data is None:\n            return []\n        with open(test_data.path,\
-          \ \"r\") as f:\n            benchmark = json.load(f)\n\n        docs_names\
-          \ = []\n        for question in benchmark:\n            docs_names.extend(question[\"\
-          correct_answer_document_ids\"])\n\n        return docs_names\n\n    def\
-          \ download_docs_s3():\n        access_key = os.environ.get(\"AWS_ACCESS_KEY_ID\"\
-          )\n        secret_key = os.environ.get(\"AWS_SECRET_ACCESS_KEY\")\n    \
-          \    endpoint_url = os.environ.get(\"AWS_ENDPOINT_URL\")\n        region\
-          \ = os.environ.get(\"AWS_REGION\")\n\n        if (access_key and not secret_key)\
-          \ or (secret_key and not access_key):\n            raise ValueError(\n \
-          \               \"S3 credentials misconfigured: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\
-          \ must either \"\n                \"both be set and non-empty, or both be\
-          \ unset. Check the 's3-secret' Kubernetes secret.\"\n            )\n   \
-          \     if not access_key and not secret_key:\n            raise ValueError(\n\
-          \                \"S3 credentials missing: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\
-          \ must be provided via \"\n                \"the 's3-secret' Kubernetes\
-          \ secret when using s3:// dataset URIs.\"\n            )\n\n        s3_client\
-          \ = boto3.client(\n            \"s3\",\n            endpoint_url=endpoint_url,\n\
-          \            region_name=region,\n            aws_access_key_id=access_key,\n\
-          \            aws_secret_access_key=secret_key,\n        )\n\n        contents\
-          \ = s3_client.list_objects_v2(\n            Bucket=input_data_bucket_name,\n\
-          \            Prefix=input_data_path,\n        ).get(\"Contents\", [])\n\n\
-          \        supported_files = [\n            c for c in contents\n        \
-          \    if c[\"Key\"].endswith(tuple(SUPPORTED_EXTENSIONS))\n        ]\n  \
-          \      if not supported_files:\n            raise Exception(\"No supported\
-          \ documents found.\")\n\n        test_data_docs_names = get_test_data_docs_names(test_data)\n\
+          \ = None,\n    sampled_documents: Output[Artifact] = None,\n):\n    \"\"\
+          \"Document Loader component.\n\n    Loads documents from S3 and performs\
+          \ sampling.\n\n    Args:\n        input_data_bucket_name: str\n        \
+          \    Name of the S3 bucket containing input data.\n\n        input_data_path:\
+          \ str\n            Path to folder with input documents within bucket.\n\n\
+          \        test_data: dict\n            Optional artifact containing test\
+          \ data for sampling.\n\n        sampling_config: dict\n            Optional\
+          \ sampling configuration dictionary.\n\n        sampled_documents: Output[Artifact]\n\
+          \            artifact containing downloaded documents.\n    \"\"\"\n   \
+          \ import os\n    import sys\n    import json\n    import logging\n\n   \
+          \ import boto3\n\n\n    SUPPORTED_EXTENSIONS = {\".pdf\", \".docx\", \"\
+          .pptx\", \".md\", \".html\", \".txt\"}\n    MAX_SIZE_BYTES = 1024 ** 3 \
+          \ # 1 GB\n\n    logger = logging.getLogger(\"Document Loader component logger\"\
+          )\n    logger.setLevel(logging.INFO)\n    if not logger.handlers:\n    \
+          \    handler = logging.StreamHandler(sys.stdout)\n        logger.addHandler(handler)\n\
+          \n    if sampling_config is None:\n        sampling_config = {}\n\n    def\
+          \ get_test_data_docs_names(test_data_artifact: Input[Artifact]) -> list[str]:\n\
+          \        if test_data_artifact is None:\n            return []\n       \
+          \ with open(test_data.path, \"r\") as f:\n            benchmark = json.load(f)\n\
+          \n        docs_names = []\n        for question in benchmark:\n        \
+          \    docs_names.extend(question[\"correct_answer_document_ids\"])\n\n  \
+          \      return docs_names\n\n    def download_docs_s3():\n        access_key\
+          \ = os.environ.get(\"AWS_ACCESS_KEY_ID\")\n        secret_key = os.environ.get(\"\
+          AWS_SECRET_ACCESS_KEY\")\n        endpoint_url = os.environ.get(\"AWS_ENDPOINT_URL\"\
+          )\n        region = os.environ.get(\"AWS_REGION\")\n\n        if (access_key\
+          \ and not secret_key) or (secret_key and not access_key):\n            raise\
+          \ ValueError(\n                \"S3 credentials misconfigured: AWS_ACCESS_KEY_ID\
+          \ and AWS_SECRET_ACCESS_KEY must either \"\n                \"both be set\
+          \ and non-empty, or both be unset. Check the 's3-secret' Kubernetes secret.\"\
+          \n            )\n        if not access_key and not secret_key:\n       \
+          \     raise ValueError(\n                \"S3 credentials missing: AWS_ACCESS_KEY_ID\
+          \ and AWS_SECRET_ACCESS_KEY must be provided via \"\n                \"\
+          the 's3-secret' Kubernetes secret when using s3:// dataset URIs.\"\n   \
+          \         )\n\n        s3_client = boto3.client(\n            \"s3\",\n\
+          \            endpoint_url=endpoint_url,\n            region_name=region,\n\
+          \            aws_access_key_id=access_key,\n            aws_secret_access_key=secret_key,\n\
+          \        )\n\n        contents = s3_client.list_objects_v2(\n          \
+          \  Bucket=input_data_bucket_name,\n            Prefix=input_data_path,\n\
+          \        ).get(\"Contents\", [])\n\n        supported_files = [\n      \
+          \      c for c in contents\n            if c[\"Key\"].endswith(tuple(SUPPORTED_EXTENSIONS))\n\
+          \        ]\n        if not supported_files:\n            raise Exception(\"\
+          No supported documents found.\")\n\n        test_data_docs_names = get_test_data_docs_names(test_data)\n\
           \n        supported_files.sort(key=lambda c: c[\"Key\"] not in test_data_docs_names)\n\
           \n        total_size = 0\n        documents_to_download = []\n\n       \
           \ for file in supported_files:\n            if total_size + file[\"Size\"\
@@ -155,7 +159,7 @@ deploymentSpec:
           \                    local_path\n                )\n            except Exception\
           \ as e:\n                logger.error(\"Failed to fetch %s: %s\", key, e)\n\
           \                raise\n\n    download_docs_s3()\n\n"
-        image: python:3.11
+        image: quay.io/wnowogorski-org/autorag_data_loading:latest
     exec-test-data-loader:
       container:
         args:
@@ -168,7 +172,6 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'boto3'  && \
           \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
           \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
           $0\" \"$@\"\n"
@@ -208,8 +211,8 @@ deploymentSpec:
           \ = boto3.client(\n            \"s3\",\n            endpoint_url=endpoint_url,\n\
           \            region_name=region,\n            aws_access_key_id=access_key,\n\
           \            aws_secret_access_key=secret_key,\n        )\n\n        if\
-          \ test_data_path.path.endswith(\".json\"):\n            logger.info(f\"\
-          Fetching test data from S3: bucket={test_data_bucket_name}, path={test_data_path}\"\
+          \ test_data_path.endswith(\".json\"):\n            logger.info(f\"Fetching\
+          \ test data from S3: bucket={test_data_bucket_name}, path={test_data_path}\"\
           )\n            try:\n                logger.info(f\"Starting download to\
           \ {test_data.path}\")\n                s3_client.download_file(\n      \
           \              test_data_bucket_name,\n                    test_data_path,\n\
@@ -219,7 +222,7 @@ deploymentSpec:
           \ e)\n                raise\n        else:\n            logger.error(\"\
           Test data must be a json file: %s\", test_data_path)\n            raise\n\
           \n    get_test_data_s3()\n\n"
-        image: python:3.11
+        image: quay.io/wnowogorski-org/autorag_data_loading:latest
     exec-text-extraction:
       container:
         args:
@@ -247,12 +250,12 @@ deploymentSpec:
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef text_extraction(\n    documents: Input[Artifact],\n    extracted_text:\
-          \ Output[Artifact],\n) -> str:\n    \"\"\"Text Extraction component.\n\n\
-          \    Extracts text from provided documents (PDF, DOCX, PPTX, MD, HTML, TXT)\
-          \ using the docling library.\n\n    Args:\n        documents: Input artifact\
-          \ containing the documents to process.\n        extracted_text: Output artifact\
-          \ where the extracted text content will be stored.\n\n    Returns:\n   \
-          \     A message indicating the completion status and processing statistics.\n\
+          \ Output[Artifact],\n):\n    \"\"\"Text Extraction component.\n\n    Extracts\
+          \ text from provided documents (PDF, DOCX, PPTX, MD, HTML, TXT) using the\
+          \ docling library.\n\n    Args:\n        documents: Input artifact containing\
+          \ the documents to process.\n        extracted_text: Output artifact where\
+          \ the extracted text content will be stored.\n\n    Returns:\n        A\
+          \ message indicating the completion status and processing statistics.\n\
           \    \"\"\"\n    import os\n    import logging\n    import sys\n    from\
           \ pathlib import Path\n    from concurrent.futures import ThreadPoolExecutor\n\
           \n    from docling.document_converter import DocumentConverter, PdfFormatOption\n\
@@ -289,7 +292,7 @@ deploymentSpec:
           \ len(results) - processed_count\n\n    summary = f\"Text extraction completed.\
           \ Total processed: {processed_count}, Errors: {error_count}.\"\n    logger.info(summary)\n\
           \n"
-        image: quay.io/openshift_trial/custom_images:docling
+        image: quay.io/wnowogorski-org/autorag_data_loading:latest
 pipelineInfo:
   description: Pipeline to load test data and documents for AutoRAG.
   name: autorag-data-processing-pipeline
@@ -361,7 +364,7 @@ root:
         isOptional: true
         parameterType: STRUCT
       secret_name:
-        defaultValue: kubeflow-aws-secrets
+        defaultValue: wn-s3-secrets
         isOptional: true
         parameterType: STRING
       test_data_bucket_name:

@@ -50,7 +50,7 @@ if __name__ == "__main__":
     from kfp.compiler import Compiler
     import pathlib
 
-    output_path = pathlib.Path(__file__).with_name("autorag_data_loading_pipeline.yaml")
+    output_path = pathlib.Path(__file__).with_name("data_loading_pipeline.yaml")
     Compiler().compile(
         pipeline_func=autorag_data_loading_pipeline,
         package_path=str(output_path)
