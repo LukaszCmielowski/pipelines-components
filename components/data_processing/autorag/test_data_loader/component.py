@@ -23,9 +23,9 @@ def test_data_loader(test_data_bucket_name: str, test_data_path: str, test_data:
         ValueError: If S3 credentials are missing or misconfigured.
         Exception: If the download fails or the path is not a JSON file.
     """
+    import logging
     import os
     import sys
-    import logging
 
     import boto3
 

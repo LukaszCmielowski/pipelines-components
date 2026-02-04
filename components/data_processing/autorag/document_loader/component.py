@@ -1,13 +1,13 @@
-from kfp.dsl import component, Input, Output, Artifact
+from kfp import dsl
 
 
-@component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
+@dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
 def document_loader(
     input_data_bucket_name: str,
     input_data_path: str,
-    test_data: Input[Artifact] = None,
+    test_data: dsl.Input[dsl.Artifact] = None,
     sampling_config: dict = None,
-    sampled_documents: Output[Artifact] = None,
+    sampled_documents: dsl.Output[dsl.Artifact] = None,
 ):
     """Document Loader component.
 
@@ -29,10 +29,10 @@ def document_loader(
         sampled_documents: Output[Artifact]
             artifact containing downloaded documents.
     """
-    import os
-    import sys
     import json
     import logging
+    import os
+    import sys
 
     import boto3
 
@@ -48,7 +48,7 @@ def document_loader(
     if sampling_config is None:
         sampling_config = {}
 
-    def get_test_data_docs_names(test_data_artifact: Input[Artifact]) -> list[str]:
+    def get_test_data_docs_names(test_data_artifact: dsl.Input[dsl.Artifact]) -> list[str]:
         if test_data_artifact is None:
             return []
         with open(test_data.path, "r") as f:
@@ -124,8 +124,8 @@ def document_loader(
 
 
 if __name__ == "__main__":
+
     from kfp.compiler import Compiler
-    import sys
 
     Compiler().compile(
         document_loader,

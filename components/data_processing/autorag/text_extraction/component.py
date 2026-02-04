@@ -1,10 +1,10 @@
-from kfp.dsl import component, Input, Output, Artifact
+from kfp import dsl
 
 
-@component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
+@dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
 def text_extraction(
-    documents: Input[Artifact],
-    extracted_text: Output[Artifact],
+    documents: dsl.Input[dsl.Artifact],
+    extracted_text: dsl.Output[dsl.Artifact],
 ):
     """Text Extraction component.
 
@@ -17,15 +17,15 @@ def text_extraction(
     Returns:
         A message indicating the completion status and processing statistics.
     """
-    import os
     import logging
+    import os
     import sys
-    from pathlib import Path
     from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
 
-    from docling.document_converter import DocumentConverter, PdfFormatOption
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
 
     logger = logging.getLogger("Text Extraction component logger")
     logger.setLevel(logging.INFO)
