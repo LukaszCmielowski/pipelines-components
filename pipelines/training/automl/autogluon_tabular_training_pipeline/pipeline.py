@@ -21,7 +21,13 @@ from kfp_components.components.training.automl.autogluon_models_selection import
     ),
     pipeline_config=dsl.PipelineConfig(
         workspace=dsl.WorkspaceConfig(
-            size='100Mi', # TODO: change to recommended size
+            size="100Mi",  # TODO: change to recommended size
+            kubernetes=dsl.KubernetesWorkspaceConfig(
+                pvcSpecPatch={
+                    "storageClassName": "gp3-csi",  # or 'gp3', 'fast', etc.
+                    "accessModes": ["ReadWriteOnce"],
+                }
+            ),
         ),
     ),
 )
@@ -155,7 +161,6 @@ def autogluon_tabular_training_pipeline(
         },
     )
 
-
     train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
@@ -171,7 +176,6 @@ def autogluon_tabular_training_pipeline(
 
     # Stage 2: Model Refitting
     # Refit each top model on the full training dataset
-    
 
     with dsl.ParallelFor(items=selection_task.outputs["top_models"], parallelism=2) as model_name:
         refit_full_task = autogluon_models_full_refit(
