@@ -6,6 +6,7 @@ from kfp_components.components.training.automl.autogluon_leaderboard_evaluation 
 from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
 from kfp_components.components.training.automl.autogluon_models_selection import models_selection
 
+from kfp_components.components.deployment.automl.notebook_generation.component import notebook_generation
 
 @dsl.pipeline(
     name="autogluon-tabular-training-pipeline",
@@ -158,8 +159,11 @@ def autogluon_tabular_training_pipeline(
             "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
         },
     )
+    tabular_loader_task.set_caching_options(False)
 
     train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
+    train_test_split_task.set_caching_options(False)
+
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
 
@@ -171,6 +175,7 @@ def autogluon_tabular_training_pipeline(
         top_n=top_n,
         workspace_path=dsl.WORKSPACE_PATH_PLACEHOLDER,
     )
+    selection_task.set_caching_options(False)
 
     # Stage 2: Model Refitting
     # Refit each top model on the full training dataset
@@ -181,12 +186,24 @@ def autogluon_tabular_training_pipeline(
             full_dataset=tabular_loader_task.outputs["full_dataset"],
             predictor_path=selection_task.outputs["predictor_path"],
         )
+        refit_full_task.set_caching_options(False)
+
+        notebook_generation_task = notebook_generation(
+            problem_type=task_type,
+            model_name=refit_full_task.outputs["model_name"],
+            pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
+            run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+        )
+        notebook_generation_task.set_caching_options(False)
+        notebook_generation_task.after(refit_full_task)
+
 
     # Generate leaderboard
     leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
     )
+    leaderboard_evaluation_task.set_caching_options(False)
 
 
 if __name__ == "__main__":
