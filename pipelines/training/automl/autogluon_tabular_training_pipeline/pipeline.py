@@ -98,7 +98,7 @@ def autogluon_tabular_training_pipeline(
 
     Args:
         train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
-            The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_REGION.
+            The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
         train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file.
             The bucket should be accessible using the AWS credentials configured in the
             'train_data_secret_name' Kubernetes secret.
@@ -154,8 +154,8 @@ def autogluon_tabular_training_pipeline(
         secret_key_to_env={
             "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
-            "AWS_ENDPOINT_URL": "AWS_ENDPOINT_URL",
-            "AWS_REGION": "AWS_REGION",
+            "AWS_S3_ENDPOINT": "AWS_S3_ENDPOINT",
+            "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
         },
     )
 

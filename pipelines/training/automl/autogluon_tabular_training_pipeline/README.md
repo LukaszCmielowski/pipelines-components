@@ -56,7 +56,7 @@ better results for tabular data by automatically:
 
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
-| `train_data_secret_name` | `str` | — | Kubernetes secret with S3 credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_REGION). |
+| `train_data_secret_name` | `str` | — | Kubernetes secret with S3 credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION). |
 | `train_data_bucket_name` | `str` | — | S3-compatible bucket containing the tabular data file. |
 | `train_data_file_key` | `str` | — | Key (path) of the data file in the bucket; CSV with feature and label columns. |
 | `label_column` | `str` | — | Target/label column name for model training. Must exist in the dataset. |

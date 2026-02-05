@@ -24,8 +24,8 @@ def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output
     def download_from_s3():
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-        endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-        region_name = os.environ.get("AWS_REGION")
+        endpoint_url = os.environ.get("AWS_S3_ENDPOINT")
+        region_name = os.environ.get("AWS_DEFAULT_REGION")
 
         if (access_key and not secret_key) or (secret_key and not access_key):
             raise ValueError(
