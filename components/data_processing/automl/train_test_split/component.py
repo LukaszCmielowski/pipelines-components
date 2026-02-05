@@ -3,9 +3,8 @@ from kfp import dsl
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["pandas", "scikit-learn"],
 )
-def train_test_split(
+def train_test_split(  # noqa: D417
     # Add your component parameters here
     dataset: dsl.Input[dsl.Dataset],
     sampled_train_dataset: dsl.Output[dsl.Dataset],

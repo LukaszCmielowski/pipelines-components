@@ -1,7 +1,4 @@
 approvers:
-  # TODO: Add your GitHub username here (must be a Kubeflow community member)
-  # - your-github-username
+  - Mateusz-Switala
 reviewers:
-  # TODO: Add reviewers' GitHub usernames here
-  # - reviewer1
-  # - reviewer2
+  - Mateusz-Switala

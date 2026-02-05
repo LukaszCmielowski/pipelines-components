@@ -13,26 +13,28 @@ def leaderboard_evaluation(
 ):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
-    This component aggregates the evaluation results of a list of trained AutoGluon TabularPredictor models
-    and generates a html-formatted leaderboard ranking the models by their performance metrics.
+    This component aggregates evaluation results from a list of Model artifacts
+    (reading pre-computed metrics from JSON) and generates an HTML-formatted
+    leaderboard ranking the models by their performance metrics. Each model
+    artifact is expected to contain metrics at
+    model.path / model.metadata["model_name"] / metrics / metrics.json.
 
     Args:
-        models: A list of Model artifacts containing trained AutoGluon
-            TabularPredictor models to evaluate. Each model should have
-            metadata containing a "model_name" field.
-        eval_metric: The name of the evaluation metric to use for ranking
-            models in the leaderboard. This should match one of the metrics
-            returned by the TabularPredictor's evaluate method (e.g., "accuracy"
-            for classification, "root_mean_squared_error" for regression).
-            The leaderboard will be sorted by this metric in descending order.
-        html_artifact: Output artifact where the html-formatted
-            leaderboard will be written. The leaderboard contains model names
-            and their evaluation metrics.
+        models: A list of Model artifacts. Each should have metadata containing
+            a "model_name" field and metrics file at
+            model.path / model_name / metrics / metrics.json.
+        eval_metric: The name of the evaluation metric to use for ranking.
+            Must match a key in the metrics JSON (e.g., "accuracy" for
+            classification, "root_mean_squared_error" for regression).
+            The leaderboard is sorted by this metric in descending order.
+        html_artifact: Output artifact where the HTML-formatted leaderboard
+            will be written. The leaderboard contains model names and their
+            evaluation metrics.
 
     Raises:
-        FileNotFoundError: If any model path or dataset path cannot be found.
-        ValueError: If a model cannot be loaded or evaluated successfully.
-        KeyError: If model metadata does not contain the required "model_name" field.
+        FileNotFoundError: If any model metrics path cannot be found.
+        KeyError: If model metadata does not contain "model_name" or the
+            metrics JSON does not contain the eval_metric key.
 
     Example:
         from kfp import dsl
@@ -41,7 +43,7 @@ def leaderboard_evaluation(
         )
 
         @dsl.pipeline(name="model-evaluation-pipeline")
-        def evaluation_pipeline(trained_models, test_data):
+        def evaluation_pipeline(trained_models):
             leaderboard = leaderboard_evaluation(
                 models=trained_models,
                 eval_metric="root_mean_squared_error",
