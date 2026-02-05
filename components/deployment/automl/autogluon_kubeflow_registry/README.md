@@ -146,7 +146,7 @@ AutoGluon keeps all models trained under the hood but uses the best one by defau
 
 ## Metadata 🗂️
 
-- **Name**: model-registry
+- **Name**: autogluon-kubeflow-registry
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:

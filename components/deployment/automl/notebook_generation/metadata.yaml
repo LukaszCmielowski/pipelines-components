@@ -1,20 +1,17 @@
 ---
-name: autogluon_tabular_training_pipeline
-stability: alpha  # New pipeline without proven track record
+name: notebook_generation
+stability: alpha  # New component without proven track record
 dependencies:
   kubeflow:
     - name: Pipelines
       version: '>=2.15.2'
-    - name: Kubernetes
-      version: ">=1.28.0"
-  # external_services:  # Add if pipeline uses external services
+  # external_services:  # Add if component uses external services
   #   - name: Example Service
   #     version: ">=1.0.0"
 tags:
-  - training
-  - pipeline
+  - deployment
   # Add more relevant tags here
-lastVerified: 2026-01-22T11:44:56Z
+lastVerified: 2026-02-03T00:00:00Z
 # links:  # Add relevant links
 #   documentation: https://your-docs-url.com
 #   issue_tracker: https://github.com/kubeflow/pipelines-components/issues

@@ -17,15 +17,15 @@ This component supports multiple task types (classification, regression, time-se
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| --------- | ---- | ------- | ----------- |
 | `train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the full training data. |
 | `test_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the test data. |
-| `sampled_train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the sampled training data for initial model building. |
-| `tabular_data` | `dsl.Input[dsl.Dataset]` | `None` | Input dataset artifact containing the raw tabular data from data-loader. |
-| `task_type` | `str` | `None` | Type of ML task. Required: `"classification"`, `"regression"`, or `"time_series"`. |
-| `label_column` | `str` | `None` | Name of the label/target column in the dataset. Required. |
-| `sampling_config` | `dict` | `None` | Optional dictionary with sampling configuration. See [Sampling Configuration](#sampling-configuration) below. |
-| `split_config` | `dict` | `None` | Optional dictionary with train/test split configuration. See [Split Configuration](#split-configuration) below. |
+| `sampled_train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset with sampled training data for initial model building. |
+| `tabular_data` | `dsl.Input[dsl.Dataset]` | `None` | Input dataset artifact (raw tabular data from data-loader). |
+| `task_type` | `str` | `None` | ML task type: `"classification"`, `"regression"`, or `"time_series"`. |
+| `label_column` | `str` | `None` | Name of the label/target column. Required. |
+| `sampling_config` | `dict` | `None` | Optional sampling config; see [Sampling Configuration](#sampling-configuration). |
+| `split_config` | `dict` | `None` | Optional train/test split config; see [Split Configuration](#split-configuration). |
 
 ### Sampling Configuration
 
@@ -67,11 +67,11 @@ For time-series tasks:
 ## Outputs 📤
 
 | Output | Type | Description |
-|--------|------|-------------|
-| `train_data` | `dsl.Dataset` | The full training dataset artifact. |
-| `test_data` | `dsl.Dataset` | The test dataset artifact. |
-| `sampled_train_data` | `dsl.Dataset` | The sampled training dataset (default: 500 samples) for initial model building. |
-| Return value | `str` | A message indicating the completion status of data splitting. |
+| ------ | ---- | ----------- |
+| `train_data` | `dsl.Dataset` | Full training dataset artifact. |
+| `test_data` | `dsl.Dataset` | Test dataset artifact. |
+| `sampled_train_data` | `dsl.Dataset` | Sampled training dataset (default: 500 samples) for initial model building. |
+| Return value | `str` | Message indicating the completion status of data splitting. |
 
 ## Usage Examples 💡
 

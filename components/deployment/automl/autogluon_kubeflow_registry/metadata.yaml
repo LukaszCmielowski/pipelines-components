@@ -1,5 +1,5 @@
 ---
-name: autogluon_mlflow_registry
+name: autogluon_kubeflow_registry
 stability: alpha  # New component without proven track record
 dependencies:
   kubeflow:

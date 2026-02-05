@@ -3,16 +3,10 @@ from kfp import dsl
 
 @dsl.component(
     base_image="python:3.12",
-    packages_to_install=["numpy", "pandas", "boto3", "scikit-learn"],
+    packages_to_install=["numpy", "pandas", "boto3"],
 )
-def automl_data_loader(
-    file_key: str,
-    bucket_name: str,
-    target_column: str,
-    full_dataset: dsl.Output[dsl.Dataset],
-    sampling_type: str = "first_n_rows",
-):
-    """AutoML Data Loader component.
+def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):
+    """Automl Data Loader component.
 
     Loads tabular (CSV) data from S3 in batches, sampling up to 1GB of data.
     The component reads data in chunks to efficiently handle large files without

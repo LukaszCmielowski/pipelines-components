@@ -16,11 +16,11 @@ This component integrates with RHOAI Connections API for accessing data from S3 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| --------- | ---- | ------- | ----------- |
 | `tabular_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the loaded training data. |
-| `input_data_reference` | `dict` | `None` | Dictionary defining tabular data source. Required keys: `connection_id` (str), `bucket` (str), `path` (str). Optional: `format` (str, default: inferred from path). |
+| `input_data_reference` | `dict` | `None` | Dict with `connection_id`, `bucket`, `path`; optional `format`. |
 | `test_data` | `dsl.Output[dsl.Dataset]` | `None` | Optional output dataset artifact for test data. |
-| `test_data_reference` | `dict` | `None` | Optional dictionary defining test data source. Same structure as `input_data_reference`. |
+| `test_data_reference` | `dict` | `None` | Optional dict defining test data source; same structure as `input_data_reference`. |
 
 ### Input Data Reference Structure
 
@@ -47,10 +47,10 @@ For local filesystem:
 ## Outputs 📤
 
 | Output | Type | Description |
-|--------|------|-------------|
-| `tabular_data` | `dsl.Dataset` | The loaded training dataset artifact. Contains the data file and metadata. |
+| ------ | ---- | ----------- |
+| `tabular_data` | `dsl.Dataset` | Loaded training dataset artifact (data file and metadata). |
 | `test_data` | `dsl.Dataset` | Optional test dataset artifact if `test_data_reference` is provided. |
-| Return value | `str` | A message indicating the completion status of data loading. |
+| Return value | `str` | Message indicating the completion status of data loading. |
 
 ## Usage Examples 💡
 
