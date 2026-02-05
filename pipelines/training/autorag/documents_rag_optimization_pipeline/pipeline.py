@@ -2,24 +2,34 @@ from typing import Dict, List, Optional
 
 from kfp import dsl
 
+# from pipelines.data_processing.autorag.data_loading_pipeline import data_loading_pipeline
+from components.data_processing.autorag.document_loader import document_loader
+from components.data_processing.autorag.test_data_loader import test_data_loader
+from components.data_processing.autorag.text_extraction import text_extraction
+from components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
+from components.training.autorag.search_space_preparation.component import search_space_preparation
+
 
 @dsl.pipeline(
     name="documents-rag-optimization-pipeline",
     description="Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications",
 )
 def documents_rag_optimization_pipeline(
-    name: str,
-    input_data_reference: Dict,
-    test_data_reference: Dict,
-    results_reference: Dict,
-    description: Optional[str] = None,
+    # extracted_text: dsl.InputPath(dsl.Artifact),
+    # test_data: dsl.InputPath(dsl.Artifact),
+    secret_name: str = "kubeflow-aws-secrets",
+    test_data_bucket_name: str = "wnowogorski-test-bucket",
+    test_data_path: str = "benchmark.json",
+    input_data_bucket_name: str = "wnowogorski-test-bucket",
+    input_data_path: str = "",
+    sampling_config: dict = {},
     vector_database_id: Optional[str] = None,
-    mlflow_config: Optional[Dict] = None,
-    optimization: Optional[Dict] = None,
-    chunking_constraints: Optional[List[Dict]] = None,
-    embeddings_constraints: Optional[List[Dict]] = None,
-    generation_constraints: Optional[List[Dict]] = None,
-    retrieval_constraints: Optional[List[Dict]] = None,
+    mlflow_config: Optional[dict] = None,
+    optimization: Optional[dict] = None,
+    chunking_constraints: Optional[list[dict]] = None,
+    embeddings_constraints: Optional[list[dict]] = None,
+    generation_constraints: Optional[list[dict]] = None,
+    retrieval_constraints: Optional[list[dict]] = None,
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
@@ -61,7 +71,33 @@ def documents_rag_optimization_pipeline(
             configurations. Each dictionary contains: method (str), number_of_chunks (int),
             optional hybrid_ranker (dict).
     """
-    # TODO: Implement your pipeline logic here
+
+    test_data_loader_task = test_data_loader(
+        test_data_bucket_name=test_data_bucket_name,
+        test_data_path=test_data_path,
+    )
+
+    document_loader_task = document_loader(
+        input_data_bucket_name=input_data_bucket_name,
+        input_data_path=input_data_path,
+        test_data=test_data_loader_task.outputs["test_data"],
+        sampling_config=sampling_config,
+    )
+
+    text_extraction_task = text_extraction(documents=document_loader_task.outputs["sampled_documents"])
+
+    mps_task = search_space_preparation(
+        test_data=test_data_loader_task.outputs["test_data"],
+        extracted_text=text_extraction_task.outputs["extracted_text"],
+        constraints=constraints,
+    )
+
+    hpo_task = rag_templates_optimization(
+        extracted_text=text_extraction_task.outputs["extracted_text"],
+        test_data=test_data_loader_task.outputs["test_data"],
+        search_space_prep_report=mps_task.outputs["search_space_prep_report"],
+        vector_database_id="milvus",
+    )
 
 
 if __name__ == "__main__":
