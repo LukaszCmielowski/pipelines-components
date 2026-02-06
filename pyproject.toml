@@ -23,7 +23,9 @@ lint = [
     "yamllint==1.38.0",
 ]
 test = [
+    "boto3",
     "docker",
+    "pandas",
     "pytest",
     "pytest-cov",
     "pytest-timeout",

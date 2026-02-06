@@ -1,3 +1,5 @@
+from typing import Optional
+
 from kfp import dsl
 
 
@@ -5,7 +7,13 @@ from kfp import dsl
     base_image="python:3.12",
     packages_to_install=["numpy", "pandas", "boto3"],
 )
-def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):
+def automl_data_loader(
+    file_key: str,
+    bucket_name: str,
+    full_dataset: dsl.Output[dsl.Dataset],
+    sampling_type: str = "first_n_rows",
+    target_column: Optional[str] = None,
+):
     """Automl Data Loader component.
 
     Loads tabular (CSV) data from S3 in batches, sampling up to 1GB of data.
@@ -38,7 +46,7 @@ def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         endpoint_url = os.environ.get("AWS_S3_ENDPOINT")
-        region_name = os.environ.get("AWS_DEFAULT_REGION")
+        # region_name = os.environ.get("AWS_DEFAULT_REGION")
 
         if (access_key and not secret_key) or (secret_key and not access_key):
             raise ValueError(
@@ -54,7 +62,7 @@ def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output
         return boto3.client(
             "s3",
             endpoint_url=endpoint_url,
-            region_name=region_name,
+            # region_name=region_name,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
