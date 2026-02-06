@@ -23,7 +23,7 @@ from kfp_components.components.training.automl.autogluon_models_selection import
             size="100Mi",  # TODO: change to recommended size
             kubernetes=dsl.KubernetesWorkspaceConfig(
                 pvcSpecPatch={
-                    "storageClassName": "local-path",  # "gp3-csi",  # or 'gp3', 'fast', etc.
+                    "storageClassName": "gp3-csi",  # or 'gp3', 'fast', etc.
                     "accessModes": ["ReadWriteOnce"],
                 }
             ),
