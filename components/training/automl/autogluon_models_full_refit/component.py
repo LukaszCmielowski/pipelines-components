@@ -8,10 +8,8 @@ from kfp import dsl
     packages_to_install=["autogluon.tabular[all]==1.5.0"],
 )
 def autogluon_models_full_refit(
-    # Add your component parameters here
     model_name: str,
     full_dataset: dsl.Input[dsl.Dataset],
-    # predictor_artifact: dsl.Input[dsl.Model],
     predictor_path: str,
     model_artifact: dsl.Output[dsl.Model],
 ) -> NamedTuple("outputs", model_name=str):
