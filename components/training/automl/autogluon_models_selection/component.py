@@ -6,7 +6,6 @@ from kfp import dsl
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=["autogluon.tabular[all]==1.5.0"],
-    # base_image="localhost:5000/autogluon-py312:v3",
 )
 def models_selection(
     label_column: str,
@@ -113,7 +112,7 @@ def models_selection(
         verbosity=2,
     ).fit(
         train_data=train_data_df,
-        num_stack_levels=3,
+        num_stack_levels=2,  # TODO: cdiscuss optimal value
         num_bag_folds=2,
         use_bag_holdout=True,
     )

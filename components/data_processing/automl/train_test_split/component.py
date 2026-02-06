@@ -1,10 +1,10 @@
+from typing import Dict, NamedTuple
+
 from kfp import dsl
 
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    # base_image="localhost:5000/autogluon-py312:v3",
-    # packages_to_install=["pandas", "scikit-learn"],
 )
 def train_test_split(  # noqa: D417
     # Add your component parameters here
@@ -14,7 +14,7 @@ def train_test_split(  # noqa: D417
     test_size: float = 0.3,
     # Add your output artifacts here
     # output_artifact: dsl.Output[dsl.Artifact]
-):  # Specify your return type
+) -> NamedTuple("outputs", sample_row=str):
     """Train Test Split component.
 
     TODO: Add a detailed description of what this component does.
@@ -26,6 +26,8 @@ def train_test_split(  # noqa: D417
     Returns:
         Description of what the component returns.
     """
+    import json
+
     import pandas as pd
 
     # Split the data
@@ -35,7 +37,10 @@ def train_test_split(  # noqa: D417
 
     X_train.to_csv(sampled_train_dataset.path, index=False)
     X_test.to_csv(sampled_test_dataset.path, index=False)
-    # TODO: Implement your component logic here
+
+    # Dumps to json string to avoid NaN in the output Dict
+    sample_row = json.dumps(X_test.head(1).to_dict())
+    return NamedTuple("outputs", sample_row=Dict)(sample_row=sample_row)
 
 
 if __name__ == "__main__":

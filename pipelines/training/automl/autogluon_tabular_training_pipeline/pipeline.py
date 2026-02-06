@@ -2,11 +2,11 @@ from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
 from kfp_components.components.data_processing.automl.train_test_split import train_test_split
+from kfp_components.components.deployment.automl.notebook_generation.component import notebook_generation
 from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
 from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
 from kfp_components.components.training.automl.autogluon_models_selection import models_selection
 
-from kfp_components.components.deployment.automl.notebook_generation.component import notebook_generation
 
 @dsl.pipeline(
     name="autogluon-tabular-training-pipeline",
@@ -99,7 +99,8 @@ def autogluon_tabular_training_pipeline(
 
     Args:
         train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
-            The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
+            The following keys are required:
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
         train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file.
             The bucket should be accessible using the AWS credentials configured in the
             'train_data_secret_name' Kubernetes secret.
@@ -175,7 +176,6 @@ def autogluon_tabular_training_pipeline(
         top_n=top_n,
         workspace_path=dsl.WORKSPACE_PATH_PLACEHOLDER,
     )
-    selection_task.set_caching_options(False)
 
     # Stage 2: Model Refitting
     # Refit each top model on the full training dataset
@@ -186,24 +186,23 @@ def autogluon_tabular_training_pipeline(
             full_dataset=tabular_loader_task.outputs["full_dataset"],
             predictor_path=selection_task.outputs["predictor_path"],
         )
-        refit_full_task.set_caching_options(False)
-
-        notebook_generation_task = notebook_generation(
-            problem_type=task_type,
-            model_name=refit_full_task.outputs["model_name"],
-            pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
-            run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
-        )
-        notebook_generation_task.set_caching_options(False)
-        notebook_generation_task.after(refit_full_task)
-
 
     # Generate leaderboard
-    leaderboard_evaluation(
+    leaderboard_evaluation_task = leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
     )
     leaderboard_evaluation_task.set_caching_options(False)
+
+    notebook_generation_task = notebook_generation(
+        problem_type=task_type,
+        model_name=leaderboard_evaluation_task.outputs["best_model"],
+        pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
+        run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+        sample_row=train_test_split_task.outputs["sample_row"],
+        label_column=label_column,
+    )
+    notebook_generation_task.set_caching_options(False)
 
 
 if __name__ == "__main__":

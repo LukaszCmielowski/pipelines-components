@@ -1,12 +1,11 @@
 from typing import NamedTuple
+
 from kfp import dsl
 
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=["autogluon.tabular[all]==1.5.0"],
-    # base_image="localhost:5000/autogluon-py312:v3",
-    packages_to_install=["autogluon==1.5.0"],
 )
 def autogluon_models_full_refit(
     # Add your component parameters here
