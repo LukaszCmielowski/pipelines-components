@@ -23,7 +23,7 @@ from kfp_components.components.training.automl.autogluon_models_selection import
             size="100Mi",  # TODO: change to recommended size
             kubernetes=dsl.KubernetesWorkspaceConfig(
                 pvcSpecPatch={
-                    "storageClassName": "gp3-csi",  # or 'gp3', 'fast', etc.
+                    "storageClassName": "local-path",  # "gp3-csi",  # or 'gp3', 'fast', etc.
                     "accessModes": ["ReadWriteOnce"],
                 }
             ),
@@ -160,10 +160,8 @@ def autogluon_tabular_training_pipeline(
             "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
         },
     )
-    tabular_loader_task.set_caching_options(False)
 
     train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
-    train_test_split_task.set_caching_options(False)
 
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
@@ -192,9 +190,8 @@ def autogluon_tabular_training_pipeline(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
     )
-    leaderboard_evaluation_task.set_caching_options(False)
 
-    notebook_generation_task = notebook_generation(
+    _ = notebook_generation(
         problem_type=task_type,
         model_name=leaderboard_evaluation_task.outputs["best_model"],
         pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
@@ -202,7 +199,6 @@ def autogluon_tabular_training_pipeline(
         sample_row=train_test_split_task.outputs["sample_row"],
         label_column=label_column,
     )
-    notebook_generation_task.set_caching_options(False)
 
 
 if __name__ == "__main__":

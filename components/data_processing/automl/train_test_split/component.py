@@ -4,7 +4,8 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    # base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="localhost:5000/autogluon-py312:v3",
 )
 def train_test_split(  # noqa: D417
     # Add your component parameters here
@@ -26,8 +27,6 @@ def train_test_split(  # noqa: D417
     Returns:
         Description of what the component returns.
     """
-    import json
-
     import pandas as pd
 
     # Split the data
@@ -39,7 +38,7 @@ def train_test_split(  # noqa: D417
     X_test.to_csv(sampled_test_dataset.path, index=False)
 
     # Dumps to json string to avoid NaN in the output Dict
-    sample_row = json.dumps(X_test.head(1).to_dict())
+    sample_row = X_test.head(1).to_json()
     return NamedTuple("outputs", sample_row=Dict)(sample_row=sample_row)
 
 

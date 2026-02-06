@@ -427,7 +427,7 @@ def notebook_generation(
                 "id": "fa7f736d-0b5c-4988-87a5-4d1a5cde0873",
                 "metadata": {},
                 "outputs": [],
-                "source": ['pipeline_name = "<PIPELINE_NAMNE>"\n', 'run_id = "<RUN_ID>"'],
+                "source": ['pipeline_name = "<PIPELINE_NAME>"\n', 'run_id = "<RUN_ID>"'],
             },
             {
                 "cell_type": "markdown",
@@ -679,7 +679,7 @@ def notebook_generation(
     sample_row.pop(label_column, None)
     sample_row_idx = 20 + int((problem_type in {"binary", "multiclass"}))
     notebook["cells"][sample_row_idx]["source"][2] = notebook["cells"][sample_row_idx]["source"][2].replace(
-        "<SAMPLE_ROW>", json.dumps(sample_row, indent=2)
+        "<SAMPLE_ROW>", str(sample_row)
     )
     path = Path(notebook_artifact.path)
     path.mkdir(parents=True, exist_ok=True)
