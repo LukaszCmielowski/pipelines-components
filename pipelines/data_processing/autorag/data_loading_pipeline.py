@@ -9,29 +9,35 @@ from kfp_components.components.data_processing.autorag.text_extraction.component
     name="AutoRAG Data Processing Pipeline", description="Pipeline to load test data and documents for AutoRAG."
 )
 def data_loading_pipeline(
-    secret_name: str,
+    test_data_secret_name: str,
+    input_data_secret_name: str,
     test_data_bucket_name: str,
-    test_data_path: str,
+    test_data_key: str,
     input_data_bucket_name: str,
-    input_data_path: str,
+    input_data_key: str,
     sampling_config: dict,
 ):
     """Defines a pipeline to load and sample input data for AutoRAG.
 
     Args:
-        secret_name : str
-            The name of the secret to fetch the environment variables with S3 credentials from.
+        test_data_secret_name : str
+            Name of the secret containing environment variables with S3 credentials
+            used to access the test data.
+
+        input_data_secret_name : str
+            Name of the secret containing environment variables with S3 credentials
+            used to access the input data.
 
         test_data_bucket_name : str
             S3 bucket that contains the test data file.
 
-        test_data_path : str
+        test_data_key : str
             S3 object key to the JSON test data file.
 
         input_data_bucket_name : str
             Name of the S3 bucket containing input data.
 
-        input_data_path : str
+        input_data_key : str
             Path to folder with input documents within bucket.
 
         sampling_config : dict
@@ -39,19 +45,20 @@ def data_loading_pipeline(
     """
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,
-        test_data_path=test_data_path,
+        test_data_path=test_data_key,
     )
 
     document_loader_task = document_loader(
         input_data_bucket_name=input_data_bucket_name,
-        input_data_path=input_data_path,
+        input_data_path=input_data_key,
         test_data=test_data_loader_task.outputs["test_data"],
         sampling_config=sampling_config,
     )
 
-    text_extraction_task = text_extraction(documents=document_loader_task.outputs["sampled_documents"])
-
-    for task in [test_data_loader_task, document_loader_task, text_extraction_task]:
+    for task, secret_name in zip(
+        [test_data_loader_task, document_loader_task],
+        [test_data_secret_name, input_data_secret_name],
+    ):
         use_secret_as_env(
             task,
             secret_name=secret_name,
@@ -62,6 +69,8 @@ def data_loading_pipeline(
                 "aws_region_name": "AWS_REGION",
             },
         )
+
+    text_extraction(documents=document_loader_task.outputs["sampled_documents"])
 
 
 if __name__ == "__main__":

@@ -37,28 +37,26 @@ def test_data_loader(test_data_bucket_name: str, test_data_path: str, test_data:
 
     def get_test_data_s3():
         """Validate S3 credentials and download the JSON test data file."""
-        access_key = os.environ.get("AWS_ACCESS_KEY_ID")
-        secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-        endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-        region = os.environ.get("AWS_REGION")
-
-        if (access_key and not secret_key) or (secret_key and not access_key):
-            raise ValueError(
-                "S3 credentials misconfigured: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must either "
-                "both be set and non-empty, or both be unset. Check the 's3-secret' Kubernetes secret."
-            )
-        if not access_key and not secret_key:
-            raise ValueError(
-                "S3 credentials missing: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be provided via "
-                "the 's3-secret' Kubernetes secret when using s3:// dataset URIs."
-            )
+        s3_creds = {
+            k: os.environ.get(k) for k in [
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_ENDPOINT_URL",
+                "AWS_REGION"
+            ]
+        }
+        for k, v in s3_creds.items():
+            if v is None:
+                raise ValueError(
+                    "%s environment variable not set. Check if kubernetes secret was configured properly" % k
+                )
 
         s3_client = boto3.client(
             "s3",
-            endpoint_url=endpoint_url,
-            region_name=region,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
+            endpoint_url=s3_creds["AWS_ENDPOINT_URL"],
+            region_name=s3_creds["AWS_REGION"],
+            aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
         )
 
         if test_data_path.endswith(".json"):

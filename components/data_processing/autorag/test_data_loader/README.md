@@ -17,11 +17,11 @@ AutoRAG pipeline, as the test data is needed for document sampling in subsequent
 
 ## Inputs 📥
 
-|Parameter|Type|Default|Description|
-|---------|----|------|-----------|
-|`test_data`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the loaded test data as a pandas DataFrame.|
-|`test_data_bucket_name`|`str`|`None`|S3 bucket that contains the test data file.|
-|`test_data_path`|`str`|`None`|S3 object key to the JSON test data file.|
+|Parameter|Type| Default   |Description|
+|---------|----|-----------|-----------|
+|`test_data`|`dsl.Output[dsl.Artifact]`| `None`    |Output artifact containing the loaded test data as a pandas DataFrame.|
+|`test_data_bucket_name`|`str`| Mandatory |S3 bucket that contains the test data file.|
+|`test_data_path`|`str`| Mandatory |S3 object key to the JSON test data file.|
 
 ### Test Data Reference Structure
 
