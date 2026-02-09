@@ -1,6 +1,9 @@
 
 
-FROM redhat/ubi10-minimal:10.1@sha256:2910fd7720d45c3cabc708c71a6ff6b98695e1d814b71547c9324c97a728ebef
+FROM --platform=$BUILDPLATFORM redhat/ubi10-minimal:10.1@sha256:a74a7a92d3069bfac09c6882087771fc7db59fa9d8e16f14f4e012fe7288554c
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 RUN microdnf -y install \
   python3 \
