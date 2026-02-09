@@ -19,7 +19,10 @@ from components.training.autorag.rag_templates_optimization.src.utils import loa
 from components.training.autorag.search_space_preparation.proxy_objects import DisconnectedModelsPreSelector
 
 
-@dsl.component(base_image="quay.io/fkomarzy/sandbox_public/rag_base:1.0b1amd64")
+@dsl.component(
+    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    packages_to_install=["ai4rag", "langchain_core"],
+)
 def search_space_preparation(
     test_data: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Input[dsl.Artifact],
@@ -78,9 +81,9 @@ def search_space_preparation(
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
     from kfp import dsl
     from langchain_core.documents import Document
-    from proxy_objects import DisconnectedModelsPreSelector
-    from utils import load_as_langchain_doc
 
+    # from proxy_objects import DisconnectedModelsPreSelector
+    # from utils import load_as_langchain_doc
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
     TOP_N_GENERATION_MODELS = 3  # change names (topNmodels? )
@@ -88,6 +91,39 @@ def search_space_preparation(
     METRIC = "faithfulness"
     SAMPLE_SIZE = 5
     SEED = 17
+
+    class DisconnectedModelsPreSelector(ModelsPreSelector):
+
+        def __init__(self, mps: ModelsPreSelector) -> None:
+            self.mps: ModelsPreSelector = mps
+            self.metric = mps.metric
+
+        def evaluate_patterns(self):
+
+            self.evaluation_results = [
+                {
+                    "embedding_model": "granite_emb1",
+                    "foundation_model": "mistral1",
+                    "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
+                    "question_scores": {
+                        "faithfulnesss": {
+                            "q_id_0": 0.5,
+                            "q_id_1": 0.8,
+                        }
+                    },
+                },
+                {
+                    "embedding_model": "granite_emb2",
+                    "foundation_model": "mistral2",
+                    "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
+                    "question_scores": {
+                        "faithfulnesss": {
+                            "q_id_0": 0.5,
+                            "q_id_1": 0.8,
+                        }
+                    },
+                },
+            ]
 
     class MockGenerationModel(FoundationModel):
 

@@ -21,7 +21,10 @@ from components.training.autorag.rag_templates_optimization.src.utils import (
 )
 
 
-@dsl.component(base_image="quay.io/fkomarzy/sandbox_public/rag_base:1.0b1amd64")
+@dsl.component(
+    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    packages_to_install=["ai4rag", "pyyaml", "langchain_core"],
+)
 def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
@@ -76,12 +79,24 @@ def rag_templates_optimization(
     from ai4rag.rag.foundation_models.base_model import FoundationModel
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
-    from event_handlers import TmpEventHandler
+    from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
+
+    # from event_handlers import TmpEventHandler
     from langchain_core.documents import Document
-    from proxy_objects import DisconnectedAI4RAGExperiment, StdoutEventHandler
+
+    # from proxy_objects import DisconnectedAI4RAGExperiment, StdoutEventHandler
 
     MAX_NUMBER_OF_RAG_PATTERNS = 8
     METRIC = "faithfulness"
+
+    class TmpEventHandler(BaseEventHandler):
+        """Exists temporarily only for the purpose of satisying type hinting checks"""
+
+        def on_status_change(self, level: LogLevel, message: str, step: str | None = None) -> None:
+            pass
+
+        def on_pattern_creation(self, payload: dict, evaluation_results: list, **kwargs) -> None:
+            pass
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
         """
@@ -187,7 +202,8 @@ def rag_templates_optimization(
     )
 
     if not client_connection:
-        rag_exp = DisconnectedAI4RAGExperiment(rag_exp)
+        pass
+        # rag_exp = DisconnectedAI4RAGExperiment(rag_exp)
 
     # retrieve documents && run optimisation loop
     best_pattern = rag_exp.search()

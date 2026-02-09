@@ -1,7 +1,10 @@
 from kfp import dsl
 
 
-@dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
+@dsl.component(
+    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    packages_to_install=["docling[ort]"],
+)
 def text_extraction(
     documents: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Output[dsl.Artifact],

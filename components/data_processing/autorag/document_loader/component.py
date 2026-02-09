@@ -1,7 +1,10 @@
 from kfp import dsl
 
 
-@dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
+@dsl.component(
+    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    packages_to_install=["boto3"],
+)
 def document_loader(
     input_data_bucket_name: str,
     input_data_path: str,
