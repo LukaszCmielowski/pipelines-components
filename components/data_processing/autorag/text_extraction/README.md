@@ -17,10 +17,10 @@ into structured text that can be processed by downstream components.
 
 ## Inputs 📥
 
-|Parameter|Type|Default|Description|
-|---------|----|------|-----------|
-|`extracted_text`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the extracted text content.|
-|`documents`|`dsl.Input[dsl.Artifact]`|`None`|Input artifact containing the documents from document-loader.|
+| Parameter        | Type                       | Default  | Description                                                   |
+|------------------|----------------------------|----------|---------------------------------------------------------------|
+| `extracted_text` | `dsl.Output[dsl.Artifact]` | `None`   | Output artifact containing the extracted text content.        |
+| `documents`      | `dsl.Input[dsl.Artifact]`  | `None`   | Input artifact containing the documents from document-loader. |
 
 ## Outputs 📤
 
