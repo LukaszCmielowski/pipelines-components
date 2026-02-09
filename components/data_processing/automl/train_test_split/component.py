@@ -36,8 +36,9 @@ def train_test_split(  # noqa: D417
     X_train.to_csv(sampled_train_dataset.path, index=False)
     X_test.to_csv(sampled_test_dataset.path, index=False)
 
-    # Dumps to json string to avoid NaN in the output Dict
-    sample_row = X_test.head(1).to_json()
+    # Dumps to json string to avoid NaN in the output json
+    # Format: '[{"col1": "val1","col2":"val2"},{"col1":"val3","col2":"val4"}]'
+    sample_row = X_test.head(1).to_json(orient="records")
     return NamedTuple("outputs", sample_row=Dict)(sample_row=sample_row)
 
 

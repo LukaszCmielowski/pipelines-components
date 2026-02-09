@@ -44,6 +44,7 @@ def notebook_generation(
         sample_row: JSON string of a single row (object of feature names to
             values), used in the notebook's prediction example. The component
             parses it, removes the label column, and injects the result.
+            Expected format: '[{"col1": "val1","col2":"val2"},{"col1":"val3","col2":"val4"}]'
         label_column: Key in the parsed sample_row for the target/label column;
             this column is omitted from the sample row in the notebook.
 
@@ -766,7 +767,8 @@ def notebook_generation(
     notebook["cells"][10]["source"][0] = notebook["cells"][10]["source"][0].replace("<MODEL_NAME>", model_name)
 
     sample_row = json.loads(sample_row)
-    sample_row.pop(label_column, None)
+    sample_row = [{col: value for col, value in row.items() if col != label_column} for row in sample_row]
+
     sample_row_idx = 20 + int((problem_type in {"binary", "multiclass"}))
     notebook["cells"][sample_row_idx]["source"][2] = notebook["cells"][sample_row_idx]["source"][2].replace(
         "<SAMPLE_ROW>", str(sample_row)

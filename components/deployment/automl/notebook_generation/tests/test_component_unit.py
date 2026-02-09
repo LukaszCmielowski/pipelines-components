@@ -22,7 +22,7 @@ def _run_component(tmpdir, problem_type="regression", **kwargs):
         "notebook_artifact": mock_artifact,
         "pipeline_name": "pipeline-foo",
         "run_id": "run-1",
-        "sample_row": json.dumps({"x": 1}),
+        "sample_row": json.dumps([{"x": 1}]),
         "label_column": "x",
     }
     defaults.update(kwargs)
@@ -54,7 +54,7 @@ class TestNotebookGenerationUnitTests:
                 model_name="WeightedEnsemble_L2",
                 pipeline_name="my-autogluon-pipeline-abc123",
                 run_id="run-xyz-456",
-                sample_row=json.dumps(sample_row),
+                sample_row=json.dumps([sample_row]),
                 label_column="target",
             )
 
@@ -94,7 +94,7 @@ class TestNotebookGenerationUnitTests:
                 model_name="WeightedEnsemble_L2",
                 pipeline_name="my-pipeline-xyz",
                 run_id="run-123",
-                sample_row=json.dumps(sample_row),
+                sample_row=json.dumps([sample_row]),
                 label_column="label",
             )
 
@@ -123,7 +123,7 @@ class TestNotebookGenerationUnitTests:
                 tmpdir,
                 problem_type="multiclass",
                 model_name="BestModel",
-                sample_row=json.dumps({"a": 1, "b": 2, "y": 0}),
+                sample_row=json.dumps([{"a": 1, "b": 2, "y": 0}]),
                 label_column="y",
             )
 
@@ -165,7 +165,7 @@ class TestNotebookGenerationUnitTests:
             _run_component(
                 tmpdir,
                 problem_type="regression",
-                sample_row=json.dumps(sample_row),
+                sample_row=json.dumps([sample_row]),
                 label_column="label",
             )
 
@@ -215,7 +215,7 @@ class TestNotebookGenerationUnitTests:
                 notebook_artifact=mock_artifact,
                 pipeline_name="p",
                 run_id="r",
-                sample_row=json.dumps({"x": 1}),
+                sample_row=json.dumps([{"x": 1}]),
                 label_column="x",
             )
 
