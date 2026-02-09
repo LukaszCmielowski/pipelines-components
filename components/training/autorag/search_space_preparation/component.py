@@ -19,7 +19,7 @@ from components.training.autorag.rag_templates_optimization.src.utils import loa
 from components.training.autorag.search_space_preparation.proxy_objects import DisconnectedModelsPreSelector
 
 
-@dsl.component(base_image="rag_base:test")
+@dsl.component(base_image="quay.io/fkomarzy/sandbox_public/rag_base:1.0b1")
 def search_space_preparation(
     test_data: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Input[dsl.Artifact],

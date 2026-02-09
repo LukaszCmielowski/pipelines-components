@@ -21,7 +21,7 @@ from components.training.autorag.rag_templates_optimization.src.utils import (
 )
 
 
-@dsl.component(base_image="rag_base:test")
+@dsl.component(base_image="quay.io/fkomarzy/sandbox_public/rag_base:1.0b1")
 def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
