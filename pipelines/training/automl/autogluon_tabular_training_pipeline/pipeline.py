@@ -2,6 +2,7 @@ from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
 from kfp_components.components.data_processing.automl.train_test_split import train_test_split
+from kfp_components.components.deployment.automl.notebook_generation.component import notebook_generation
 from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
 from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
 from kfp_components.components.training.automl.autogluon_models_selection import models_selection
@@ -98,7 +99,8 @@ def autogluon_tabular_training_pipeline(
 
     Args:
         train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
-            The following keys are required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
+            The following keys are required:
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
         train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file.
             The bucket should be accessible using the AWS credentials configured in the
             'train_data_secret_name' Kubernetes secret.
@@ -160,6 +162,7 @@ def autogluon_tabular_training_pipeline(
     )
 
     train_test_split_task = train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
+
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
 
@@ -183,9 +186,18 @@ def autogluon_tabular_training_pipeline(
         )
 
     # Generate leaderboard
-    leaderboard_evaluation(
+    leaderboard_evaluation_task = leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
+    )
+
+    _ = notebook_generation(
+        problem_type=task_type,
+        model_name=leaderboard_evaluation_task.outputs["best_model"],
+        pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
+        run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+        sample_row=train_test_split_task.outputs["sample_row"],
+        label_column=label_column,
     )
 
 

@@ -112,7 +112,7 @@ def models_selection(
         verbosity=2,
     ).fit(
         train_data=train_data_df,
-        num_stack_levels=3,
+        num_stack_levels=1,  # TODO: discuss optimal value
         num_bag_folds=2,
         use_bag_holdout=True,
     )

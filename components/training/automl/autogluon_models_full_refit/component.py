@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from kfp import dsl
 
 
@@ -6,13 +8,11 @@ from kfp import dsl
     packages_to_install=["autogluon.tabular[all]==1.5.0"],
 )
 def autogluon_models_full_refit(
-    # Add your component parameters here
     model_name: str,
     full_dataset: dsl.Input[dsl.Dataset],
-    # predictor_artifact: dsl.Input[dsl.Model],
     predictor_path: str,
     model_artifact: dsl.Output[dsl.Model],
-):
+) -> NamedTuple("outputs", model_name=str):
     """Refit a specific AutoGluon model on the full training dataset.
 
     This component takes a trained AutoGluon TabularPredictor, loaded from
@@ -123,6 +123,8 @@ def autogluon_models_full_refit(
         )
         with (path / "metrics" / "confusion_matrix.json").open("w") as f:
             json.dump(confusion_matrix_res.to_dict(), f)
+
+    return NamedTuple("outputs", model_name=str)(model_name=model_name_full)
 
 
 if __name__ == "__main__":
