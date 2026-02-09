@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, NamedTuple
 
 from kfp import dsl
 
@@ -10,7 +10,7 @@ def leaderboard_evaluation(
     models: List[dsl.Model],
     eval_metric: str,
     html_artifact: dsl.Output[dsl.HTML],
-):
+) -> NamedTuple("outputs", best_model=str):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
     This component aggregates evaluation results from a list of Model artifacts
@@ -62,8 +62,12 @@ def leaderboard_evaluation(
         )
         results.append({"model": model.metadata["model_name"]} | eval_results)
 
+    leaderboard_df = pd.DataFrame(results).sort_values(by=eval_metric, ascending=False)
     with open(html_artifact.path, "w") as f:
-        f.write(pd.DataFrame(results).sort_values(by=eval_metric, ascending=False).to_html())
+        f.write(leaderboard_df.to_html())
+
+    best_model = leaderboard_df.iloc[0]["model"]
+    return NamedTuple("outputs", best_model=str)(best_model=best_model)
 
 
 if __name__ == "__main__":
