@@ -23,13 +23,13 @@ allowing users to specify data sources through connection IDs.
 
 ## Inputs 📥
 
-|Parameter|Type|Default|Description|
-|---------|----|------|-----------|
-|`input_data_bucket_name`|`str`|`None`|Name of the S3 bucket containing input data.|
-|`input_data_path`|`str`|`None`|Path to folder with input documents within bucket.|
-|`sampled_documents`|`dsl.Output[dsl.Artifact]`|`None`|Output artifact containing the sampled documents.|
-|`test_data`|`dsl.Input[dsl.Artifact]`|`None`|Optional input artifact containing test data for document sampling.|
-|`sampling_config`|`dict`|`None`|Optional dictionary with sampling configuration.|
+| Parameter                | Type                       | Default   | Description                                                         |
+|--------------------------|----------------------------|-----------|---------------------------------------------------------------------|
+| `input_data_bucket_name` | `str`                      | Mandatory | Name of the S3 bucket containing input data.                        |
+| `input_data_path`        | `str`                      | Mandatory | Path to folder with input documents within bucket.                  |
+| `sampled_documents`      | `dsl.Output[dsl.Artifact]` | `None`    | Output artifact containing the sampled documents.                   |
+| `test_data`              | `dsl.Input[dsl.Artifact]`  | `None`    | Optional input artifact containing test data for document sampling. |
+| `sampling_config`        | `dict`                     | `None`    | Optional dictionary with sampling configuration.                    |
 
 ### Input data
 

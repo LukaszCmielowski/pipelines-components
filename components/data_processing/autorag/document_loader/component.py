@@ -41,15 +41,14 @@ def document_loader(
 
     logger = logging.getLogger("Document Loader component logger")
     logger.setLevel(logging.INFO)
-    if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        logger.addHandler(handler)
+    handler = logging.StreamHandler(sys.stdout)
+    logger.addHandler(handler)
 
     if sampling_config is None:
         sampling_config = {}
 
-    def get_test_data_docs_names(test_data_artifact: dsl.Input[dsl.Artifact]) -> list[str]:
-        if test_data_artifact is None:
+    def get_test_data_docs_names() -> list[str]:
+        if test_data is None:
             return []
         with open(test_data.path, "r") as f:
             benchmark = json.load(f)
@@ -61,28 +60,23 @@ def document_loader(
         return docs_names
 
     def download_docs_s3():
-        access_key = os.environ.get("AWS_ACCESS_KEY_ID")
-        secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-        endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-        region = os.environ.get("AWS_REGION")
-
-        if (access_key and not secret_key) or (secret_key and not access_key):
-            raise ValueError(
-                "S3 credentials misconfigured: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must either "
-                "both be set and non-empty, or both be unset. Check the 's3-secret' Kubernetes secret."
-            )
-        if not access_key and not secret_key:
-            raise ValueError(
-                "S3 credentials missing: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be provided via "
-                "the 's3-secret' Kubernetes secret when using s3:// dataset URIs."
-            )
+        """Validate S3 credentials and download the input documents."""
+        s3_creds = {
+            k: os.environ.get(k)
+            for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
+        }
+        for k, v in s3_creds.items():
+            if v is None:
+                raise ValueError(
+                    "%s environment variable not set. Check if kubernetes secret was configured properly" % k
+                )
 
         s3_client = boto3.client(
             "s3",
-            endpoint_url=endpoint_url,
-            region_name=region,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
+            endpoint_url=s3_creds["AWS_ENDPOINT_URL"],
+            region_name=s3_creds["AWS_REGION"],
+            aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
         )
 
         contents = s3_client.list_objects_v2(
@@ -94,7 +88,7 @@ def document_loader(
         if not supported_files:
             raise Exception("No supported documents found.")
 
-        test_data_docs_names = get_test_data_docs_names(test_data)
+        test_data_docs_names = get_test_data_docs_names()
 
         supported_files.sort(key=lambda c: c["Key"] not in test_data_docs_names)
 
@@ -107,7 +101,6 @@ def document_loader(
             documents_to_download.append(file)
             total_size += file["Size"]
 
-        os.makedirs(sampled_documents.path, exist_ok=True)
         for file_info in documents_to_download:
             key = file_info["Key"]
             safe_name = key.replace("/", "__")
