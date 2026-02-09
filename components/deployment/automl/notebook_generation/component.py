@@ -62,7 +62,52 @@ def notebook_generation(
                 "id": "a12d957a-c313-4e92-9578-44f6a48560d5",
                 "metadata": {},
                 "source": [
-                    "![AutoML Banner](data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNzk2IDEwMCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMTc5NiAxMDA7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7ZmlsbDp1cmwoI1NWR0lEXzFfKTt9Cgkuc3Qxe2ZpbGw6bm9uZTtzdHJva2U6I0ZGRkZGRjtzdHJva2Utd2lkdGg6MjtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9Cgkuc3Qye2ZpbGw6bm9uZTtzdHJva2U6I0ZGRkZGRjtzdHJva2Utd2lkdGg6MS41O3N0cm9rZS1taXRlcmxpbWl0OjEwO30KCS5zdDN7ZmlsbDojRkZGRkZGO30KCS5zdDR7Zm9udC1mYW1pbHk6J0hlbHZldGljYSBOZXVlJywgQXJpYWwsIHNhbnMtc2VyaWY7fQoJLnN0NXtmb250LXNpemU6MzJweDt9Cgkuc3Q2e2ZpbGw6IzNEM0QzRDt9Cgkuc3Q3e2ZpbGw6IzkzOTU5ODt9Cgkuc3Q4e29wYWNpdHk6MC4yO2ZpbGw6dXJsKCNTVkdJRF8yXyk7ZW5hYmxlLWJhY2tncm91bmQ6bmV3O30KCS5zdDl7Zm9udC13ZWlnaHQ6NTAwO30KPC9zdHlsZT4KPHJlY3Qgd2lkdGg9IjE3OTYiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTYxNjE2Ii8+CjxsaW5lYXJHcmFkaWVudCBpZD0iU1ZHSURfMV8iIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iNDIuODYiIHkxPSI1MCIgeDI9Ijc5LjcxIiB5Mj0iNTAiPgoJPHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjojRkY2QjZCIi8+Cgk8c3RvcCBvZmZzZXQ9IjAuMjEiIHN0eWxlPSJzdG9wLWNvbG9yOiNFRTAwMDAiLz4KCTxzdG9wIG9mZnNldD0iMC43NSIgc3R5bGU9InN0b3AtY29sb3I6I0NDMDAwMCIvPgoJPHN0b3Agb2Zmc2V0PSIxIiBzdHlsZT0ic3RvcC1jb2xvcjojQUEwMDAwIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwhLS0gQXV0b01MIEljb24vTG9nbyBwbGFjZWhvbGRlciAtIHNpbXBsaWZpZWQgZ2VvbWV0cmljIHNoYXBlIC0tPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNNTIuNCw0NS45YzAtMi4zLDEuOC00LjEsNC4xLTQuMXM0LjEsMS44LDQuMSw0LjFTNTguOCw1MCw1Ni41LDUwbDAsMGMtMi4yLDAuMS00LTEuNy00LjEtMy45CglDNTIuNCw0Niw1Mi40LDQ2LDUyLjQsNDUuOXogTTc3LjUsNTIuNWMtMC44LTEuMS0xLjQtMi4zLTEuOS0zLjVjMS4yLTQuNSwwLjctOC42LTEuOC0xMS45Yy0yLjktMy44LTguMi02LTE0LjUtNi4xCgljLTQuNS0wLjEtOC44LDEuNy0xMiw0LjhjLTMsMy00LjYsNy4yLTQuNSwxMS41Yy0wLjEsMi45LDAuOSw1LjgsMi43LDguMWMwLjgsMC44LDEuMywxLjksMS40LDN2NC41Yy0wLjgsMC41LTEuNCwxLjMtMS40LDIuMwoJYzAuMiwxLjUsMS41LDIuNiwzLDIuNGMxLjItMC4yLDIuMi0xLjEsMi40LTIuNGMwLTEtMC41LTEuOS0xLjQtMi4zdi00LjVjMC0yLTEtMy4zLTEuOS00LjZjLTEuNS0xLjktMi4yLTQuMi0yLjEtNi41CgljMC0zLjUsMS40LTYuOSwzLjgtOS40YzIuNy0yLjcsNi4zLTQuMSwxMC00LjFjNS41LDAsOS44LDEuOSwxMi4xLDVjMiwyLjgsMi41LDYuMywxLjQsOS42Yy0wLjQsMS4yLDAuNiwyLjcsMi4zLDUuNgoJYzAuNiwwLjksMS4yLDEuOSwxLjYsMi45Yy0wLjksMC43LTIsMS4yLTMuMSwxLjVjLTAuNSwwLjQtMC43LDAuOS0wLjgsMS41VjY1YzAsMC40LTAuMSwwLjgtMC40LDEuMWMtMC4zLDAuMi0wLjcsMC4zLTEuMSwwLjMKCWMtMS42LTAuMy0zLjQtMC43LTUuMi0xLjF2LTQuOGMwLjgtMC41LDEuNC0xLjQsMS40LTIuM2MwLTEuNS0xLjItMi43LTIuNy0yLjdzLTIuNywxLjItMi43LDIuN2MwLDEsMC41LDEuOSwxLjQsMi4zdjQuMQoJYy0wLjQtMC4xLTAuNy0wLjEtMS4xLTAuM2MtNC41LTEuMS00LjUtMi42LTQuNS0zLjR2LTguM2MzLjItMC43LDUuNC0zLjUsNS41LTYuN2MtMC4xLTMuOC0zLjMtNi43LTcuMS02LjZjLTMuNiwwLjEtNi40LDMtNi42LDYuNgoJYzAsMy4yLDIuMyw2LDUuNSw2Ljd2OC4zYzAsMiwwLjcsNC42LDYuNiw2LjFjMywwLjgsNiwxLjUsOS4xLDEuOWMwLjMsMCwwLjYsMC4xLDAuOCwwLjFjMSwwLDEuOS0wLjMsMi42LTEKCWMwLjktMC44LDEuNC0xLjksMS40LTMuMXYtNC41YzItMC44LDQuMS0yLDQuMS0zLjdDNzkuNyw1NS45LDc5LDU0LjYsNzcuNSw1Mi41eiIvPgo8Y2lyY2xlIGNsYXNzPSJzdDEiIGN4PSI1Ni41IiBjeT0iNDUuOSIgcj0iNS40Ii8+CjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjQ4LjMiIGN5PSI2NSIgcj0iMS42Ii8+CjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjY0LjgiIGN5PSI1OC4yIiByPSIxLjYiLz4KPHRleHQgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAxMDEuMDIgNTkuMzMpIiBjbGFzcz0ic3QzIHN0NCBzdDUiPkF1dG9NTDwvdGV4dD4KPHJlY3QgeD0iMjMxLjEiIHk9IjM0IiBjbGFzcz0ic3Q2IiB3aWR0aD0iMSIgaGVpZ2h0PSIzMiIvPgo8dGV4dCB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAxIDI1Ni4yOSA1OS42NikiIGNsYXNzPSJzdDcgc3Q0IHN0NSI+UGFydCBvZiBSZWQgSGF0IE9wZW5TaGlmdCBBSTwvdGV4dD4KPGxpbmVhckdyYWRpZW50IGlkPSJTVkdJRF8yXyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHgxPSI3NzMuOCIgeTE9IjUwIiB4Mj0iMTc5NiIgeTI9IjUwIj4KCTxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6IzE2MTYxNiIvPgoJPHN0b3Agb2Zmc2V0PSIwLjUyIiBzdHlsZT0ic3RvcC1jb2xvcjojRkY2QjZCIi8+Cgk8c3RvcCBvZmZzZXQ9IjAuNjIiIHN0eWxlPSJzdG9wLWNvbG9yOiNFRTAwMDAiLz4KCTxzdG9wIG9mZnNldD0iMC44OCIgc3R5bGU9InN0b3AtY29sb3I6I0NDMDAwMCIvPgoJPHN0b3Agb2Zmc2V0PSIxIiBzdHlsZT0ic3RvcC1jb2xvcjojQUEwMDAwIi8+CjwvbGluZWFyR3JhZGllbnQ+CjxyZWN0IHg9Ijc3My44IiBjbGFzcz0ic3Q4IiB3aWR0aD0iMTAyMi4yIiBoZWlnaHQ9IjEwMCIvPgo8dGV4dCB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAxIDE0NDguMTY0MSA1OS40NikiIGNsYXNzPSJzdDMgc3Q0IHN0NSBzdDkiPlByZWRpY3RvciBOb3RlYm9vazwvdGV4dD4KPC9zdmc+Cg==)"  # noqa: E501
+                    """<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1796 100" style="enable-background:new 0 0 1796 100;" xml:space="preserve" width="100%">
+<style type="text/css">
+	.st0{fill-rule:evenodd;clip-rule:evenodd;fill:url(#SVGID_1_);}
+	.st1{fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}
+	.st2{fill:none;stroke:#FFFFFF;stroke-width:1.5;stroke-miterlimit:10;}
+	.st3{fill:#FFFFFF;}
+	.st4{font-family:'Helvetica Neue', Arial, sans-serif;}
+	.st5{font-size:32px;}
+	.st6{fill:#3D3D3D;}
+	.st7{fill:#939598;}
+	.st8{opacity:0.2;fill:url(#SVGID_2_);enable-background:new;}
+	.st9{font-weight:500;}
+</style>
+<rect width="1796" height="100" fill="#161616"/>
+<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="42.86" y1="50" x2="79.71" y2="50">
+	<stop offset="0" style="stop-color:#FF6B6B"/>
+	<stop offset="0.21" style="stop-color:#EE0000"/>
+	<stop offset="0.75" style="stop-color:#CC0000"/>
+	<stop offset="1" style="stop-color:#AA0000"/>
+</linearGradient>
+<path class="st0" d="M52.4,45.9c0-2.3,1.8-4.1,4.1-4.1s4.1,1.8,4.1,4.1S58.8,50,56.5,50l0,0c-2.2,0.1-4-1.7-4.1-3.9
+	C52.4,46,52.4,46,52.4,45.9z M77.5,52.5c-0.8-1.1-1.4-2.3-1.9-3.5c1.2-4.5,0.7-8.6-1.8-11.9c-2.9-3.8-8.2-6-14.5-6.1
+	c-4.5-0.1-8.8,1.7-12,4.8c-3,3-4.6,7.2-4.5,11.5c-0.1,2.9,0.9,5.8,2.7,8.1c0.8,0.8,1.3,1.9,1.4,3v4.5c-0.8,0.5-1.4,1.3-1.4,2.3
+	c0.2,1.5,1.5,2.6,3,2.4c1.2-0.2,2.2-1.1,2.4-2.4c0-1-0.5-1.9-1.4-2.3v-4.5c0-2-1-3.3-1.9-4.6c-1.5-1.9-2.2-4.2-2.1-6.5
+	c0-3.5,1.4-6.9,3.8-9.4c2.7-2.7,6.3-4.1,10-4.1c5.5,0,9.8,1.9,12.1,5c2,2.8,2.5,6.3,1.4,9.6c-0.4,1.2,0.6,2.7,2.3,5.6
+	c0.6,0.9,1.2,1.9,1.6,2.9c-0.9,0.7-2,1.2-3.1,1.5c-0.5,0.4-0.7,0.9-0.8,1.5V65c0,0.4-0.1,0.8-0.4,1.1c-0.3,0.2-0.7,0.3-1.1,0.3
+	c-1.6-0.3-3.4-0.7-5.2-1.1v-4.8c0.8-0.5,1.4-1.4,1.4-2.3c0-1.5-1.2-2.7-2.7-2.7s-2.7,1.2-2.7,2.7c0,1,0.5,1.9,1.4,2.3v4.1
+	c-0.4-0.1-0.7-0.1-1.1-0.3c-4.5-1.1-4.5-2.6-4.5-3.4v-8.3c3.2-0.7,5.4-3.5,5.5-6.7c-0.1-3.8-3.3-6.7-7.1-6.6c-3.6,0.1-6.4,3-6.6,6.6
+	c0,3.2,2.3,6,5.5,6.7v8.3c0,2,0.7,4.6,6.6,6.1c3,0.8,6,1.5,9.1,1.9c0.3,0,0.6,0.1,0.8,0.1c1,0,1.9-0.3,2.6-1
+	c0.9-0.8,1.4-1.9,1.4-3.1v-4.5c2-0.8,4.1-2,4.1-3.7C79.7,55.9,79,54.6,77.5,52.5z"/>
+<circle class="st1" cx="56.5" cy="45.9" r="5.4"/>
+<circle class="st2" cx="48.3" cy="65" r="1.6"/>
+<circle class="st2" cx="64.8" cy="58.2" r="1.6"/>
+<text transform="matrix(1 0 0 1 101.02 59.33)" class="st3 st4 st5">AutoML</text>
+<rect x="231.1" y="34" class="st6" width="1" height="32"/>
+<text transform="matrix(1 0 0 1 256.29 59.66)" class="st7 st4 st5">Part of Red Hat OpenShift AI</text>
+<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="773.8" y1="50" x2="1796" y2="50">
+	<stop offset="0" style="stop-color:#161616"/>
+	<stop offset="0.52" style="stop-color:#FF6B6B"/>
+	<stop offset="0.62" style="stop-color:#EE0000"/>
+	<stop offset="0.88" style="stop-color:#CC0000"/>
+	<stop offset="1" style="stop-color:#AA0000"/>
+</linearGradient>
+<rect x="773.8" class="st8" width="1022.2" height="100"/>
+<text transform="matrix(1 0 0 1 1448.1641 59.46)" class="st3 st4 st5 st9">Predictor Notebook</text>
+</svg>"""  # noqa: E501
                 ],
             },
             {
@@ -75,7 +120,7 @@ def notebook_generation(
                     "This notebook lets you review the experiment leaderboard for insights into trained model evaluation quality, load a chosen AutoGluon model from S3, and run predictions. \n",  # noqa: E501
                     "\n",
                     "\n",
-                    "**Tips:**\n",
+                    " \U0001f4a1 **Tips:**\n",
                     "- Ensure the S3 connection to pipeline run results is configured so the notebook can access run artifacts.\n",  # noqa: E501
                     "- The model name must match one of the models listed in the leaderboard (the **model** column).\n",
                     "\n",
@@ -141,7 +186,7 @@ def notebook_generation(
                     '<a id="experiment-leaderboard"></a>\n',
                     "## Experiment leaderboard\n",
                     "\n",
-                    "**Action:** Ensure the S3 connection is added to the workbench so the notebook can access the results.",  # noqa: E501
+                    " \U0001f4cc **Action:** Ensure the S3 connection is added to the workbench so the notebook can access the results.",  # noqa: E501
                 ],
             },
             {
@@ -175,7 +220,7 @@ def notebook_generation(
                     '<a id="download-trained-model"></a>\n',
                     "## Download trained model\n",
                     "\n",
-                    "**Tip:** IF you want to download different model than the best one set `model_name` accordingly (must match a name from the leaderboard **model** column).",  # noqa: E501
+                    " \U0001f4a1 **Tip:** IF you want to download different model than the best one set `model_name` accordingly (must match a name from the leaderboard **model** column).",  # noqa: E501
                 ],
             },
             {
@@ -358,7 +403,52 @@ def notebook_generation(
                 "id": "a12d957a-c313-4e92-9578-44f6a48560d5",
                 "metadata": {},
                 "source": [
-                    "![AutoML Banner](data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNzk2IDEwMCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMTc5NiAxMDA7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7ZmlsbDp1cmwoI1NWR0lEXzFfKTt9Cgkuc3Qxe2ZpbGw6bm9uZTtzdHJva2U6I0ZGRkZGRjtzdHJva2Utd2lkdGg6MjtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9Cgkuc3Qye2ZpbGw6bm9uZTtzdHJva2U6I0ZGRkZGRjtzdHJva2Utd2lkdGg6MS41O3N0cm9rZS1taXRlcmxpbWl0OjEwO30KCS5zdDN7ZmlsbDojRkZGRkZGO30KCS5zdDR7Zm9udC1mYW1pbHk6J0hlbHZldGljYSBOZXVlJywgQXJpYWwsIHNhbnMtc2VyaWY7fQoJLnN0NXtmb250LXNpemU6MzJweDt9Cgkuc3Q2e2ZpbGw6IzNEM0QzRDt9Cgkuc3Q3e2ZpbGw6IzkzOTU5ODt9Cgkuc3Q4e29wYWNpdHk6MC4yO2ZpbGw6dXJsKCNTVkdJRF8yXyk7ZW5hYmxlLWJhY2tncm91bmQ6bmV3O30KCS5zdDl7Zm9udC13ZWlnaHQ6NTAwO30KPC9zdHlsZT4KPHJlY3Qgd2lkdGg9IjE3OTYiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTYxNjE2Ii8+CjxsaW5lYXJHcmFkaWVudCBpZD0iU1ZHSURfMV8iIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iNDIuODYiIHkxPSI1MCIgeDI9Ijc5LjcxIiB5Mj0iNTAiPgoJPHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjojRkY2QjZCIi8+Cgk8c3RvcCBvZmZzZXQ9IjAuMjEiIHN0eWxlPSJzdG9wLWNvbG9yOiNFRTAwMDAiLz4KCTxzdG9wIG9mZnNldD0iMC43NSIgc3R5bGU9InN0b3AtY29sb3I6I0NDMDAwMCIvPgoJPHN0b3Agb2Zmc2V0PSIxIiBzdHlsZT0ic3RvcC1jb2xvcjojQUEwMDAwIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwhLS0gQXV0b01MIEljb24vTG9nbyBwbGFjZWhvbGRlciAtIHNpbXBsaWZpZWQgZ2VvbWV0cmljIHNoYXBlIC0tPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNNTIuNCw0NS45YzAtMi4zLDEuOC00LjEsNC4xLTQuMXM0LjEsMS44LDQuMSw0LjFTNTguOCw1MCw1Ni41LDUwbDAsMGMtMi4yLDAuMS00LTEuNy00LjEtMy45CglDNTIuNCw0Niw1Mi40LDQ2LDUyLjQsNDUuOXogTTc3LjUsNTIuNWMtMC44LTEuMS0xLjQtMi4zLTEuOS0zLjVjMS4yLTQuNSwwLjctOC42LTEuOC0xMS45Yy0yLjktMy44LTguMi02LTE0LjUtNi4xCgljLTQuNS0wLjEtOC44LDEuNy0xMiw0LjhjLTMsMy00LjYsNy4yLTQuNSwxMS41Yy0wLjEsMi45LDAuOSw1LjgsMi43LDguMWMwLjgsMC44LDEuMywxLjksMS40LDN2NC41Yy0wLjgsMC41LTEuNCwxLjMtMS40LDIuMwoJYzAuMiwxLjUsMS41LDIuNiwzLDIuNGMxLjItMC4yLDIuMi0xLjEsMi40LTIuNGMwLTEtMC41LTEuOS0xLjQtMi4zdi00LjVjMC0yLTEtMy4zLTEuOS00LjZjLTEuNS0xLjktMi4yLTQuMi0yLjEtNi41CgljMC0zLjUsMS40LTYuOSwzLjgtOS40YzIuNy0yLjcsNi4zLTQuMSwxMC00LjFjNS41LDAsOS44LDEuOSwxMi4xLDVjMiwyLjgsMi41LDYuMywxLjQsOS42Yy0wLjQsMS4yLDAuNiwyLjcsMi4zLDUuNgoJYzAuNiwwLjksMS4yLDEuOSwxLjYsMi45Yy0wLjksMC43LTIsMS4yLTMuMSwxLjVjLTAuNSwwLjQtMC43LDAuOS0wLjgsMS41VjY1YzAsMC40LTAuMSwwLjgtMC40LDEuMWMtMC4zLDAuMi0wLjcsMC4zLTEuMSwwLjMKCWMtMS42LTAuMy0zLjQtMC43LTUuMi0xLjF2LTQuOGMwLjgtMC41LDEuNC0xLjQsMS40LTIuM2MwLTEuNS0xLjItMi43LTIuNy0yLjdzLTIuNywxLjItMi43LDIuN2MwLDEsMC41LDEuOSwxLjQsMi4zdjQuMQoJYy0wLjQtMC4xLTAuNy0wLjEtMS4xLTAuM2MtNC41LTEuMS00LjUtMi42LTQuNS0zLjR2LTguM2MzLjItMC43LDUuNC0zLjUsNS41LTYuN2MtMC4xLTMuOC0zLjMtNi43LTcuMS02LjZjLTMuNiwwLjEtNi40LDMtNi42LDYuNgoJYzAsMy4yLDIuMyw2LDUuNSw2Ljd2OC4zYzAsMiwwLjcsNC42LDYuNiw2LjFjMywwLjgsNiwxLjUsOS4xLDEuOWMwLjMsMCwwLjYsMC4xLDAuOCwwLjFjMSwwLDEuOS0wLjMsMi42LTEKCWMwLjktMC44LDEuNC0xLjksMS40LTMuMXYtNC41YzItMC44LDQuMS0yLDQuMS0zLjdDNzkuNyw1NS45LDc5LDU0LjYsNzcuNSw1Mi41eiIvPgo8Y2lyY2xlIGNsYXNzPSJzdDEiIGN4PSI1Ni41IiBjeT0iNDUuOSIgcj0iNS40Ii8+CjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjQ4LjMiIGN5PSI2NSIgcj0iMS42Ii8+CjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjY0LjgiIGN5PSI1OC4yIiByPSIxLjYiLz4KPHRleHQgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAxMDEuMDIgNTkuMzMpIiBjbGFzcz0ic3QzIHN0NCBzdDUiPkF1dG9NTDwvdGV4dD4KPHJlY3QgeD0iMjMxLjEiIHk9IjM0IiBjbGFzcz0ic3Q2IiB3aWR0aD0iMSIgaGVpZ2h0PSIzMiIvPgo8dGV4dCB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAxIDI1Ni4yOSA1OS42NikiIGNsYXNzPSJzdDcgc3Q0IHN0NSI+UGFydCBvZiBSZWQgSGF0IE9wZW5TaGlmdCBBSTwvdGV4dD4KPGxpbmVhckdyYWRpZW50IGlkPSJTVkdJRF8yXyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHgxPSI3NzMuOCIgeTE9IjUwIiB4Mj0iMTc5NiIgeTI9IjUwIj4KCTxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6IzE2MTYxNiIvPgoJPHN0b3Agb2Zmc2V0PSIwLjUyIiBzdHlsZT0ic3RvcC1jb2xvcjojRkY2QjZCIi8+Cgk8c3RvcCBvZmZzZXQ9IjAuNjIiIHN0eWxlPSJzdG9wLWNvbG9yOiNFRTAwMDAiLz4KCTxzdG9wIG9mZnNldD0iMC44OCIgc3R5bGU9InN0b3AtY29sb3I6I0NDMDAwMCIvPgoJPHN0b3Agb2Zmc2V0PSIxIiBzdHlsZT0ic3RvcC1jb2xvcjojQUEwMDAwIi8+CjwvbGluZWFyR3JhZGllbnQ+CjxyZWN0IHg9Ijc3My44IiBjbGFzcz0ic3Q4IiB3aWR0aD0iMTAyMi4yIiBoZWlnaHQ9IjEwMCIvPgo8dGV4dCB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAxIDE0NDguMTY0MSA1OS40NikiIGNsYXNzPSJzdDMgc3Q0IHN0NSBzdDkiPlByZWRpY3RvciBOb3RlYm9vazwvdGV4dD4KPC9zdmc+Cg==)"  # noqa: E501
+                    """<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1796 100" style="enable-background:new 0 0 1796 100;" xml:space="preserve" width="100%">
+<style type="text/css">
+	.st0{fill-rule:evenodd;clip-rule:evenodd;fill:url(#SVGID_1_);}
+	.st1{fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}
+	.st2{fill:none;stroke:#FFFFFF;stroke-width:1.5;stroke-miterlimit:10;}
+	.st3{fill:#FFFFFF;}
+	.st4{font-family:'Helvetica Neue', Arial, sans-serif;}
+	.st5{font-size:32px;}
+	.st6{fill:#3D3D3D;}
+	.st7{fill:#939598;}
+	.st8{opacity:0.2;fill:url(#SVGID_2_);enable-background:new;}
+	.st9{font-weight:500;}
+</style>
+<rect width="1796" height="100" fill="#161616"/>
+<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="42.86" y1="50" x2="79.71" y2="50">
+	<stop offset="0" style="stop-color:#FF6B6B"/>
+	<stop offset="0.21" style="stop-color:#EE0000"/>
+	<stop offset="0.75" style="stop-color:#CC0000"/>
+	<stop offset="1" style="stop-color:#AA0000"/>
+</linearGradient>
+<path class="st0" d="M52.4,45.9c0-2.3,1.8-4.1,4.1-4.1s4.1,1.8,4.1,4.1S58.8,50,56.5,50l0,0c-2.2,0.1-4-1.7-4.1-3.9
+	C52.4,46,52.4,46,52.4,45.9z M77.5,52.5c-0.8-1.1-1.4-2.3-1.9-3.5c1.2-4.5,0.7-8.6-1.8-11.9c-2.9-3.8-8.2-6-14.5-6.1
+	c-4.5-0.1-8.8,1.7-12,4.8c-3,3-4.6,7.2-4.5,11.5c-0.1,2.9,0.9,5.8,2.7,8.1c0.8,0.8,1.3,1.9,1.4,3v4.5c-0.8,0.5-1.4,1.3-1.4,2.3
+	c0.2,1.5,1.5,2.6,3,2.4c1.2-0.2,2.2-1.1,2.4-2.4c0-1-0.5-1.9-1.4-2.3v-4.5c0-2-1-3.3-1.9-4.6c-1.5-1.9-2.2-4.2-2.1-6.5
+	c0-3.5,1.4-6.9,3.8-9.4c2.7-2.7,6.3-4.1,10-4.1c5.5,0,9.8,1.9,12.1,5c2,2.8,2.5,6.3,1.4,9.6c-0.4,1.2,0.6,2.7,2.3,5.6
+	c0.6,0.9,1.2,1.9,1.6,2.9c-0.9,0.7-2,1.2-3.1,1.5c-0.5,0.4-0.7,0.9-0.8,1.5V65c0,0.4-0.1,0.8-0.4,1.1c-0.3,0.2-0.7,0.3-1.1,0.3
+	c-1.6-0.3-3.4-0.7-5.2-1.1v-4.8c0.8-0.5,1.4-1.4,1.4-2.3c0-1.5-1.2-2.7-2.7-2.7s-2.7,1.2-2.7,2.7c0,1,0.5,1.9,1.4,2.3v4.1
+	c-0.4-0.1-0.7-0.1-1.1-0.3c-4.5-1.1-4.5-2.6-4.5-3.4v-8.3c3.2-0.7,5.4-3.5,5.5-6.7c-0.1-3.8-3.3-6.7-7.1-6.6c-3.6,0.1-6.4,3-6.6,6.6
+	c0,3.2,2.3,6,5.5,6.7v8.3c0,2,0.7,4.6,6.6,6.1c3,0.8,6,1.5,9.1,1.9c0.3,0,0.6,0.1,0.8,0.1c1,0,1.9-0.3,2.6-1
+	c0.9-0.8,1.4-1.9,1.4-3.1v-4.5c2-0.8,4.1-2,4.1-3.7C79.7,55.9,79,54.6,77.5,52.5z"/>
+<circle class="st1" cx="56.5" cy="45.9" r="5.4"/>
+<circle class="st2" cx="48.3" cy="65" r="1.6"/>
+<circle class="st2" cx="64.8" cy="58.2" r="1.6"/>
+<text transform="matrix(1 0 0 1 101.02 59.33)" class="st3 st4 st5">AutoML</text>
+<rect x="231.1" y="34" class="st6" width="1" height="32"/>
+<text transform="matrix(1 0 0 1 256.29 59.66)" class="st7 st4 st5">Part of Red Hat OpenShift AI</text>
+<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="773.8" y1="50" x2="1796" y2="50">
+	<stop offset="0" style="stop-color:#161616"/>
+	<stop offset="0.52" style="stop-color:#FF6B6B"/>
+	<stop offset="0.62" style="stop-color:#EE0000"/>
+	<stop offset="0.88" style="stop-color:#CC0000"/>
+	<stop offset="1" style="stop-color:#AA0000"/>
+</linearGradient>
+<rect x="773.8" class="st8" width="1022.2" height="100"/>
+<text transform="matrix(1 0 0 1 1448.1641 59.46)" class="st3 st4 st5 st9">Predictor Notebook</text>
+</svg>"""  # noqa: E501
                 ],
             },
             {
@@ -371,7 +461,7 @@ def notebook_generation(
                     "This notebook lets you review the experiment leaderboard for insights into trained model evaluation quality, load a chosen AutoGluon model from S3, and run predictions. \n",  # noqa: E501
                     "\n",
                     "\n",
-                    "**Tips:**\n",
+                    " \U0001f4a1 **Tips:**\n",
                     "- Ensure the S3 connection to pipeline run results is configured so the notebook can access run artifacts.\n",  # noqa: E501
                     "- The model name must match one of the models listed in the leaderboard (the **model** column).\n",
                     "\n",
@@ -437,7 +527,7 @@ def notebook_generation(
                     '<a id="experiment-leaderboard"></a>\n',
                     "## Experiment leaderboard\n",
                     "\n",
-                    "**Action:** Ensure the S3 connection is added to the workbench so the notebook can access the results.",  # noqa: E501
+                    " \U0001f4cc **Action:** Ensure the S3 connection is added to the workbench so the notebook can access the results.",  # noqa: E501
                 ],
             },
             {
@@ -471,7 +561,7 @@ def notebook_generation(
                     '<a id="download-trained-model"></a>\n',
                     "## Download trained model\n",
                     "\n",
-                    "**Tip:** IF you want to download different model than the best one set `model_name` accordingly (must match a name from the leaderboard **model** column).",  # noqa: E501
+                    " \U0001f4a1 **Tip:** IF you want to download different model than the best one set `model_name` accordingly (must match a name from the leaderboard **model** column).",  # noqa: E501
                 ],
             },
             {

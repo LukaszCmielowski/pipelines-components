@@ -4,8 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    # base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    base_image="localhost:5000/autogluon-py312:v3",
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
 def train_test_split(  # noqa: D417
     # Add your component parameters here
