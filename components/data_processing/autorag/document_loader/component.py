@@ -62,12 +62,8 @@ def document_loader(
     def download_docs_s3():
         """Validate S3 credentials and download the input documents."""
         s3_creds = {
-            k: os.environ.get(k) for k in [
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-                "AWS_ENDPOINT_URL",
-                "AWS_REGION"
-            ]
+            k: os.environ.get(k)
+            for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
         }
         for k, v in s3_creds.items():
             if v is None:

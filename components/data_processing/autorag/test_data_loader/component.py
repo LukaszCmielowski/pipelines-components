@@ -38,12 +38,8 @@ def test_data_loader(test_data_bucket_name: str, test_data_path: str, test_data:
     def get_test_data_s3():
         """Validate S3 credentials and download the JSON test data file."""
         s3_creds = {
-            k: os.environ.get(k) for k in [
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-                "AWS_ENDPOINT_URL",
-                "AWS_REGION"
-            ]
+            k: os.environ.get(k)
+            for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
         }
         for k, v in s3_creds.items():
             if v is None:
