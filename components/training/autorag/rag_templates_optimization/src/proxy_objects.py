@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from ai4rag.core.experiment.experiment import AI4RAGExperiment
+from ai4rag.core.experiment.mps import ModelsPreSelector
 from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
 from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
 
@@ -76,8 +77,45 @@ class DisconnectedAI4RAGExperiment(AI4RAGExperiment):
                 ),
             ]
 
-        self.results.add_evaluation(eval_data, eval_res)
+            self.results.add_evaluation(eval_data, eval_res)
 
         self.search_output = self.results.get_best_evaluations(k=1)
 
         return self.search_output
+
+
+class DisconnectedModelsPreSelector(ModelsPreSelector):
+
+    def __init__(self, mps: ModelsPreSelector) -> None:
+        self.mps: ModelsPreSelector = mps
+        self.metric = mps.metric
+
+    def evaluate_patterns(self):
+
+        self.evaluation_results = [
+            {
+                "embedding_model": "granite_emb1",
+                "foundation_model": "mistral1",
+                "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
+                "question_scores": {
+                    "faithfulnesss": {
+                        "q_id_0": 0.5,
+                        "q_id_1": 0.8,
+                    }
+                },
+            },
+            {
+                "embedding_model": "granite_emb2",
+                "foundation_model": "mistral2",
+                "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
+                "question_scores": {
+                    "faithfulnesss": {
+                        "q_id_0": 0.5,
+                        "q_id_1": 0.8,
+                    }
+                },
+            },
+        ]
+
+    # def select_models(self, n_em: int = 2, n_fm: int = 3) -> dict[str, list[EmbeddingModel | FoundationModel]]:
+    #     pass
