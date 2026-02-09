@@ -108,6 +108,7 @@ def document_loader(
 
             try:
                 logger.info(f"Downloading {key} to {local_path}")
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
                 s3_client.download_file(input_data_bucket_name, key, local_path)
             except Exception as e:
                 logger.error("Failed to fetch %s: %s", key, e)
