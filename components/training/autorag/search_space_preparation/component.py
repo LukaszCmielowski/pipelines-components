@@ -20,7 +20,7 @@ from components.training.autorag.search_space_preparation.proxy_objects import D
 
 
 @dsl.component(
-    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=["ai4rag", "langchain_core"],
 )
 def search_space_preparation(

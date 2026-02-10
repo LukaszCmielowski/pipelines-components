@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="http://quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=["boto3"],
 )
 def document_loader(

@@ -1,6 +1,6 @@
 
 
-FROM --platform=$BUILDPLATFORM redhat/ubi10-minimal:10.1@sha256:a74a7a92d3069bfac09c6882087771fc7db59fa9d8e16f14f4e012fe7288554c
+FROM redhat/ubi10-minimal:10.1@sha256:a74a7a92d3069bfac09c6882087771fc7db59fa9d8e16f14f4e012fe7288554c
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -12,7 +12,7 @@ RUN microdnf -y install \
 
 WORKDIR /usr/local/src/kfp/components
 
-RUN --mount=type=bind,source=requirements.txt,target=/root/requirements.txt pip install -r /root/requirements.txt
+RUN --mount=type=bind,source=requirements.txt,target=/root/requirements.txt,relabel=shared pip install -r /root/requirements.txt
 
 COPY src/* ./
 COPY component_metadata/* ./component_metadata/*
