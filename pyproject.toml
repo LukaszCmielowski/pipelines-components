@@ -38,11 +38,7 @@ dev = [
     "kfp-components[lint]",
     "kfp-components[test]",
 ]
-# AutoRAG components (ai4rag from GitHub for import resolution and local runs).
-# ai4rag requires Python>=3.12; skip on 3.11 so CI (e.g. uv sync --extra test) can resolve.
-autorag = [
-    "ai4rag@git+https://github.com/IBM/ai4rag.git; python_version >= \"3.12\"",
-]
+
 
 [project.urls]
 Homepage = "https://www.kubeflow.org/docs/components/pipelines/"
