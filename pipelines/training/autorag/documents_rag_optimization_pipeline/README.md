@@ -45,6 +45,29 @@ messages (list[dict]). |
 configurations. Each dictionary contains: method (str), number_of_chunks (int),
 optional hybrid_ranker (dict). |
 
+## Stored artifacts (S3 / results storage) 📁
+
+After pipeline execution, outputs are stored under the location defined by `results_reference` (bucket and path). Typical layout:
+
+```
+<results_reference.bucket> / <results_reference.path>/
+├── leaderboard                    # Leaderboard HtML artifact (RAG patterns ranked by metric)
+├── autorag_run                    # Run artifact (log and experiment status)
+└── rag_patterns/                  # Directory of generated RAG patterns
+    ├── <pattern_name_0>/
+    │   ├── pattern.json           # Pattern config, params, and evaluation metrics
+    │   ├── indexing_notebook.ipynb # Notebook to build/populate the vector index
+    │   └── inference_notebook.ipynb # Notebook for retrieval and generation
+    ├── <pattern_name_1>/
+    │   ├── pattern.json
+    │   ├── indexing_notebook.ipynb
+    │   └── inference_notebook.ipynb
+    └── ...
+```
+
+Each RAG pattern folder corresponds to one optimized configuration; pattern names and count depend on the run (e.g. `max_number_of_rag_patterns`).
+
+
 ## Usage Examples 🧪
 
 ```python
