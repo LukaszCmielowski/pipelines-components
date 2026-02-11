@@ -48,10 +48,8 @@ The `optimization_settings` dictionary supports:
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `autorag_run_artifact` | `dsl.Output[dsl.Artifact]` | General type artifact pointing to the log file and an experiment status object |
-| `rag_patterns` | `dsl.Artifact` | Multiple RAG Pattern artifacts, each containing optimized configuration, metrics, and notebooks. |
-| `leaderboard` | `dsl.Artifact` | Leaderboard artifact with RAG Patterns ranked by performance metrics. |
-| Return value | `str` | A message indicating the completion status of RAG optimization. |
+| `rag_patterns` | `dsl.OutputPath[dsl.Artifact]` | Directory of RAG Pattern artifacts; each subdir contains `pattern.json`, `indexing_notebook.ipynb`, and `inference_notebook.ipynb`. Consumed by the **leaderboard_evaluation** component to produce the HTML leaderboard. |
+| `autorag_run_artifact` | `dsl.Output[dsl.Artifact]` | General type artifact pointing to the log file and an experiment status object. |
 
 ## Usage Examples 💡
 

@@ -6,6 +6,7 @@ from kfp.kubernetes import use_secret_as_env
 from components.data_processing.autorag.document_loader import document_loader
 from components.data_processing.autorag.test_data_loader import test_data_loader
 from components.data_processing.autorag.text_extraction import text_extraction
+from components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
 from components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
 from components.training.autorag.search_space_preparation.component import search_space_preparation
 
@@ -106,6 +107,8 @@ def documents_rag_optimization_pipeline(
         vector_database_id=vector_database_id or "ls_milvus",
         optimization_settings={"metric": optimization_metric},
     )
+
+    leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])
 
 
 if __name__ == "__main__":

@@ -10,7 +10,6 @@ from kfp import dsl
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
-        "langchain_core",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
     ],
 )

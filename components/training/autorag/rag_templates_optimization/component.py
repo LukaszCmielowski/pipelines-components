@@ -8,7 +8,6 @@ from kfp import dsl
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pyyaml",
-        "langchain_core",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
     ],
 )
@@ -16,7 +15,6 @@ def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
-    leaderboard: dsl.Output[dsl.Artifact],  # contains metadata on the patterns hierarchy
     rag_patterns: dsl.OutputPath(dsl.Artifact),
     autorag_run_artifact: dsl.Output[dsl.Artifact],  # uri to log, WML status object-like (from WML)
     vector_database_id: Optional[str] = None,
@@ -47,10 +45,11 @@ def rag_templates_optimization(
             "context_correctness". Defaults to "faithfulness" if omitted.
 
     Returns:
-        leaderboard
-            An artifact containing ordered (metric-wise) RAG patterns along with related metadata.
         rag_patterns
-            A path pointing to a folder containg all of the generated RAG patterns.
+            A path pointing to a folder containing all of the generated RAG patterns
+            (each subdir: pattern.json, indexing_notebook.ipynb, inference_notebook.ipynb).
+        autorag_run_artifact
+            Run log and experiment status (TODO).
 
     """
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
@@ -269,7 +268,6 @@ def rag_templates_optimization(
         with (patt_dir / "indexing_notebook.ipynb").open("w+") as ind_notebook:
             json_dump({"ind_notebook_cell": "cell_Value"}, ind_notebook)
 
-    # TODO leaderboard artifact
     # TODO autorag_run_artifact
 
 

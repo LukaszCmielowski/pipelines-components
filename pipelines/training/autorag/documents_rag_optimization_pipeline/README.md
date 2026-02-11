@@ -47,25 +47,36 @@ optional hybrid_ranker (dict). |
 
 ## Stored artifacts (S3 / results storage) 📁
 
-After pipeline execution, outputs are stored under the location defined by `results_reference` (bucket and path). Typical layout:
+After pipeline execution, outputs are stored under the location defined by `results_reference` (bucket and path). Layout follows pipeline and component structure:
 
 ```
 <results_reference.bucket> / <results_reference.path>/
-├── leaderboard                    # Leaderboard HtML artifact (RAG patterns ranked by metric)
-├── autorag_run                    # Run artifact (log and experiment status)
-└── rag_patterns/                  # Directory of generated RAG patterns
-    ├── <pattern_name_0>/
-    │   ├── pattern.json           # Pattern config, params, and evaluation metrics
-    │   ├── indexing_notebook.ipynb # Notebook to build/populate the vector index
-    │   └── inference_notebook.ipynb # Notebook for retrieval and generation
-    ├── <pattern_name_1>/
-    │   ├── pattern.json
-    │   ├── indexing_notebook.ipynb
-    │   └── inference_notebook.ipynb
-    └── ...
+<pipeline_name>/
+└── <run_id>/
+    ├── leaderboard-evaluation/
+    │   └── <task_id>/
+    │       └── html_artifact                     # HTML leaderboard (RAG pattern names + metrics); single file at path
+    ├── autorag-run/
+    │   └── <task_id>/
+    │       └── run_artifact                      # Log and experiment status
+    └── rag-templates-optimization/
+        └── <task_id>/
+            └── rag_patterns_artifact/
+                ├── <pattern_name_0>/             # one per top-N RAG pattern
+                │   ├── pattern.json              # Pattern config, params, evaluation metrics
+                │   ├── indexing_notebook.ipynb   # Notebook to build/populate the vector index
+                │   └── inference_notebook.ipynb  # Notebook for retrieval and generation
+                ├── <pattern_name_1>/
+                │   ├── pattern.json
+                │   ├── indexing_notebook.ipynb
+                │   └── inference_notebook.ipynb
+                └── ...
 ```
 
-Each RAG pattern folder corresponds to one optimized configuration; pattern names and count depend on the run (e.g. `max_number_of_rag_patterns`).
+- `pipeline_name`: pipeline identifier (e.g. `documents-rag-optimization-pipeline`).
+- `run_id`: Kubeflow Pipelines run ID.
+- Component folders (`leaderboard-evaluation`, `rag-pattern-generation`, etc.) align with pipeline steps; `<task_id>` is the KFP task ID for that step.
+- Pattern count and names depend on the run (e.g. `max_number_of_rag_patterns`).
 
 
 ## Usage Examples 🧪
@@ -390,6 +401,9 @@ This pipeline orchestrates the following AutoRAG components:
 
 5. **[RAG Templates Optimization](../components/training/autorag/rag_templates_optimization/README.md)** -
    Core optimization component using GAM-based prediction
+
+6. **[Leaderboard Evaluation](../components/training/autorag/leaderboard_evaluation/README.md)** -
+   Builds an HTML leaderboard artifact from RAG pattern results (pattern names, settings, metrics)
 
 ## Artifacts 📦
 
