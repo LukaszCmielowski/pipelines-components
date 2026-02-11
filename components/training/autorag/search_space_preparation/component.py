@@ -90,6 +90,7 @@ def search_space_preparation(
     SEED = 17
 
     class DisconnectedModelsPreSelector(ModelsPreSelector):
+
         def __init__(self, mps: ModelsPreSelector) -> None:
             self.mps: ModelsPreSelector = mps
             self.metric = mps.metric
@@ -122,6 +123,7 @@ def search_space_preparation(
             ]
 
     class MockGenerationModel(FoundationModel):
+
         def __init__(
             self,
             model_id: str,
@@ -134,6 +136,7 @@ def search_space_preparation(
             return "Dummy response from a generation model!"
 
     class MockEmbeddingModel(EmbeddingModel):
+
         def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
             super().__init__(client, model_id, params)
 
