@@ -23,7 +23,11 @@ from components.training.autorag.rag_templates_optimization.src.utils import (
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["ai4rag", "pyyaml", "langchain_core"],
+    packages_to_install=[
+        "ai4rag@git+https://github.com/IBM/ai4rag.git",
+        "pyyaml",
+        "langchain_core",
+    ],
 )
 def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
@@ -142,6 +146,7 @@ def rag_templates_optimization(
             return "Dummy response from a generation model!"
 
     class MockEmbeddingModel(EmbeddingModel):
+
         def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
             super().__init__(client, model_id, params)
 

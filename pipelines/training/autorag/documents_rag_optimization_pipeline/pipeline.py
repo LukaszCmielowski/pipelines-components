@@ -16,9 +16,9 @@ from components.training.autorag.search_space_preparation.component import searc
 )
 def documents_rag_optimization_pipeline(
     test_data_secret_name: str,
-    input_data_secret_name: str,
     test_data_bucket_name: str,
     test_data_key: str,
+    input_data_secret_name: str,
     input_data_bucket_name: str,
     input_data_key: str,
     llama_stack_secret_name: str,
@@ -36,36 +36,28 @@ def documents_rag_optimization_pipeline(
     settings based on an upfront-specified quality metric.
 
     The system integrates with llama-stack API for inference and vector database operations,
-    producing optimized RAG Patterns as artifacts that can be deployed and used for production
-    RAG applications. It can also communicate with externally provided MLFlow server to support
-    advanced experiment tracking features.
+    producing optimized RAG patterns as artifacts that can be deployed and used for production
+    RAG applications.
 
     Args:
-        name: Name of the AutoRAG experiment run (e.g., "AutoRAG run").
-        input_data_reference: Dictionary defining document data source with keys: connection_id,
-            bucket, path.
-        test_data_reference: Dictionary defining test data source with keys: connection_id, bucket,
-            path. Test data JSON file is supported only.
-        results_reference: Dictionary defining results storage location with keys: connection_id,
-            bucket, path.
-        description: Optional description of the experiment (e.g., "RHOAI Kubeflow Pipelines Docs").
-        vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus
-            database). If not provided, an in-memory database will be used.
-        mlflow_config: Optional dictionary defining MLFlow configuration for experiment tracking with
-            keys: tracking_uri, experiment_name, enabled.
-        optimization: Optional dictionary defining optimization settings with keys:
-            max_number_of_rag_patterns (int), metric (str). Supported metrics: faithfulness,
-            answer_correctness.
-        chunking_constraints: Optional list of dictionaries defining chunking configurations. Each
-            dictionary contains: method (str), chunk_overlap (int), chunk_size (int).
-        embeddings_constraints: Optional list of dictionaries defining embedding models. Each
-            dictionary contains: model (str).
-        generation_constraints: Optional list of dictionaries defining generation models. Each
-            dictionary contains: model (str), optional context_template_text (str), optional
-            messages (list[dict]).
-        retrieval_constraints: Optional list of dictionaries defining retrieval method
-            configurations. Each dictionary contains: method (str), number_of_chunks (int),
-            optional hybrid_ranker (dict).
+        test_data_secret_name: Name of the Kubernetes secret holding S3-compatible credentials for
+            test data access. The following environment variables are required:
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
+        test_data_bucket_name: S3 (or compatible) bucket name for the test data file.
+        test_data_key: Object key (path) of the test data JSON file in the test data bucket.
+        input_data_secret_name: Name of the Kubernetes secret holding S3-compatible credentials
+            for input document data access. The following environment variables are required:
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
+        input_data_bucket_name: S3 (or compatible) bucket name for the input documents.
+        input_data_key: Object key (path) of the input documents in the input data bucket.
+        llama_stack_secret_name: Name of the Kubernetes secret for llama-stack API connection.
+            The secret is expected to provide the LLAMASTACK_CLIENT_CONNECTION environment variable.
+        embeddings_models: Optional list of embedding model identifiers to use in the search space.
+        generation_models: Optional list of foundation/generation model identifiers to use in the
+            search space.
+        optimization_metrics: Quality metric used to optimize RAG patterns (e.g., "faithfulness").
+        vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus).
+            If not provided, an in-memory database may be used.
     """
 
     test_data_loader_task = test_data_loader(
@@ -88,10 +80,10 @@ def documents_rag_optimization_pipeline(
             task,
             secret_name=secret_name,
             secret_key_to_env={
-                "aws_access_key_id": "AWS_ACCESS_KEY_ID",
-                "aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-                "endpoint_url": "AWS_ENDPOINT_URL",
-                "aws_region_name": "AWS_REGION",
+                "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
+                "AWS_S3_ENDPOINT": "AWS_S3_ENDPOINT",
+                "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
             },
         )
 

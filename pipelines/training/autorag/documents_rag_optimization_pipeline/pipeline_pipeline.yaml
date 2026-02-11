@@ -1,0 +1,849 @@
+# PIPELINE DEFINITION
+# Name: documents-rag-optimization-pipeline
+# Description: Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications
+# Inputs:
+#    embeddings_models: list
+#    generation_models: list
+#    input_data_bucket_name: str
+#    input_data_key: str
+#    input_data_secret_name: str
+#    llama_stack_secret_name: str
+#    optimization_metrics: str [Default: 'faithfulness']
+#    test_data_bucket_name: str
+#    test_data_key: str
+#    test_data_secret_name: str
+#    vector_database_id: str
+components:
+  comp-document-loader:
+    executorLabel: exec-document-loader
+    inputDefinitions:
+      artifacts:
+        test_data:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: Optional input artifact containing test data for sampling.
+          isOptional: true
+      parameters:
+        input_data_bucket_name:
+          description: S3 (or compatible) bucket containing input data.
+          parameterType: STRING
+        input_data_path:
+          description: Path to folder with input documents within the bucket.
+          parameterType: STRING
+        sampling_config:
+          description: Optional sampling configuration dictionary.
+          isOptional: true
+          parameterType: STRUCT
+    outputDefinitions:
+      artifacts:
+        sampled_documents:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-rag-templates-optimization:
+    executorLabel: exec-rag-templates-optimization
+    inputDefinitions:
+      artifacts:
+        extracted_text:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        search_space_prep_report:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        test_data:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        optimization_settings:
+          isOptional: true
+          parameterType: STRUCT
+        vector_database_id:
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        autorag_run_artifact:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        leaderboard:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        rag_patterns:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-search-space-preparation:
+    executorLabel: exec-search-space-preparation
+    inputDefinitions:
+      artifacts:
+        extracted_text:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        test_data:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        embeddings_models:
+          isOptional: true
+          parameterType: LIST
+        generation_models:
+          isOptional: true
+          parameterType: LIST
+        metric:
+          isOptional: true
+          parameterType: STRING
+        models_config:
+          isOptional: true
+          parameterType: STRUCT
+    outputDefinitions:
+      artifacts:
+        search_space_prep_report:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-test-data-loader:
+    executorLabel: exec-test-data-loader
+    inputDefinitions:
+      parameters:
+        test_data_bucket_name:
+          description: 'S3 (or compatible) bucket that contains the test
+
+            data file.'
+          parameterType: STRING
+        test_data_path:
+          description: S3 object key to the JSON test data file.
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        test_data:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-text-extraction:
+    executorLabel: exec-text-extraction
+    inputDefinitions:
+      artifacts:
+        documents:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: Input artifact containing the documents to process.
+    outputDefinitions:
+      artifacts:
+        extracted_text:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-document-loader:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - document_loader
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'boto3'  && \
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef document_loader(\n    input_data_bucket_name: str,\n    input_data_path:\
+          \ str,\n    test_data: dsl.Input[dsl.Artifact] = None,\n    sampling_config:\
+          \ dict = None,\n    sampled_documents: dsl.Output[dsl.Artifact] = None,\n\
+          ):\n    \"\"\"Document Loader component.\n\n    Loads documents from S3-compatible\
+          \ storage and performs sampling. Reads\n    credentials from environment\
+          \ variables (injected by the pipeline from a\n    Kubernetes secret).\n\n\
+          \    Args:\n        input_data_bucket_name: S3 (or compatible) bucket containing\
+          \ input data.\n        input_data_path: Path to folder with input documents\
+          \ within the bucket.\n        test_data: Optional input artifact containing\
+          \ test data for sampling.\n        sampling_config: Optional sampling configuration\
+          \ dictionary.\n        sampled_documents: Output artifact containing the\
+          \ downloaded documents.\n\n    Environment variables (required when run\
+          \ with pipeline secret injection):\n        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,\
+          \ AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.\n    \"\"\"\n    import json\n  \
+          \  import logging\n    import os\n    import sys\n\n    import boto3\n\n\
+          \    SUPPORTED_EXTENSIONS = {\".pdf\", \".docx\", \".pptx\", \".md\", \"\
+          .html\", \".txt\"}\n    MAX_SIZE_BYTES = 1024**3  # 1 GB\n\n    logger =\
+          \ logging.getLogger(\"Document Loader component logger\")\n    logger.setLevel(logging.INFO)\n\
+          \    handler = logging.StreamHandler(sys.stdout)\n    logger.addHandler(handler)\n\
+          \n    if sampling_config is None:\n        sampling_config = {}\n\n    def\
+          \ get_test_data_docs_names() -> list[str]:\n        if test_data is None:\n\
+          \            return []\n        with open(test_data.path, \"r\") as f:\n\
+          \            benchmark = json.load(f)\n\n        docs_names = []\n     \
+          \   for question in benchmark:\n            docs_names.extend(question[\"\
+          correct_answer_document_ids\"])\n\n        return docs_names\n\n    def\
+          \ download_docs_s3():\n        \"\"\"Validate S3 credentials and download\
+          \ the input documents.\"\"\"\n        s3_creds = {\n            k: os.environ.get(k)\n\
+          \            for k in [\"AWS_ACCESS_KEY_ID\", \"AWS_SECRET_ACCESS_KEY\"\
+          , \"AWS_S3_ENDPOINT\", \"AWS_DEFAULT_REGION\"]\n        }\n        for k,\
+          \ v in s3_creds.items():\n            if v is None:\n                raise\
+          \ ValueError(\n                    \"%s environment variable not set. Check\
+          \ if kubernetes secret was configured properly\" % k\n                )\n\
+          \n        s3_client = boto3.client(\n            \"s3\",\n            endpoint_url=s3_creds[\"\
+          AWS_S3_ENDPOINT\"],\n            region_name=s3_creds[\"AWS_DEFAULT_REGION\"\
+          ],\n            aws_access_key_id=s3_creds[\"AWS_ACCESS_KEY_ID\"],\n   \
+          \         aws_secret_access_key=s3_creds[\"AWS_SECRET_ACCESS_KEY\"],\n \
+          \       )\n\n        contents = s3_client.list_objects_v2(\n           \
+          \ Bucket=input_data_bucket_name,\n            Prefix=input_data_path,\n\
+          \        ).get(\"Contents\", [])\n\n        supported_files = [c for c in\
+          \ contents if c[\"Key\"].endswith(tuple(SUPPORTED_EXTENSIONS))]\n      \
+          \  if not supported_files:\n            raise Exception(\"No supported documents\
+          \ found.\")\n\n        test_data_docs_names = get_test_data_docs_names()\n\
+          \n        supported_files.sort(key=lambda c: c[\"Key\"] not in test_data_docs_names)\n\
+          \n        total_size = 0\n        documents_to_download = []\n\n       \
+          \ for file in supported_files:\n            if total_size + file[\"Size\"\
+          ] > MAX_SIZE_BYTES:\n                continue\n            documents_to_download.append(file)\n\
+          \            total_size += file[\"Size\"]\n\n        for file_info in documents_to_download:\n\
+          \            key = file_info[\"Key\"]\n            safe_name = key.replace(\"\
+          /\", \"__\")\n            local_path = os.path.join(sampled_documents.path,\
+          \ safe_name)\n\n            try:\n                logger.info(f\"Downloading\
+          \ {key} to {local_path}\")\n                os.makedirs(os.path.dirname(local_path),\
+          \ exist_ok=True)\n                s3_client.download_file(input_data_bucket_name,\
+          \ key, local_path)\n            except Exception as e:\n               \
+          \ logger.error(\"Failed to fetch %s: %s\", key, e)\n                raise\n\
+          \n    download_docs_s3()\n\n"
+        image: quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2
+    exec-rag-templates-optimization:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - rag_templates_optimization
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'ai4rag@git+https://github.com/IBM/ai4rag.git'\
+          \ 'pyyaml' 'langchain_core'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef rag_templates_optimization(\n    extracted_text: dsl.InputPath(dsl.Artifact),\n\
+          \    test_data: dsl.InputPath(dsl.Artifact),\n    search_space_prep_report:\
+          \ dsl.InputPath(dsl.Artifact),\n    leaderboard: dsl.Output[dsl.Artifact],\
+          \  # contains metadata on the patterns hierarchy\n    rag_patterns: dsl.OutputPath(dsl.Artifact),\n\
+          \    autorag_run_artifact: dsl.Output[dsl.Artifact],  # uri to log, WML\
+          \ status object-like (from WML)\n    vector_database_id: Optional[str] =\
+          \ None,\n    optimization_settings: Optional[dict] = None,\n):\n    \"\"\
+          \"\n    Rag Templates Optimization component.\n\n    Carries out the iterative\
+          \ RAG optimization process.\n\n    Args:\n        extracted_text\n     \
+          \       A path pointing to a folder containg extracted texts from input\
+          \ documents.\n\n        test_data\n            A path pointing to test data\
+          \ used for evaluating RAG pattern quality.\n\n        search_space_prep_report\n\
+          \            A path pointing to a .yml file containig short report on the\
+          \ experiment's first phase\n            (search space preparation).\n\n\
+          \        vector_database\n            An identificator of the vector store\
+          \ used in the experiment.\n\n        optimization_settings\n           \
+          \ Additional settings customising the experiment.\n\n    Returns:\n    \
+          \    leaderboard\n            An artifact containing ordered (metric-wise)\
+          \ RAG patterns along with related metadata.\n        rag_patterns\n    \
+          \        A path pointing to a folder containg all of the generated RAG patterns.\n\
+          \n    \"\"\"\n\n    import os\n    from json import dump as json_dump\n\
+          \    from pathlib import Path\n    from random import random\n    from typing\
+          \ import Any, List, TextIO\n\n    import pandas as pd\n    import yaml as\
+          \ yml\n    from ai4rag.core.experiment.experiment import AI4RAGExperiment\n\
+          \    from ai4rag.core.hpo.base_optimiser import OptimiserSettings\n    from\
+          \ ai4rag.rag.embedding.base_model import EmbeddingModel\n    from ai4rag.rag.foundation_models.base_model\
+          \ import FoundationModel\n    from ai4rag.search_space.src.parameter import\
+          \ Parameter\n    from ai4rag.search_space.src.search_space import AI4RAGSearchSpace\n\
+          \    from ai4rag.utils.event_handler.event_handler import BaseEventHandler,\
+          \ LogLevel\n\n    # from event_handlers import TmpEventHandler\n    from\
+          \ langchain_core.documents import Document\n\n    # from proxy_objects import\
+          \ DisconnectedAI4RAGExperiment, StdoutEventHandler\n\n    MAX_NUMBER_OF_RAG_PATTERNS\
+          \ = 8\n    METRIC = \"faithfulness\"\n\n    class TmpEventHandler(BaseEventHandler):\n\
+          \        \"\"\"Exists temporarily only for the purpose of satisying type\
+          \ hinting checks\"\"\"\n\n        def on_status_change(self, level: LogLevel,\
+          \ message: str, step: str | None = None) -> None:\n            pass\n\n\
+          \        def on_pattern_creation(self, payload: dict, evaluation_results:\
+          \ list, **kwargs) -> None:\n            pass\n\n    def load_as_langchain_doc(path:\
+          \ str | Path) -> list[Document]:\n        \"\"\"\n        Given path to\
+          \ a text-based file or a folder thereof load everything to memory and\n\
+          \        return as a list of langchain `Document` objects.\n\n        Args:\n\
+          \            path\n                A local path to either a text file or\
+          \ a folder of text files.\n        Returns:\n            A list of langchain\
+          \ `Document` objects.\n\n        Note:\n\n        \"\"\"\n\n        if isinstance(path,\
+          \ str):\n            path = Path(path)\n\n        documents = []\n     \
+          \   if path.is_dir():\n            for doc_path in path.iterdir():\n   \
+          \             with doc_path.open(\"r\", encoding=\"utf-8\") as doc:\n  \
+          \                  documents.append(Document(page_content=doc.read(), metadata={\"\
+          file_name\": doc_path.name}))\n\n        elif path.is_file():\n        \
+          \    with path.open(\"r\", encoding=\"utf-8\") as doc:\n               \
+          \ documents.append(Document(page_content=doc.read(), metadata={\"file_name\"\
+          : path.name}))\n\n        return documents\n\n    class MockGenerationModel(FoundationModel):\n\
+          \n        def __init__(\n            self,\n            model_id: str,\n\
+          \            client: None = None,\n            model_params: dict[str, Any]\
+          \ | None = None,\n        ):\n            super().__init__(client, model_id,\
+          \ model_params)\n\n        def chat(self, system_message: str, user_message:\
+          \ str) -> str:\n            return \"Dummy response from a generation model!\"\
+          \n\n    class MockEmbeddingModel(EmbeddingModel):\n\n        def __init__(self,\
+          \ model_id: str, params: dict[str, Any] | None = None, client: None = None):\n\
+          \            super().__init__(client, model_id, params)\n\n        def embed_documents(self,\
+          \ texts: List[str]) -> List[List[float]]:\n            n = []\n        \
+          \    for _ in texts:\n                n.append([random() for _ in range(self.params[\"\
+          embedding_dimension\"])])\n\n            return n\n\n        def embed_query(self,\
+          \ query: str) -> List[float]:\n            return [random() for _ in range(self.params[\"\
+          embedding_dimension\"])]\n\n    optimization_settings = optimization_settings\
+          \ if optimization_settings else {}\n    if not (optimization_metric := optimization_settings.get(\"\
+          metric\", None)):\n        optimization_metric = METRIC\n\n    documents\
+          \ = load_as_langchain_doc(extracted_text)\n\n    # recreate the search space\n\
+          \    with open(search_space_prep_report, \"r\") as f:\n        search_space\
+          \ = yml.load(f, yml.SafeLoader)\n    params = []\n    for param, values\
+          \ in search_space.items():\n        if param == \"foundation_models\":\n\
+          \            params.append(Parameter(\"foundation_model\", \"C\", values=list(map(MockGenerationModel,\
+          \ values))))\n        elif param == \"embedding_models\":\n            params.append(Parameter(\"\
+          embedding_model\", \"C\", values=list(map(MockEmbeddingModel, values))))\n\
+          \        else:\n            params.append(Parameter(param, \"C\", values=values))\n\
+          \    search_space = AI4RAGSearchSpace(params=params)\n\n    # TODO chunking\
+          \ should be handled externally\n    # OR\n    # should be a separate component\
+          \ run previously (or within text extraction)\n    # documents_splits = MarkdownTextSplitter().create_documents(documents)\n\
+          \n    event_handler = TmpEventHandler()\n    optimiser_settings = OptimiserSettings(\n\
+          \        max_evals=optimization_settings.get(\"max_number_of_rag_patterns\"\
+          , MAX_NUMBER_OF_RAG_PATTERNS)\n    )\n\n    benchmark_data = pd.read_json(Path(test_data))\n\
+          \n    # TODO exact naming of the secret is yet to be defined\n    client_connection\
+          \ = os.environ.get(\"LLAMASTACK_CLIENT_CONNECTION\", None)\n\n    rag_exp\
+          \ = AI4RAGExperiment(\n        client=client_connection,\n        event_handler=event_handler,\n\
+          \        optimiser_settings=optimiser_settings,\n        search_space=search_space,\n\
+          \        benchmark_data=benchmark_data,\n        vector_store_type=vector_database_id,\n\
+          \        documents=documents,\n        optimization_metric=optimization_metric,\n\
+          \        # TODO some necessary kwargs (if any at all)\n    )\n\n    if not\
+          \ client_connection:\n        pass\n        # rag_exp = DisconnectedAI4RAGExperiment(rag_exp)\n\
+          \n    # retrieve documents && run optimisation loop\n    best_pattern =\
+          \ rag_exp.search()\n\n    rag_patterns_dir = Path(rag_patterns)\n\n    for\
+          \ eval in rag_exp.results.evaluations:\n        patt_dir = rag_patterns_dir\
+          \ / eval.pattern_name\n        patt_dir.mkdir(parents=True, exist_ok=True)\n\
+          \        with (patt_dir / \"pattern.json\").open(\"w+\") as pattern_details:\n\
+          \            # json_dump(rag_exp._stream_finished_pattern(eval, []), pattern_details)\n\
+          \            json_dump(eval.to_dict(), pattern_details)\n\n        with\
+          \ (patt_dir / \"inference_notebook.ipynb\").open(\"w+\") as inf_notebook:\n\
+          \            json_dump({\"inference_notebook_cell\": \"cell_value\"}, inf_notebook)\n\
+          \n        with (patt_dir / \"indexing_notebook.ipynb\").open(\"w+\") as\
+          \ ind_notebook:\n            json_dump({\"ind_notebook_cell\": \"cell_Value\"\
+          }, ind_notebook)\n\n    # TODO leaderboard artifact\n    # TODO autorag_run_artifact\n\
+          \n"
+        image: quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2
+    exec-search-space-preparation:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - search_space_preparation
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'ai4rag@git+https://github.com/IBM/ai4rag.git'\
+          \ 'langchain_core'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef search_space_preparation(\n    test_data: dsl.Input[dsl.Artifact],\n\
+          \    extracted_text: dsl.Input[dsl.Artifact],\n    search_space_prep_report:\
+          \ dsl.Output[dsl.Artifact],\n    # test_data: dsl.InputPath(dsl.Artifact),\n\
+          \    # extracted_text: dsl.InputPath(dsl.Artifact),\n    # search_space_prep_report:\
+          \ dsl.OutputPath(dsl.Artifact),\n    # constraints: Dict = None,\n    embeddings_models:\
+          \ Optional[List] = None,\n    generation_models: Optional[List] = None,\n\
+          \    models_config: Dict = None,  # ???\n    metric: str = None,\n):\n \
+          \   \"\"\"\n    Runs an AutoRAG experiment's first phase which includes:\n\
+          \    - AutoRAG search space creation given the user's constraints,\n   \
+          \ - embedding and foundation models number limitation and initial selection,\n\
+          \n    Args:\n        test_data\n            A path to a .json file containing\
+          \ questions and expected answers that can be retrieved\n            from\
+          \ `extracted_data`. Necessary baseline for calculating quality metrics of\
+          \ RAG pipeline.\n\n        extracted_text\n            A path to either\
+          \ a single file or a folder of files. The document(s) will be used during\n\
+          \            model selection process.\n\n        constraints\n         \
+          \   User defined constraints for the AutoRAG search space.\n\n        models_config\n\
+          \            User defined models limited selection.\n\n        metric\n\
+          \            Quality metric to evaluate the intermediate RAG patterns.\n\
+          \n    Returns:\n        search_space_prep_report\n            A .yml-formatted\
+          \ report including results of this experiment's phase.\n            For\
+          \ its exact content please refer to the `search_space_prep_report_schema.yml`\
+          \ file.\n    \"\"\"\n\n    import os\n    from pathlib import Path\n   \
+          \ from random import random\n    from typing import Any, Optional\n\n  \
+          \  import pandas as pd\n    import yaml as yml\n    from ai4rag.core.experiment.benchmark_data\
+          \ import BenchmarkData\n    from ai4rag.core.experiment.mps import ModelsPreSelector\n\
+          \    from ai4rag.rag.embedding.base_model import EmbeddingModel\n    from\
+          \ ai4rag.rag.foundation_models.base_model import FoundationModel\n    from\
+          \ ai4rag.search_space.prepare.prepare_search_space import prepare_ai4rag_search_space\n\
+          \    from ai4rag.search_space.src.parameter import Parameter\n    from ai4rag.search_space.src.search_space\
+          \ import AI4RAGSearchSpace\n    from kfp import dsl\n    from langchain_core.documents\
+          \ import Document\n\n    # from proxy_objects import DisconnectedModelsPreSelector\n\
+          \    # from utils import load_as_langchain_doc\n    # TODO whole component\
+          \ has to be run conditionally\n    # TODO these defaults should be exposed\
+          \ by ai4rag library\n    TOP_N_GENERATION_MODELS = 3  # change names (topNmodels?\
+          \ )\n    TOP_K_EMBEDDING_MODELS = 2\n    METRIC = \"faithfulness\"\n   \
+          \ SAMPLE_SIZE = 5\n    SEED = 17\n\n    class DisconnectedModelsPreSelector(ModelsPreSelector):\n\
+          \n        def __init__(self, mps: ModelsPreSelector) -> None:\n        \
+          \    self.mps: ModelsPreSelector = mps\n            self.metric = mps.metric\n\
+          \n        def evaluate_patterns(self):\n\n            self.evaluation_results\
+          \ = [\n                {\n                    \"embedding_model\": \"granite_emb1\"\
+          ,\n                    \"foundation_model\": \"mistral1\",\n           \
+          \         \"scores\": {\"faithfulness\": {\"mean\": 0.5, \"ci_low\": 0.4,\
+          \ \"ci_high\": 0.6}},\n                    \"question_scores\": {\n    \
+          \                    \"faithfulnesss\": {\n                            \"\
+          q_id_0\": 0.5,\n                            \"q_id_1\": 0.8,\n         \
+          \               }\n                    },\n                },\n        \
+          \        {\n                    \"embedding_model\": \"granite_emb2\",\n\
+          \                    \"foundation_model\": \"mistral2\",\n             \
+          \       \"scores\": {\"faithfulness\": {\"mean\": 0.5, \"ci_low\": 0.4,\
+          \ \"ci_high\": 0.6}},\n                    \"question_scores\": {\n    \
+          \                    \"faithfulnesss\": {\n                            \"\
+          q_id_0\": 0.5,\n                            \"q_id_1\": 0.8,\n         \
+          \               }\n                    },\n                },\n        \
+          \    ]\n\n    class MockGenerationModel(FoundationModel):\n\n        def\
+          \ __init__(\n            self,\n            model_id: str,\n           \
+          \ client: None = None,\n            model_params: dict[str, Any] | None\
+          \ = None,\n        ):\n            super().__init__(client, model_id, model_params)\n\
+          \n        def chat(self, system_message: str, user_message: str) -> str:\n\
+          \            return \"Dummy response from a generation model!\"\n\n    class\
+          \ MockEmbeddingModel(EmbeddingModel):\n\n        def __init__(self, model_id:\
+          \ str, params: dict[str, Any] | None = None, client: None = None):\n   \
+          \         super().__init__(client, model_id, params)\n\n        def embed_documents(self,\
+          \ texts: List[str]) -> List[List[float]]:\n            n = []\n        \
+          \    for _ in texts:\n                n.append([random() for _ in range(self.params[\"\
+          embedding_dimension\"])])\n\n            return n\n\n        def embed_query(self,\
+          \ query: str) -> List[float]:\n            return [random() for _ in range(self.params[\"\
+          embedding_dimension\"])]\n\n    def load_as_langchain_doc(path: str | Path)\
+          \ -> list[Document]:\n        \"\"\"\n        Given path to a text-based\
+          \ file or a folder thereof load everything to memory and\n        return\
+          \ as a list of langchain `Document` objects.\n\n        Args:\n        \
+          \    path\n                A local path to either a text file or a folder\
+          \ of text files.\n        Returns:\n            A list of langchain `Document`\
+          \ objects.\n\n        Note:\n\n        \"\"\"\n\n        if isinstance(path,\
+          \ str):\n            path = Path(path)\n\n        documents = []\n     \
+          \   if path.is_dir():\n            for doc_path in path.iterdir():\n   \
+          \             with doc_path.open(\"r\", encoding=\"utf-8\") as doc:\n  \
+          \                  documents.append(Document(page_content=doc.read(), metadata={\"\
+          file_name\": doc_path.name}))\n\n        elif path.is_file():\n        \
+          \    with path.open(\"r\", encoding=\"utf-8\") as doc:\n               \
+          \ documents.append(Document(page_content=doc.read(), metadata={\"file_name\"\
+          : path.name}))\n\n        return documents\n\n    def prepare_ai4rag_search_space():\n\
+          \        if not generation_models:\n            generation_models_local\
+          \ = [\"mocked_gen_model1\"]\n        if not embeddings_models:\n       \
+          \     embedding_models_local = [\"mocked_em_model1\"]\n\n        generation_models_local\
+          \ = list(map(MockGenerationModel, generation_models))\n        embedding_models_local\
+          \ = list(map(MockEmbeddingModel, embeddings_models))\n\n        return AI4RAGSearchSpace(\n\
+          \            params=[\n                Parameter(\"foundation_model\", \"\
+          C\", values=generation_models_local),\n                Parameter(\"embedding_model\"\
+          , \"C\", values=embedding_models_local),\n            ]\n        )\n\n \
+          \   # build search space\n    # constraints = constraints if constraints\
+          \ else {}\n    search_space = prepare_ai4rag_search_space()\n\n    benchmark_data\
+          \ = BenchmarkData(pd.read_json(Path(test_data.path)))\n    documents = load_as_langchain_doc(extracted_text.path)\n\
+          \n    mps = ModelsPreSelector(\n        benchmark_data=benchmark_data.get_random_sample(n_records=SAMPLE_SIZE,\
+          \ random_seed=SEED),\n        documents=documents,\n        foundation_models=search_space._search_space[\"\
+          foundation_model\"].values,\n        embedding_models=search_space._search_space[\"\
+          embedding_model\"].values,\n        metric=metric if metric else METRIC,\n\
+          \    )\n\n    if not os.environ.get(\"LLAMASTACK_CLIENT_CONNECTION\", None):\n\
+          \        # TODO the exact env variable name is yet to be defined\n     \
+          \   mps = DisconnectedModelsPreSelector(mps)\n\n    mps.evaluate_patterns()\n\
+          \n    selected_models = mps.select_models(n_em=TOP_K_EMBEDDING_MODELS, n_fm=TOP_N_GENERATION_MODELS)\n\
+          \    selected_models_names = {k: list(map(str, v)) for k, v in selected_models.items()}\n\
+          \n    verbose_search_space_repr = {\n        k: v.all_values()\n       \
+          \ for k, v in search_space._search_space.items()\n        if k not in (\"\
+          foundation_model\", \"embedding_model\")\n    }\n    verbose_search_space_repr\
+          \ |= selected_models_names\n\n    with open(search_space_prep_report.path,\
+          \ \"w\") as report_file:\n        yml.dump(verbose_search_space_repr, report_file,\
+          \ yml.SafeDumper)\n\n"
+        image: quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2
+    exec-test-data-loader:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - test_data_loader
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'boto3'  && \
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef test_data_loader(test_data_bucket_name: str, test_data_path:\
+          \ str, test_data: dsl.Output[dsl.Artifact] = None):\n    \"\"\"Download\
+          \ test data json file from S3 into a KFP artifact.\n\n    The component\
+          \ reads S3-compatible credentials from environment variables\n    (injected\
+          \ by the pipeline from a Kubernetes secret) and downloads a JSON\n    test\
+          \ data file from the provided bucket and path to the output artifact.\n\n\
+          \    Args:\n        test_data_bucket_name: S3 (or compatible) bucket that\
+          \ contains the test\n            data file.\n        test_data_path: S3\
+          \ object key to the JSON test data file.\n        test_data: Output artifact\
+          \ that receives the downloaded file.\n\n    Environment variables (required\
+          \ when run with pipeline secret injection):\n        AWS_ACCESS_KEY_ID,\
+          \ AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.\n\n    Raises:\n\
+          \        ValueError: If S3 credentials are missing or misconfigured.\n \
+          \       Exception: If the download fails or the path is not a JSON file.\n\
+          \    \"\"\"\n    import logging\n    import os\n    import sys\n\n    import\
+          \ boto3\n    from botocore.exceptions import ClientError\n\n    logger =\
+          \ logging.getLogger(\"Test Data Loader component logger\")\n    logger.setLevel(logging.INFO)\n\
+          \    if not logger.handlers:\n        handler = logging.StreamHandler(sys.stdout)\n\
+          \        logger.addHandler(handler)\n\n    def get_test_data_s3():\n   \
+          \     \"\"\"Validate S3 credentials and download the JSON test data file.\"\
+          \"\"\n        s3_creds = {\n            k: os.environ.get(k)\n         \
+          \   for k in [\"AWS_ACCESS_KEY_ID\", \"AWS_SECRET_ACCESS_KEY\", \"AWS_S3_ENDPOINT\"\
+          , \"AWS_DEFAULT_REGION\"]\n        }\n        for k, v in s3_creds.items():\n\
+          \            if v is None:\n                raise ValueError(\n        \
+          \            \"%s environment variable not set. Check if kubernetes secret\
+          \ was configured properly\" % k\n                )\n\n        s3_client\
+          \ = boto3.client(\n            \"s3\",\n            endpoint_url=s3_creds[\"\
+          AWS_S3_ENDPOINT\"],\n            region_name=s3_creds[\"AWS_DEFAULT_REGION\"\
+          ],\n            aws_access_key_id=s3_creds[\"AWS_ACCESS_KEY_ID\"],\n   \
+          \         aws_secret_access_key=s3_creds[\"AWS_SECRET_ACCESS_KEY\"],\n \
+          \       )\n\n        if test_data_path.endswith(\".json\"):\n          \
+          \  logger.info(f\"Fetching test data from S3: bucket={test_data_bucket_name},\
+          \ path={test_data_path}\")\n            try:\n                logger.info(f\"\
+          Starting download to {test_data.path}\")\n                s3_client.download_file(test_data_bucket_name,\
+          \ test_data_path, test_data.path)\n                logger.info(\"Download\
+          \ completed successfully\")\n            except ClientError as e:\n    \
+          \            if e.response.get(\"Error\", {}).get(\"Code\") in (\"404\"\
+          , \"NoSuchKey\"):\n                    raise FileNotFoundError(\n      \
+          \                  \"Test data object not found in S3. bucket=%r, key=%r.\
+          \ \"\n                        \"Check that test_data_key (pipeline parameter)\
+          \ is the full object key to an existing JSON file.\"\n                 \
+          \       % (test_data_bucket_name, test_data_path)\n                    )\
+          \ from e\n                logger.error(\"Failed to fetch %s: %s\", test_data_path,\
+          \ e)\n                raise\n            except Exception as e:\n      \
+          \          logger.error(\"Failed to fetch %s: %s\", test_data_path, e)\n\
+          \                raise\n        else:\n            logger.error(\"Test data\
+          \ must be a json file: %s\", test_data_path)\n            raise\n\n    get_test_data_s3()\n\
+          \n"
+        image: quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2
+    exec-text-extraction:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - text_extraction
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'docling[ort]'\
+          \  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef text_extraction(\n    documents: dsl.Input[dsl.Artifact],\n \
+          \   extracted_text: dsl.Output[dsl.Artifact],\n):\n    \"\"\"Text Extraction\
+          \ component.\n\n    Extracts text from provided documents (PDF, DOCX, PPTX,\
+          \ MD, HTML, TXT) using the docling library.\n\n    Args:\n        documents:\
+          \ Input artifact containing the documents to process.\n        extracted_text:\
+          \ Output artifact where the extracted text content will be stored.\n\n \
+          \   Returns:\n        A message indicating the completion status and processing\
+          \ statistics.\n    \"\"\"\n    import logging\n    import os\n    import\
+          \ sys\n    from concurrent.futures import ThreadPoolExecutor\n    from pathlib\
+          \ import Path\n\n    from docling.datamodel.base_models import InputFormat\n\
+          \    from docling.datamodel.pipeline_options import PdfPipelineOptions\n\
+          \    from docling.document_converter import DocumentConverter, PdfFormatOption\n\
+          \n    logger = logging.getLogger(\"Text Extraction component logger\")\n\
+          \    logger.setLevel(logging.INFO)\n    if not logger.handlers:\n      \
+          \  handler = logging.StreamHandler(sys.stdout)\n        logger.addHandler(handler)\n\
+          \n    pipeline_options = PdfPipelineOptions()\n    pipeline_options.do_ocr\
+          \ = False\n    pipeline_options.do_table_structure = True\n\n    converter\
+          \ = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)})\n\
+          \n    input_dir = Path(documents.path)\n    output_dir = Path(extracted_text.path)\n\
+          \    output_dir.mkdir(parents=True, exist_ok=True)\n\n    SUPPORTED_EXTENSIONS\
+          \ = {\".pdf\", \".docx\", \".pptx\", \".md\", \".html\", \".txt\"}\n\n \
+          \   if not input_dir.exists():\n        msg = f\"Input directory {input_dir}\
+          \ does not exist.\"\n        logger.error(msg)\n        return msg\n\n \
+          \   files_to_process = [f for f in input_dir.iterdir() if f.is_file() and\
+          \ f.suffix.lower() in SUPPORTED_EXTENSIONS]\n\n    logger.info(f\"Starting\
+          \ text extraction for {len(files_to_process)} documents.\")\n\n    def process_file(file_path:\
+          \ Path):\n        try:\n            logger.info(f\"Processing document:\
+          \ {file_path.name}\")\n\n            result = converter.convert(file_path)\n\
+          \n            markdown_content = result.document.export_to_markdown()\n\n\
+          \            output_file_name = f\"{file_path.stem}.md\"\n            output_file_path\
+          \ = output_dir / output_file_name\n\n            with open(output_file_path,\
+          \ \"w\", encoding=\"utf-8\") as f:\n                f.write(markdown_content)\n\
+          \n            logger.info(f\"Successfully extracted text from {file_path.name}\"\
+          )\n            return True\n        except Exception as e:\n           \
+          \ logger.error(f\"Failed to process {file_path.name}: {str(e)}\")\n    \
+          \        return False\n\n    max_workers = min(len(files_to_process), (os.cpu_count()\
+          \ or 1) * 2) if files_to_process else 1\n\n    with ThreadPoolExecutor(max_workers=max_workers)\
+          \ as executor:\n        results = list(executor.map(process_file, files_to_process))\n\
+          \n    processed_count = sum(1 for r in results if r)\n    error_count =\
+          \ len(results) - processed_count\n\n    summary = f\"Text extraction completed.\
+          \ Total processed: {processed_count}, Errors: {error_count}.\"\n    logger.info(summary)\n\
+          \n"
+        image: quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2
+pipelineInfo:
+  description: Automated system for building and optimizing Retrieval-Augmented Generation
+    (RAG) applications
+  name: documents-rag-optimization-pipeline
+root:
+  dag:
+    tasks:
+      document-loader:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-document-loader
+        dependentTasks:
+        - test-data-loader
+        inputs:
+          artifacts:
+            test_data:
+              taskOutputArtifact:
+                outputArtifactKey: test_data
+                producerTask: test-data-loader
+          parameters:
+            input_data_bucket_name:
+              componentInputParameter: input_data_bucket_name
+            input_data_path:
+              componentInputParameter: input_data_key
+            sampling_config:
+              runtimeValue:
+                constant: {}
+        taskInfo:
+          name: document-loader
+      rag-templates-optimization:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-rag-templates-optimization
+        dependentTasks:
+        - search-space-preparation
+        - test-data-loader
+        - text-extraction
+        inputs:
+          artifacts:
+            extracted_text:
+              taskOutputArtifact:
+                outputArtifactKey: extracted_text
+                producerTask: text-extraction
+            search_space_prep_report:
+              taskOutputArtifact:
+                outputArtifactKey: search_space_prep_report
+                producerTask: search-space-preparation
+            test_data:
+              taskOutputArtifact:
+                outputArtifactKey: test_data
+                producerTask: test-data-loader
+          parameters:
+            vector_database_id:
+              runtimeValue:
+                constant: ls_milvus
+        taskInfo:
+          name: rag-templates-optimization
+      search-space-preparation:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-search-space-preparation
+        dependentTasks:
+        - test-data-loader
+        - text-extraction
+        inputs:
+          artifacts:
+            extracted_text:
+              taskOutputArtifact:
+                outputArtifactKey: extracted_text
+                producerTask: text-extraction
+            test_data:
+              taskOutputArtifact:
+                outputArtifactKey: test_data
+                producerTask: test-data-loader
+          parameters:
+            embeddings_models:
+              componentInputParameter: embeddings_models
+            generation_models:
+              componentInputParameter: generation_models
+        taskInfo:
+          name: search-space-preparation
+      test-data-loader:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test-data-loader
+        inputs:
+          parameters:
+            test_data_bucket_name:
+              componentInputParameter: test_data_bucket_name
+            test_data_path:
+              componentInputParameter: test_data_key
+        taskInfo:
+          name: test-data-loader
+      text-extraction:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-text-extraction
+        dependentTasks:
+        - document-loader
+        inputs:
+          artifacts:
+            documents:
+              taskOutputArtifact:
+                outputArtifactKey: sampled_documents
+                producerTask: document-loader
+        taskInfo:
+          name: text-extraction
+  inputDefinitions:
+    parameters:
+      embeddings_models:
+        description: Optional list of embedding model identifiers to use in the search
+          space.
+        isOptional: true
+        parameterType: LIST
+      generation_models:
+        description: 'Optional list of foundation/generation model identifiers to
+          use in the
+
+          search space.'
+        isOptional: true
+        parameterType: LIST
+      input_data_bucket_name:
+        description: S3 (or compatible) bucket name for the input documents.
+        parameterType: STRING
+      input_data_key:
+        description: Object key (path) of the input documents in the input data bucket.
+        parameterType: STRING
+      input_data_secret_name:
+        description: 'Name of the Kubernetes secret holding S3-compatible credentials
+
+          for input document data access. The following environment variables are
+          required:
+
+          AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.'
+        parameterType: STRING
+      llama_stack_secret_name:
+        description: 'Name of the Kubernetes secret for llama-stack API connection.
+
+          The secret is expected to provide the LLAMASTACK_CLIENT_CONNECTION environment
+          variable.'
+        parameterType: STRING
+      optimization_metrics:
+        defaultValue: faithfulness
+        description: Quality metric used to optimize RAG patterns (e.g., "faithfulness").
+        isOptional: true
+        parameterType: STRING
+      test_data_bucket_name:
+        description: S3 (or compatible) bucket name for the test data file.
+        parameterType: STRING
+      test_data_key:
+        description: Object key (path) of the test data JSON file in the test data
+          bucket.
+        parameterType: STRING
+      test_data_secret_name:
+        description: 'Name of the Kubernetes secret holding S3-compatible credentials
+          for
+
+          test data access. The following environment variables are required:
+
+          AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.'
+        parameterType: STRING
+      vector_database_id:
+        description: 'Optional vector database id (e.g., registered in llama-stack
+          Milvus).
+
+          If not provided, an in-memory database may be used.'
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.15.2
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-document-loader:
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: AWS_ACCESS_KEY_ID
+              secretKey: AWS_ACCESS_KEY_ID
+            - envVar: AWS_SECRET_ACCESS_KEY
+              secretKey: AWS_SECRET_ACCESS_KEY
+            - envVar: AWS_S3_ENDPOINT
+              secretKey: AWS_S3_ENDPOINT
+            - envVar: AWS_DEFAULT_REGION
+              secretKey: AWS_DEFAULT_REGION
+            optional: false
+            secretNameParameter:
+              componentInputParameter: input_data_secret_name
+        exec-test-data-loader:
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: AWS_ACCESS_KEY_ID
+              secretKey: AWS_ACCESS_KEY_ID
+            - envVar: AWS_SECRET_ACCESS_KEY
+              secretKey: AWS_SECRET_ACCESS_KEY
+            - envVar: AWS_S3_ENDPOINT
+              secretKey: AWS_S3_ENDPOINT
+            - envVar: AWS_DEFAULT_REGION
+              secretKey: AWS_DEFAULT_REGION
+            optional: false
+            secretNameParameter:
+              componentInputParameter: test_data_secret_name

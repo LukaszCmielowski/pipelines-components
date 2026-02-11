@@ -10,7 +10,7 @@ dependencies:
       version: ">=1.0.0"
     - name: pyYaml
     - name: pandas
-    
+
 tags:
   - training
   - autorag

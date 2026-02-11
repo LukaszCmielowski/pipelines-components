@@ -1,15 +1,15 @@
+"""
+This module contains proxy classes for respective classes from `ai4rag` module.
+The proxies defined here exist so to ease the local execution, debugging or unit/integration-testing by
+allowing mocked runs of `ai4rag` code without an external llama-stack server setup.
+"""
+
 from typing import Sequence
 
 from ai4rag.core.experiment.experiment import AI4RAGExperiment
 from ai4rag.core.experiment.mps import ModelsPreSelector
 from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
 from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
-
-"""
-This module contains proxy classes for respective classes from `ai4rag` module.
-The proxies defined here exist so to ease the local execution, debugging or unit/integration-testing by
-allowing mocked runs of `ai4rag` code without an external llama-stack server setup.
-"""
 
 
 class StdoutEventHandler(BaseEventHandler):
