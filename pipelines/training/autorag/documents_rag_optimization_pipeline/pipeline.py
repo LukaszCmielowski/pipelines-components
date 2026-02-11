@@ -9,6 +9,8 @@ from components.data_processing.autorag.text_extraction import text_extraction
 from components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
 from components.training.autorag.search_space_preparation.component import search_space_preparation
 
+SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
+
 
 @dsl.pipeline(
     name="documents-rag-optimization-pipeline",
@@ -24,7 +26,7 @@ def documents_rag_optimization_pipeline(
     llama_stack_secret_name: str,
     embeddings_models: Optional[List] = None,
     generation_models: Optional[List] = None,
-    optimization_metrics: str = "faithfulness",
+    optimization_metric: str = "faithfulness",
     vector_database_id: Optional[str] = None,
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
@@ -55,7 +57,8 @@ def documents_rag_optimization_pipeline(
         embeddings_models: Optional list of embedding model identifiers to use in the search space.
         generation_models: Optional list of foundation/generation model identifiers to use in the
             search space.
-        optimization_metrics: Quality metric used to optimize RAG patterns (e.g., "faithfulness").
+        optimization_metric: Quality metric used to optimize RAG patterns. Supported values:
+            "faithfulness", "answer_correctness", "context_correctness".
         vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus).
             If not provided, an in-memory database may be used.
     """
@@ -100,7 +103,8 @@ def documents_rag_optimization_pipeline(
         extracted_text=text_extraction_task.outputs["extracted_text"],
         test_data=test_data_loader_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
-        vector_database_id="ls_milvus",
+        vector_database_id=vector_database_id or "ls_milvus",
+        optimization_settings={"metric": optimization_metric},
     )
 
 

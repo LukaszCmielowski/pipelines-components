@@ -1,24 +1,6 @@
-import os
-from json import dump as json_dump
-from pathlib import Path
 from typing import Optional
 
-import pandas as pd
-from ai4rag.core.experiment.experiment import AI4RAGExperiment
-from ai4rag.core.hpo.base_optimiser import OptimiserSettings
 from kfp import dsl
-from langchain_core.documents import Document
-from langchain_text_splitters import MarkdownTextSplitter
-
-from components.training.autorag.rag_templates_optimization.src.event_handlers import TmpEventHandler
-from components.training.autorag.rag_templates_optimization.src.proxy_objects import (
-    DisconnectedAI4RAGExperiment,
-    StdoutEventHandler,
-)
-from components.training.autorag.rag_templates_optimization.src.utils import (
-    load_as_langchain_doc,
-    load_search_space_from,
-)
 
 
 @dsl.component(
@@ -27,6 +9,7 @@ from components.training.autorag.rag_templates_optimization.src.utils import (
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pyyaml",
         "langchain_core",
+        "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
     ],
 )
 def rag_templates_optimization(
@@ -59,7 +42,9 @@ def rag_templates_optimization(
             An identificator of the vector store used in the experiment.
 
         optimization_settings
-            Additional settings customising the experiment.
+            Additional settings customising the experiment. May include "metric" (str): quality
+            metric for optimization. Supported values: "faithfulness", "answer_correctness",
+            "context_correctness". Defaults to "faithfulness" if omitted.
 
     Returns:
         leaderboard
@@ -68,6 +53,14 @@ def rag_templates_optimization(
             A path pointing to a folder containg all of the generated RAG patterns.
 
     """
+    # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
+    # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
+    import sys
+    try:
+        import pysqlite3
+        sys.modules["sqlite3"] = pysqlite3
+    except ImportError:
+        pass
 
     import os
     from json import dump as json_dump
@@ -78,6 +71,7 @@ def rag_templates_optimization(
     import pandas as pd
     import yaml as yml
     from ai4rag.core.experiment.experiment import AI4RAGExperiment
+    from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
     from ai4rag.core.hpo.base_optimiser import OptimiserSettings
     from ai4rag.rag.embedding.base_model import EmbeddingModel
     from ai4rag.rag.foundation_models.base_model import FoundationModel
@@ -85,13 +79,11 @@ def rag_templates_optimization(
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
     from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
 
-    # from event_handlers import TmpEventHandler
     from langchain_core.documents import Document
-
-    # from proxy_objects import DisconnectedAI4RAGExperiment, StdoutEventHandler
 
     MAX_NUMBER_OF_RAG_PATTERNS = 8
     METRIC = "faithfulness"
+    SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
 
     class TmpEventHandler(BaseEventHandler):
         """Exists temporarily only for the purpose of satisying type hinting checks"""
@@ -101,6 +93,47 @@ def rag_templates_optimization(
 
         def on_pattern_creation(self, payload: dict, evaluation_results: list, **kwargs) -> None:
             pass
+
+    class DisconnectedAI4RAGExperiment(AI4RAGExperiment):
+        """Mock experiment that returns fake results when no llama-stack client is configured."""
+
+        def __init__(self, rag_experiment: AI4RAGExperiment) -> None:
+            self.rag_experiment = rag_experiment
+            self.metrics = ["faithfulness"]
+
+        def search(self, **kwargs):
+            self.results = ExperimentResults()
+            for i in range(3):
+                eval_res = EvaluationResult(
+                    f"pattern{i}",
+                    f"collection{i}",
+                    {"indexing_param_key": f"indexing_val{i}"},
+                    {"rag_param_key": f"rag_param_val{i}"},
+                    scores={
+                        "scores": {"faithfulness": {"mean": 0.1 * i, "ci_low": 0.4, "ci_high": 0.6}},
+                        "question_scores": {
+                            "faithfulness": {
+                                "q_id_0": 0.5,
+                                "q_id_1": 0.8,
+                            }
+                        },
+                    },
+                    execution_time=0.5 * i,
+                    final_score=0.1 * i,
+                )
+                eval_data = [
+                    EvaluationData(
+                        question="benchmark_data.questions[idx]",
+                        answer='inference_response[idx]["answer"]',
+                        contexts="contexts",
+                        context_ids="context_ids",
+                        ground_truths="benchmark_data.answers[idx]",
+                        question_id="benchmark_data.questions_ids[idx]",
+                        ground_truths_context_ids=None,
+                    ),
+                ]
+                self.results.add_evaluation(eval_data, eval_res)
+            return self.results.get_best_evaluations(k=1)
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
         """
@@ -163,6 +196,11 @@ def rag_templates_optimization(
     optimization_settings = optimization_settings if optimization_settings else {}
     if not (optimization_metric := optimization_settings.get("metric", None)):
         optimization_metric = METRIC
+    if optimization_metric not in SUPPORTED_OPTIMIZATION_METRICS:
+        raise ValueError(
+            "optimization_metric must be one of %s; got %r"
+            % (sorted(SUPPORTED_OPTIMIZATION_METRICS), optimization_metric)
+        )
 
     documents = load_as_langchain_doc(extracted_text)
 
@@ -194,21 +232,24 @@ def rag_templates_optimization(
     # TODO exact naming of the secret is yet to be defined
     client_connection = os.environ.get("LLAMASTACK_CLIENT_CONNECTION", None)
 
+    # ai4rag does not accept None for vector_store_type; use a supported default when omitted
+    vector_store_type = vector_database_id if vector_database_id else "ls_milvus"
+
     rag_exp = AI4RAGExperiment(
         client=client_connection,
         event_handler=event_handler,
         optimiser_settings=optimiser_settings,
         search_space=search_space,
         benchmark_data=benchmark_data,
-        vector_store_type=vector_database_id,
+        vector_store_type=vector_store_type,
         documents=documents,
         optimization_metric=optimization_metric,
         # TODO some necessary kwargs (if any at all)
     )
 
+    # When no llama-stack client is configured, use mocked experiment to avoid server dependency
     if not client_connection:
-        pass
-        # rag_exp = DisconnectedAI4RAGExperiment(rag_exp)
+        rag_exp = DisconnectedAI4RAGExperiment(rag_exp)
 
     # retrieve documents && run optimisation loop
     best_pattern = rag_exp.search()

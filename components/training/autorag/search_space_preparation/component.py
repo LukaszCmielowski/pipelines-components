@@ -75,12 +75,11 @@ def search_space_preparation(
     from ai4rag.core.experiment.mps import ModelsPreSelector
     from ai4rag.rag.embedding.base_model import EmbeddingModel
     from ai4rag.rag.foundation_models.base_model import FoundationModel
-    from ai4rag.search_space.prepare.prepare_search_space import prepare_ai4rag_search_space
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
+    from ai4rag.search_space import prepare_search_space
     from langchain_core.documents import Document
 
-    from components.training.autorag.rag_templates_optimization.src.utils import load_as_langchain_doc
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
     TOP_N_GENERATION_MODELS = 3  # change names (topNmodels? )
@@ -181,13 +180,11 @@ def search_space_preparation(
         return documents
 
     def prepare_ai4rag_search_space():
-        if not generation_models:
-            generation_models_local = ["mocked_gen_model1"]
-        if not embeddings_models:
-            embedding_models_local = ["mocked_em_model1"]
+        generation_models_list = generation_models if generation_models else ["mocked_gen_model1"]
+        embeddings_models_list = embeddings_models if embeddings_models else ["mocked_em_model1"]
 
-        generation_models_local = list(map(MockGenerationModel, generation_models))
-        embedding_models_local = list(map(MockEmbeddingModel, embeddings_models))
+        generation_models_local = list(map(MockGenerationModel, generation_models_list))
+        embedding_models_local = list(map(MockEmbeddingModel, embeddings_models_list))
 
         return AI4RAGSearchSpace(
             params=[
