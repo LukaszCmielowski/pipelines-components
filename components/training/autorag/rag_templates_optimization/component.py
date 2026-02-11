@@ -56,8 +56,10 @@ def rag_templates_optimization(
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
     import sys
+
     try:
         import pysqlite3
+
         sys.modules["sqlite3"] = pysqlite3
     except ImportError:
         pass
@@ -166,7 +168,6 @@ def rag_templates_optimization(
         return documents
 
     class MockGenerationModel(FoundationModel):
-
         def __init__(
             self,
             model_id: str,
@@ -179,7 +180,6 @@ def rag_templates_optimization(
             return "Dummy response from a generation model!"
 
     class MockEmbeddingModel(EmbeddingModel):
-
         def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
             super().__init__(client, model_id, params)
 

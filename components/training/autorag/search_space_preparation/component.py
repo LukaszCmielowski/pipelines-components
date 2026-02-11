@@ -58,8 +58,10 @@ def search_space_preparation(
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
     import sys
+
     try:
         import pysqlite3
+
         sys.modules["sqlite3"] = pysqlite3
     except ImportError:
         pass
@@ -77,7 +79,6 @@ def search_space_preparation(
     from ai4rag.rag.foundation_models.base_model import FoundationModel
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
-    from ai4rag.search_space import prepare_search_space
     from langchain_core.documents import Document
 
     # TODO whole component has to be run conditionally
@@ -89,7 +90,6 @@ def search_space_preparation(
     SEED = 17
 
     class DisconnectedModelsPreSelector(ModelsPreSelector):
-
         def __init__(self, mps: ModelsPreSelector) -> None:
             self.mps: ModelsPreSelector = mps
             self.metric = mps.metric
@@ -122,7 +122,6 @@ def search_space_preparation(
             ]
 
     class MockGenerationModel(FoundationModel):
-
         def __init__(
             self,
             model_id: str,
@@ -135,7 +134,6 @@ def search_space_preparation(
             return "Dummy response from a generation model!"
 
     class MockEmbeddingModel(EmbeddingModel):
-
         def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
             super().__init__(client, model_id, params)
 

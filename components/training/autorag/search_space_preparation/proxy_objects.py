@@ -1,7 +1,8 @@
 """
 This module contains proxy classes for respective classes from `ai4rag` module.
-The proxies defined here exist so to ease the local execution, debugging or unit/integration-testing by
-allowing mocked runs of `ai4rag` code without an external llama-stack server setup.
+The proxies defined here exist so to ease the local execution, debugging or
+unit/integration-testing by allowing mocked runs of `ai4rag` code without an
+external llama-stack server setup.
 """
 
 from ai4rag.core.experiment.mps import ModelsPreSelector
@@ -10,7 +11,6 @@ from ai4rag.rag.foundation_models.base_model import FoundationModel
 
 
 class DisconnectedModelsPreSelector(ModelsPreSelector):
-
     def __init__(self, mps: ModelsPreSelector) -> None:
         self.mps: ModelsPreSelector = mps
         self.metric = mps.metric
