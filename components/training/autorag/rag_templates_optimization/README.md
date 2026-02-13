@@ -21,11 +21,9 @@ deployment.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `rag_patterns` | `dsl.Output[dsl.Artifact]` | `None` | Output artifacts containing optimized RAG Patterns. |
-| `leaderboard` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the leaderboard with RAG Patterns ranked by performance. |
-| `validated_configurations` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing validated configurations from search-space-preparation. |
-| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing test data for evaluation. |
-| `extracted_text` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact containing extracted text from text-extraction. |
+| `extracted_text` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a file (or a folder of files) containing extracted texts from input documents. |
+| `test_data` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a .json file containing test data for evaluation. |
+| `phase_report` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a .yml file containing short report on the first experiment's phase (search space preparation). |
 | `vector_database_id` | `str` | `None` | Optional vector database ID (e.g., registered in llama-stack Milvus database). If not provided, an in-memory database will be used. |
 | `optimization_settings` | `dict` | `None` | Optional dictionary with optimization settings. See [Optimization Settings](#optimization-settings) below. |
 
@@ -50,9 +48,8 @@ The `optimization_settings` dictionary supports:
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `rag_patterns` | `dsl.Artifact` | Multiple RAG Pattern artifacts, each containing optimized configuration, metrics, and notebooks. |
-| `leaderboard` | `dsl.Artifact` | Leaderboard artifact with RAG Patterns ranked by performance metrics. |
-| Return value | `str` | A message indicating the completion status of RAG optimization. |
+| `rag_patterns` | `dsl.OutputPath[dsl.Artifact]` | Directory of RAG Pattern artifacts; each subdir contains `pattern.json`, `indexing_notebook.ipynb`, and `inference_notebook.ipynb`. Consumed by the **leaderboard_evaluation** component to produce the HTML leaderboard. |
+| `autorag_run_artifact` | `dsl.Output[dsl.Artifact]` | General type artifact pointing to the log file and an experiment status object. |
 
 ## Usage Examples 💡
 

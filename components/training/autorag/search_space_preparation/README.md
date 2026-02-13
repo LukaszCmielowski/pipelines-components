@@ -21,9 +21,9 @@ reducing computational cost and improving optimization efficiency.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `validated_configurations` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing validated RAG configurations ready for optimization. |
-| `constraints` | `dict` | `None` | Dictionary containing search space constraints. See [Constraints Structure](#constraints-structure) below. |
+| `constraints` | `dict` | `{}` | Dictionary containing search space constraints. See [Constraints Structure](#constraints-structure) below. |
 | `models_config` | `dict` | `None` | Optional dictionary with models configuration. |
+| `metric` | `str` | `faithfulness` | A RAG metric to optimise the experiment for. |
 
 ### Constraints Structure
 
@@ -63,8 +63,7 @@ The `constraints` dictionary should contain:
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `validated_configurations` | `dsl.Artifact` | Validated RAG configurations ready for optimization. |
-| Return value | `str` | A message indicating the completion status of search space preparation. |
+| `phase_report` | `dsl.OutputPath(dsl.Artifact)` | Path to a .yml-formatted file containing short report on the current experiment's phase. |
 
 ## Usage Examples 💡
 
