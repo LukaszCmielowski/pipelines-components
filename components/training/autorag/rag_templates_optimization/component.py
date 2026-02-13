@@ -104,23 +104,40 @@ def rag_templates_optimization(
 
         def search(self, **kwargs):
             self.results = ExperimentResults()
+            embedding_models = ["mock-embed-a", "mock-embed-b", "mock-embed-a"]
+            generation_models = ["mock-llm-1", "mock-llm-1", "mock-llm-2"]
             for i in range(3):
+                indexing_params = {
+                    "chunking": {
+                        "method": "recursive",
+                        "chunk_size": 256,
+                        "chunk_overlap": 128,
+                    },
+                }
+                rag_params = {
+                    "embeddings": {"model_id": embedding_models[i]},
+                    "retrieval": {"method": "window", "number_of_chunks": 5},
+                    "generation": {"model_id": generation_models[i]},
+                }
                 eval_res = EvaluationResult(
                     f"pattern{i}",
                     f"collection{i}",
-                    {"indexing_param_key": f"indexing_val{i}"},
-                    {"rag_param_key": f"rag_param_val{i}"},
+                    indexing_params,
+                    rag_params,
                     scores={
-                        "scores": {"faithfulness": {"mean": 0.1 * i, "ci_low": 0.4, "ci_high": 0.6}},
+                        "scores": {
+                            "answer_correctness": {"mean": 0.5 + 0.1 * i, "ci_low": 0.4, "ci_high": 0.7},
+                            "faithfulness": {"mean": 0.2 + 0.1 * i, "ci_low": 0.1, "ci_high": 0.5},
+                            "context_correctness": {"mean": 1.0, "ci_low": 0.9, "ci_high": 1.0},
+                        },
                         "question_scores": {
-                            "faithfulness": {
-                                "q_id_0": 0.5,
-                                "q_id_1": 0.8,
-                            }
+                            "answer_correctness": {"q_id_0": 0.5, "q_id_1": 0.8},
+                            "faithfulness": {"q_id_0": 0.5, "q_id_1": 0.8},
+                            "context_correctness": {"q_id_0": 1.0, "q_id_1": 1.0},
                         },
                     },
                     execution_time=0.5 * i,
-                    final_score=0.1 * i,
+                    final_score=0.5 + 0.1 * i,
                 )
                 eval_data = [
                     EvaluationData(
@@ -253,20 +270,73 @@ def rag_templates_optimization(
     # retrieve documents && run optimisation loop
     best_pattern = rag_exp.search()
 
-    rag_patterns_dir = Path(rag_patterns)
+    def _evaluation_result_fallback(eval_data_list, evaluation_result):
+        """Build evaluation_result.json-style list when question_scores missing or incomplete."""
+        out = []
+        for ev in eval_data_list:
+            answer_contexts = []
+            if getattr(ev, "contexts", None) and getattr(ev, "context_ids", None):
+                answer_contexts = [
+                    {"text": t, "document_id": doc_id}
+                    for t, doc_id in zip(ev.contexts, ev.context_ids)
+                ]
+            scores = {}
+            q_scores = (evaluation_result.scores or {}).get("question_scores") or {}
+            for key in q_scores:
+                if isinstance(q_scores[key], dict) and getattr(ev, "question_id", None) in q_scores[key]:
+                    scores[key] = q_scores[key][ev.question_id]
+            out.append({
+                "question": getattr(ev, "question", ""),
+                "correct_answers": getattr(ev, "ground_truths", None),
+                "question_id": getattr(ev, "question_id", ""),
+                "answer": getattr(ev, "answer", ""),
+                "answer_contexts": answer_contexts,
+                "scores": scores,
+            })
+        return out
 
-    for eval in rag_exp.results.evaluations:
+    rag_patterns_dir = Path(rag_patterns)
+    evaluation_data_list = getattr(rag_exp.results, "evaluation_data", [])
+
+    for i, eval in enumerate(rag_exp.results.evaluations):
         patt_dir = rag_patterns_dir / eval.pattern_name
         patt_dir.mkdir(parents=True, exist_ok=True)
-        with (patt_dir / "pattern.json").open("w+") as pattern_details:
-            # json_dump(rag_exp._stream_finished_pattern(eval, []), pattern_details)
-            json_dump(eval.to_dict(), pattern_details)
+
+        # pattern.json: ai4rag EvaluationResult (to_dict) + schema fields for consumer compliance
+        pattern_data = {
+            "pattern_name": eval.pattern_name,
+            "collection": eval.collection,
+            "scores": eval.scores,
+            "execution_time": eval.execution_time,
+            "final_score": eval.final_score,
+            "schema_version": "1.0",
+            "producer": "ai4rag",
+            "settings": {**(eval.indexing_params or {}), **(eval.rag_params or {})},
+        }
+        with (patt_dir / "pattern.json").open("w+", encoding="utf-8") as pattern_details:
+            json_dump(pattern_data, pattern_details, indent=2)
 
         with (patt_dir / "inference_notebook.ipynb").open("w+") as inf_notebook:
             json_dump({"inference_notebook_cell": "cell_value"}, inf_notebook)
 
         with (patt_dir / "indexing_notebook.ipynb").open("w+") as ind_notebook:
             json_dump({"ind_notebook_cell": "cell_Value"}, ind_notebook)
+
+        eval_data = evaluation_data_list[i] if i < len(evaluation_data_list) else []
+        try:
+            q_scores = (eval.scores or {}).get("question_scores") or {}
+            if q_scores and all(
+                isinstance(q_scores.get(k), dict) for k in q_scores
+            ):
+                evaluation_result_list = ExperimentResults.create_evaluation_results_json(
+                    eval_data, eval
+                )
+            else:
+                evaluation_result_list = _evaluation_result_fallback(eval_data, eval)
+        except (KeyError, TypeError):
+            evaluation_result_list = _evaluation_result_fallback(eval_data, eval)
+        with (patt_dir / "evaluation_result.json").open("w+", encoding="utf-8") as f:
+            json_dump(evaluation_result_list, f, indent=2)
 
     # TODO autorag_run_artifact
 

@@ -48,11 +48,13 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
         └── <task_id>/
             └── rag_patterns_artifact/
                 ├── <pattern_name_0>/             # one per top-N RAG pattern
-                │   ├── pattern.json              # Pattern config, params, evaluation metrics
+                │   ├── pattern.json              # Pattern config, params, metrics (ai4rag + schema_version, settings)
+                │   ├── evaluation_result.json    # Per-question evaluation (question_id, answer, scores, etc.)
                 │   ├── indexing_notebook.ipynb   # Notebook to build/populate the vector index
                 │   └── inference_notebook.ipynb  # Notebook for retrieval and generation
                 ├── <pattern_name_1>/
                 │   ├── pattern.json
+                │   ├── evaluation_result.json
                 │   ├── indexing_notebook.ipynb
                 │   └── inference_notebook.ipynb
                 └── ...
@@ -63,6 +65,16 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
 - Component folders (`leaderboard-evaluation`, `rag-pattern-generation`, etc.) align with pipeline steps; `<task_id>` is the KFP task ID for that step.
 - Pattern count and names depend on the run (e.g. `max_number_of_rag_patterns`).
 
+### RAG pattern artifact schema (pattern.json and evaluation_result.json)
+
+Each pattern directory under `rag_patterns_artifact/` contains:
+
+- **pattern.json** — Based on **ai4rag** `EvaluationResult`, with config in a single `settings` object:
+  - **Core**: `pattern_name`, `collection`, `scores` (aggregate and per-question `question_scores`), `execution_time`, `final_score`.
+  - **Schema**: `schema_version` (e.g. `"1.0"`), `producer` (`"ai4rag"`), and `settings` (chunking, embeddings, retrieval, generation config). `indexing_params` and `rag_params` are not written; their content is in `settings`.
+- **evaluation_result.json** — List of per-question evaluation entries. Each entry has `question_id`, `question`, `answer`, `correct_answers`, `answer_contexts` (list of `{text, document_id}`), and `scores` (per-metric score for that question). Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
+
+Consumers can rely on `schema_version` and `producer` to detect format and use `settings` for config (chunking, embeddings, retrieval, generation).
 
 ```python
 """Example usage of the documents_rag_optimization_pipeline."""

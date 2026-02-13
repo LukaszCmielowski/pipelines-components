@@ -12,16 +12,16 @@ def leaderboard_evaluation(
     Build an HTML leaderboard artifact from RAG pattern evaluation results.
 
     Reads pattern.json from each subdirectory of rag_patterns (produced by
-    rag_templates_optimization) and generates a single HTML table with RAG
-    pattern names, settings, and metric values. Writes the HTML directly
-    to html_artifact.path (single file at artifact path, same as autogluon
-    leaderboard_evaluation).
+    rag_templates_optimization) and generates a single HTML table: Pattern_Name,
+    mean_* metrics (e.g. mean_answer_correctness, mean_faithfulness), then
+    config columns (chunking.*, embeddings.model_id, retrieval.*,
+    generation.model_id). Writes the HTML to html_artifact.path.
 
     Args:
         rag_patterns
             Path to the directory of RAG patterns; each subdir contains
-            pattern.json with evaluation result (pattern_name, indexing_params,
-            rag_params, scores, execution_time, final_score).
+            pattern.json (pattern_name, indexing_params, rag_params, scores,
+            execution_time, final_score).
         html_artifact
             Output HTML artifact; the leaderboard table is written to
             html_artifact.path (single file).
@@ -29,6 +29,27 @@ def leaderboard_evaluation(
     import html
     import json
     from pathlib import Path
+
+    def _get_nested(params: dict, key: str):
+        """Resolve dotted key from flat or nested dict (e.g. chunking.method)."""
+        if not params:
+            return None
+        if key in params:
+            return params[key]
+        parts = key.split(".", 1)
+        if len(parts) == 2:
+            outer = params.get(parts[0])
+            if isinstance(outer, dict):
+                return outer.get(parts[1])
+        return None
+
+    def _merge_params(indexing_params: dict, rag_params: dict) -> dict:
+        merged = dict(indexing_params or {})
+        merged.update(rag_params or {})
+        return merged
+
+    def _metric_to_mean_key(metric: str) -> str:
+        return "mean_" + metric
 
     rag_patterns_dir = Path(rag_patterns)
     if not rag_patterns_dir.is_dir():
@@ -51,59 +72,65 @@ def leaderboard_evaluation(
 
     evaluations.sort(key=_final_score)
 
-    def _format_settings(params: dict) -> str:
-        if not params:
-            return ""
-        return "<br />".join(
-            "%s: %s" % (html.escape(str(k)), html.escape(str(v)))
-            for k, v in sorted(params.items())
-        )
+    # Default column order: metrics first, then RAG config (chunking, embeddings, retrieval, generation).
+    leaderboard_metric_columns = [
+        "mean_answer_correctness",
+        "mean_faithfulness",
+        "mean_context_correctness",
+    ]
+    leaderboard_config_columns = [
+        "chunking.method",
+        "chunking.chunk_size",
+        "chunking.chunk_overlap",
+        "embeddings.model_id",
+        "retrieval.method",
+        "retrieval.number_of_chunks",
+        "generation.model_id",
+    ]
+    # Build metric columns present in data (preferred order above)
+    all_metric_names = []
+    for e in evaluations:
+        for m in (e.get("scores") or {}).get("scores") or {}:
+            if m not in all_metric_names:
+                all_metric_names.append(m)
+    metric_columns = [c for c in leaderboard_metric_columns if c.replace("mean_", "", 1) in all_metric_names]
+    for m in all_metric_names:
+        col = _metric_to_mean_key(m)
+        if col not in metric_columns:
+            metric_columns.append(col)
 
-    def _scores_columns(evals: list) -> list:
-        cols = []
-        for e in evals:
-            scores = e.get("scores") or {}
-            for metric in (scores.get("scores") or {}).keys():
-                if metric not in cols:
-                    cols.append(metric)
-        return cols
+    config_columns = list(leaderboard_config_columns)
+    headers = ["Pattern_Name"] + metric_columns + config_columns
+    header_row = "".join("<th>%s</th>" % html.escape(h) for h in headers)
 
-    metric_columns = _scores_columns(evaluations)
     rows = []
-    for rank, e in enumerate(evaluations, start=1):
+    for e in evaluations:
         pattern_name = e.get("pattern_name", "—")
-        scores = e.get("scores") or {}
-        metric_cells = []
-        for m in metric_columns:
-            info = (scores.get("scores") or {}).get(m, {})
-            mean = info.get("mean", "")
-            ci_low = info.get("ci_low")
-            ci_high = info.get("ci_high")
-            if ci_low is not None and ci_high is not None:
-                cell = "%s [%s, %s]" % (mean, ci_low, ci_high)
-            else:
-                cell = str(mean) if mean != "" else "—"
-            metric_cells.append("<td>%s</td>" % html.escape(str(cell)))
-
-        indexing_params = e.get("indexing_params") or {}
-        rag_params = e.get("rag_params") or {}
-        settings_str = _format_settings({**indexing_params, **rag_params})
-        exec_time = e.get("execution_time")
-        final_score = e.get("final_score")
-
-        rows.append(
-            "<tr><td>%d</td><td>%s</td><td>%s</td>%s<td>%s</td><td>%s</td></tr>"
-            % (
-                rank,
-                html.escape(str(pattern_name)),
-                settings_str or "—",
-                "".join(metric_cells),
-                str(exec_time) if exec_time is not None else "—",
-                str(final_score) if final_score is not None else "—",
-            )
+        scores = (e.get("scores") or {}).get("scores") or {}
+        merged = e.get("settings") or _merge_params(
+            e.get("indexing_params") or {}, e.get("rag_params") or {}
         )
 
-    metric_headers = "".join("<th>%s</th>" % html.escape(m) for m in metric_columns)
+        cells = [html.escape(str(pattern_name))]
+
+        for col in metric_columns:
+            metric_name = col.replace("mean_", "", 1)
+            info = scores.get(metric_name) or {}
+            mean = info.get("mean")
+            if mean is not None:
+                cell = "%.4f" % mean if isinstance(mean, (int, float)) else str(mean)
+            else:
+                cell = ""
+            cells.append(cell)
+
+        for col in config_columns:
+            val = _get_nested(merged, col)
+            if val is not None:
+                cells.append(str(val))
+            else:
+                cells.append("")
+        rows.append("<tr>" + "".join("<td>%s</td>" % html.escape(c) for c in cells) + "</tr>")
+
     table_body = "".join(rows)
     html_content = """<!DOCTYPE html>
 <html>
@@ -111,9 +138,10 @@ def leaderboard_evaluation(
   <meta charset="utf-8">
   <title>RAG Patterns Leaderboard</title>
   <style>
-    table { border-collapse: collapse; }
+    table { border-collapse: collapse; width: 100%%; }
     th, td { border: 1px solid #ccc; padding: 0.5rem 0.75rem; text-align: left; }
-    th { background: #f5f5f5; }
+    th { background: #f5f5f5; font-weight: 600; }
+    .numeric { text-align: right; }
   </style>
 </head>
 <body>
@@ -121,14 +149,7 @@ def leaderboard_evaluation(
   <p>Patterns ordered by optimization metric (best first).</p>
   <table>
     <thead>
-      <tr>
-        <th>Rank</th>
-        <th>RAG Pattern</th>
-        <th>Settings</th>
-        %s
-        <th>Execution time</th>
-        <th>Final score</th>
-      </tr>
+      <tr>%s</tr>
     </thead>
     <tbody>
       %s
@@ -137,11 +158,10 @@ def leaderboard_evaluation(
 </body>
 </html>
 """ % (
-        metric_headers,
+        header_row,
         table_body,
     )
 
-    # Write HTML directly to artifact path (single file at path, same as autogluon)
     Path(html_artifact.path).parent.mkdir(parents=True, exist_ok=True)
     with open(html_artifact.path, "w", encoding="utf-8") as f:
         f.write(html_content)
