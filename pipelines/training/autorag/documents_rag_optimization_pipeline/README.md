@@ -19,155 +19,87 @@ externally provided MLFlow server to support advanced experiment tracking featur
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | `None` | Name of the AutoRAG experiment run (e.g., "AutoRAG run"). |
-| `input_data_reference` | `Dict` | `None` | Dictionary defining document data source with keys: connection_id,
-bucket, path. |
-| `test_data_reference` | `Dict` | `None` | Dictionary defining test data source with keys: connection_id, bucket,
-path. Test data JSON file is supported only. |
-| `results_reference` | `Dict` | `None` | Dictionary defining results storage location with keys: connection_id,
-bucket, path. |
-| `description` | `Optional[str]` | `None` | Optional description of the experiment (e.g., "RHOAI Kubeflow Pipelines Docs"). |
-| `vector_database_id` | `Optional[str]` | `None` | Optional vector database id (e.g., registered in llama-stack Milvus
-database). If not provided, an in-memory database will be used. |
-| `mlflow_config` | `Optional[Dict]` | `None` | Optional dictionary defining MLFlow configuration for experiment tracking with
-keys: tracking_uri, experiment_name, enabled. |
-| `optimization` | `Optional[Dict]` | `None` | Optional dictionary defining optimization settings with keys:
-max_number_of_rag_patterns (int), metric (str). Supported metrics: faithfulness,
-answer_correctness. |
-| `chunking_constraints` | `Optional[List[Dict]]` | `None` | Optional list of dictionaries defining chunking configurations. Each
-dictionary contains: method (str), chunk_overlap (int), chunk_size (int). |
-| `embeddings_constraints` | `Optional[List[Dict]]` | `None` | Optional list of dictionaries defining embedding models. Each
-dictionary contains: model (str). |
-| `generation_constraints` | `Optional[List[Dict]]` | `None` | Optional list of dictionaries defining generation models. Each
-dictionary contains: model (str), optional context_template_text (str), optional
-messages (list[dict]). |
-| `retrieval_constraints` | `Optional[List[Dict]]` | `None` | Optional list of dictionaries defining retrieval method
-configurations. Each dictionary contains: method (str), number_of_chunks (int),
-optional hybrid_ranker (dict). |
+| `test_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (test data). Must provide: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
+| `test_data_bucket_name` | `str` | — | S3 (or compatible) bucket name for the test data JSON file. |
+| `test_data_key` | `str` | — | Object key (path) of the test data JSON file in the test data bucket. |
+| `input_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (input documents). Same env vars as above. |
+| `input_data_bucket_name` | `str` | — | S3 (or compatible) bucket name for the input documents. |
+| `input_data_key` | `str` | — | Object key (path) of the input documents in the input data bucket. |
+| `llama_stack_secret_name` | `str` | — | Kubernetes secret name for llama-stack API connection (provides LLAMASTACK_CLIENT_CONNECTION). |
+| `embeddings_models` | `Optional[List]` | `None` | Optional list of embedding model identifiers for the search space. |
+| `generation_models` | `Optional[List]` | `None` | Optional list of foundation/generation model identifiers for the search space. |
+| `optimization_metric` | `str` | `"faithfulness"` | Metric to optimize. Supported: `faithfulness`, `answer_correctness`, `context_correctness`. |
+| `vector_database_id` | `Optional[str]` | `None` | Optional vector database id (e.g. llama-stack Milvus). If not set, in-memory database may be used. |
 
-## Usage Examples 🧪
+## Stored artifacts (S3 / results storage) 📁
+
+After pipeline execution, outputs are stored in the pipeline run's artifact location. Layout follows pipeline and component structure:
+
+```
+<pipeline_name>/
+└── <run_id>/
+    ├── leaderboard-evaluation/
+    │   └── <task_id>/
+    │       └── html_artifact                     # HTML leaderboard (RAG pattern names + metrics); single file at path
+    ├── autorag-run/
+    │   └── <task_id>/
+    │       └── run_artifact                      # Log and experiment status
+    └── rag-templates-optimization/
+        └── <task_id>/
+            └── rag_patterns_artifact/
+                ├── <pattern_name_0>/             # one per top-N RAG pattern
+                │   ├── pattern.json              # Pattern config, params, evaluation metrics
+                │   ├── indexing_notebook.ipynb   # Notebook to build/populate the vector index
+                │   └── inference_notebook.ipynb  # Notebook for retrieval and generation
+                ├── <pattern_name_1>/
+                │   ├── pattern.json
+                │   ├── indexing_notebook.ipynb
+                │   └── inference_notebook.ipynb
+                └── ...
+```
+
+- `pipeline_name`: pipeline identifier (e.g. `documents-rag-optimization-pipeline`).
+- `run_id`: Kubeflow Pipelines run ID.
+- Component folders (`leaderboard-evaluation`, `rag-pattern-generation`, etc.) align with pipeline steps; `<task_id>` is the KFP task ID for that step.
+- Pattern count and names depend on the run (e.g. `max_number_of_rag_patterns`).
+
 
 ```python
 """Example usage of the documents_rag_optimization_pipeline."""
 
-from kfp import dsl
-from kfp_components.pipelines.training.documents_rag_optimization_pipeline import (
+from kfp_components.pipelines.training.autorag.documents_rag_optimization_pipeline import (
     documents_rag_optimization_pipeline,
 )
 
 
 def example_minimal_usage():
     """Minimal example with only required parameters."""
-    # Define data references
-    input_data_reference = {
-        "connection_id": "s3-documents-connection",
-        "bucket": "my-documents-bucket",
-        "path": "rh_documents/",
-    }
-
-    test_data_reference = {
-        "connection_id": "s3-benchmarks-connection",
-        "bucket": "autorag_benchmarks",
-        "path": "my-folder/test_data.json",
-    }
-
-    results_reference = {
-        "connection_id": "s3-autorag-results-connection",
-        "bucket": "results",
-        "path": "autorag/",
-    }
-
-    # Create pipeline run
-    run = documents_rag_optimization_pipeline(
-        name="AutoRAG Experiment 2",
-        input_data_reference=input_data_reference,
-        test_data_reference=test_data_reference,
-        results_reference=results_reference,
+    return documents_rag_optimization_pipeline(
+        test_data_secret_name="s3-test-data-secret",
+        test_data_bucket_name="autorag-benchmarks",
+        test_data_key="test_data.json",
+        input_data_secret_name="s3-input-secret",
+        input_data_bucket_name="my-documents-bucket",
+        input_data_key="rh_documents/",
+        llama_stack_secret_name="llama-stack-secret",
     )
-    return run
 
 
 def example_full_usage():
-    """Full example with all optional parameters."""
-    # Define data references
-    input_data_reference = {
-        "connection_id": "s3-documents-connection",
-        "bucket": "my-documents-bucket",
-        "path": "rh_documents/",
-    }
-
-    test_data_reference = {
-        "connection_id": "s3-benchmarks-connection",
-        "bucket": "autorag_benchmarks",
-        "path": "my-folder/test_data.json",
-    }
-
-    results_reference = {
-        "connection_id": "s3-autorag-results-connection",
-        "bucket": "results",
-        "path": "autorag/",
-    }
-
-    # Optional MLFlow configuration
-    mlflow_config = {
-        "tracking_uri": "http://mlflow-server.redhat-ods-applications.svc.cluster.local:5000",
-        "experiment_name": "AutoRAG Experiments",
-        "enabled": True,
-    }
-
-    # Optional optimization settings
-    optimization = {
-        "max_number_of_rag_patterns": 4,
-        "metric": "answer_correctness",
-    }
-
-    # Optional constraints
-    chunking_constraints = [
-        {
-            "method": "recursive",
-            "chunk_overlap": 256,
-            "chunk_size": 2048,
-        }
-    ]
-
-    embeddings_constraints = [
-        {"model": "ibm/slate-125m-english-rtrvr-v2"},
-        {"model": "intfloat/multilingual-e5-large"},
-    ]
-
-    generation_constraints = [
-        {"model": "mistralai/mixtral-8x7b-instruct-v01"},
-        {"model": "ibm/granite-13b-instruct-v2"},
-    ]
-
-    retrieval_constraints = [
-        {
-            "method": "simple",
-            "number_of_chunks": 2,
-            "hybrid_ranker": {
-                "strategy": "weighted",
-                "alpha": 0.6,
-            },
-        }
-    ]
-
-    # Create pipeline run
-    run = documents_rag_optimization_pipeline(
-        name="AutoRAG Experiment 1",
-        description="RHOAI Kubeflow Pipelines Docs",
-        input_data_reference=input_data_reference,
-        test_data_reference=test_data_reference,
+    """Full example with optional parameters."""
+    return documents_rag_optimization_pipeline(
+        test_data_secret_name="s3-test-data-secret",
+        test_data_bucket_name="autorag-benchmarks",
+        test_data_key="my-folder/test_data.json",
+        input_data_secret_name="s3-input-secret",
+        input_data_bucket_name="my-documents-bucket",
+        input_data_key="rh_documents/",
+        llama_stack_secret_name="llama-stack-secret",
+        embeddings_models=["ibm/slate-125m-english-rtrvr-v2", "intfloat/multilingual-e5-large"],
+        generation_models=["mistralai/mixtral-8x7b-instruct-v01", "ibm/granite-13b-instruct-v2"],
+        optimization_metric="answer_correctness",
         vector_database_id="milvus-database",
-        results_reference=results_reference,
-        mlflow_config=mlflow_config,
-        optimization=optimization,
-        chunking_constraints=chunking_constraints,
-        embeddings_constraints=embeddings_constraints,
-        generation_constraints=generation_constraints,
-        retrieval_constraints=retrieval_constraints,
     )
-    return run
-
 ```
 
 ## Metadata 🗂️
@@ -215,139 +147,19 @@ The optimization process involves the following stages:
    notebooks
 8. **Leaderboard**: Maintains a leaderboard of RAG Patterns ranked by performance
 
-## Input Parameters Organization 📋
-
-The pipeline parameters are organized into the following logical groups:
-
-> 📘 **Note:** This documentation uses Kubeflow Pipelines v2 structured types (`Dict`, `List`)
-> for complex parameters.
-
-### 1. Experiment Metadata
-
-**Required Parameters:**
-
-- `name: str` - Name of the AutoRAG experiment run (e.g., "AutoRAG run")
-
-**Optional Parameters:**
-
-- `description: str` - Description of the experiment (e.g., "RHOAI Kubeflow Pipelines Docs")
-
-### 2. Input Data Sources
-
-#### Document Data
-
-**Required Parameter:**
-
-- `input_data_reference: Dict` - Dictionary defining document data source:
-  - `connection_id: str` - Connection ID for the data source (e.g., S3 connection ID)
-  - `bucket: str` - Bucket name containing the documents
-  - `path: str` - Path within the bucket/filesystem to the documents folder or single file
-
-#### Test Data
-
-Test data JSON file is supported only.
-
-**Required Parameter:**
-
-- `test_data_reference: Dict` - Dictionary defining test data source:
-  - `connection_id: str` - Connection ID for the test data source (e.g., S3 connection ID)
-  - `bucket: str` - Bucket name containing the test data file
-  - `path: str` - Path within the bucket/filesystem to the test data file
-
-### 3. Infrastructure Configuration
-
-#### Vector Database
-
-**Optional Parameter:**
-
-- `vector_database_id: str` - Vector database id (e.g., registered in llama-stack Milvus database).
-  If not provided, an in-memory database will be used.
-
-#### Output Results Storage
-
-**Required Parameter:**
-
-- `results_reference: Dict` - Dictionary defining results storage location:
-  - `connection_id: str` - Connection ID for the results storage (e.g., S3 connection ID)
-  - `bucket: str` - Bucket name for storing results
-  - `path: str` - Path where experiment results will be stored (e.g., "autorag/results")
-
-#### MLFlow Integration (Experiment Tracking)
-
-**Optional Parameter:**
-
-- `mlflow_config: Dict` - Dictionary defining MLFlow configuration for experiment tracking:
-  - `tracking_uri: str` - MLFlow tracking server URI (e.g., "http://mlflow-server:5000")
-  - `experiment_name: str` - MLFlow experiment name (default: uses pipeline `name` parameter)
-  - `enabled: bool` - Enable/disable MLFlow tracking (default: `True` if `mlflow_config` is
-    provided)
-
-When enabled, AutoRAG will automatically log:
-
-- Experiment metadata (name, description, run parameters)
-- Optimization metrics (answer_correctness, faithfulness, context_correctness)
-- Configuration parameters (chunking, embeddings, generation, retrieval settings)
-- Leaderboard rankings and best pattern information
-- Artifact references (RAG Pattern artifacts, summary reports)
-- Execution timestamps and duration
-
-> 💡 **Note:** If `mlflow_config` is not provided, MLFlow tracking will be disabled. To use
-> MLFlow, ensure the MLFlow server is accessible from the pipeline execution environment.
-
-### 4. Optimization Configuration
-
-#### Optimization Settings
-
-**Optional Parameter:**
-
-- `optimization: Dict` - Dictionary defining optimization settings:
-  - `max_number_of_rag_patterns: int` - Maximum number of RAG patterns to generate (default: 4)
-  - `metric: str` - Metric to optimize (e.g., `"answer_correctness"` or `"faithfulness"`)
-
-Supported metrics are: `faithfulness` and `answer_correctness`. On top of those the
-`context_correctness` is automatically calculated measuring the retrieved chunks quality.
-
-#### Search Space Constraints
-
-Constraints define the search space for RAG optimization. Each constraint section is provided as a
-list parameter:
-
-**Optional Parameters:**
-
-**Chunking Constraints:**
-
-- `chunking_constraints: List[Dict]` - List of dictionaries defining chunking configurations:
-  - Each dictionary contains: `method: str`, `chunk_overlap: int`, `chunk_size: int`
-
-**Embeddings Constraints:**
-
-- `embeddings_constraints: List[Dict]` - List of dictionaries defining embedding models:
-  - Each dictionary contains: `model: str`
-
-**Generation Constraints:**
-
-- `generation_constraints: List[Dict]` - List of dictionaries defining generation models:
-  - Each dictionary contains: `model: str`, optional `context_template_text: str`, optional
-    `messages: List[Dict]` array
-
-**Retrieval Constraints:**
-
-- `retrieval_constraints: List[Dict]` - List of dictionaries defining retrieval method
-  configurations:
-  - Each dictionary contains: `method: str`, `number_of_chunks: int`, optional `hybrid_ranker:
-    Dict` (with `strategy: str`, `sparse_vectors: str`, `alpha: float`, `k: int`)
-
 ## Required Parameters ✅
 
 The following parameters are required to run the pipeline:
 
-- `name: str` - Experiment name
-- `input_data_reference: Dict` - Document data source
-- `test_data_reference: Dict` - Test data source
-- `results_reference: Dict` - Results storage location
+- `test_data_secret_name` - Kubernetes secret for S3 credentials (test data)
+- `test_data_bucket_name` - Bucket containing the test data JSON file
+- `test_data_key` - Object key to the test data JSON file
+- `input_data_secret_name` - Kubernetes secret for S3 credentials (input documents)
+- `input_data_bucket_name` - Bucket containing the input documents
+- `input_data_key` - Object key to the input documents (folder or file)
+- `llama_stack_secret_name` - Kubernetes secret for llama-stack API connection
 
-> 💡 **Note:** When optional parameters are omitted, AutoRAG uses default values or explores the
-> full available search space.
+Optional parameters (`embeddings_models`, `generation_models`, `optimization_metric`, `vector_database_id`) use defaults or search-space defaults when omitted.
 
 ## Components Used 🔧
 
@@ -367,6 +179,9 @@ This pipeline orchestrates the following AutoRAG components:
 
 5. **[RAG Templates Optimization](../components/training/autorag/rag_templates_optimization/README.md)** -
    Core optimization component using GAM-based prediction
+
+6. **[Leaderboard Evaluation](../components/training/autorag/leaderboard_evaluation/README.md)** -
+   Builds an HTML leaderboard artifact from RAG pattern results (pattern names, settings, metrics)
 
 ## Artifacts 📦
 

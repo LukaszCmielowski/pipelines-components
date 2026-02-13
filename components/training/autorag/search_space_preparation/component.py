@@ -3,25 +3,15 @@ from pathlib import Path
 from random import random
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
-import yaml as yml
-from ai4rag.core.experiment.benchmark_data import BenchmarkData
-from ai4rag.core.experiment.mps import ModelsPreSelector
-from ai4rag.rag.embedding.base_model import EmbeddingModel
-from ai4rag.rag.foundation_models.base_model import FoundationModel
-from ai4rag.search_space.prepare.prepare_search_space import prepare_ai4rag_search_space
-from ai4rag.search_space.src.parameter import Parameter
-from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
 from kfp import dsl
-from langchain_core.documents import Document
-
-from components.training.autorag.rag_templates_optimization.src.utils import load_as_langchain_doc
-from components.training.autorag.search_space_preparation.proxy_objects import DisconnectedModelsPreSelector
 
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["ai4rag", "langchain_core"],
+    packages_to_install=[
+        "ai4rag@git+https://github.com/IBM/ai4rag.git",
+        "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
+    ],
 )
 def search_space_preparation(
     test_data: dsl.Input[dsl.Artifact],
@@ -64,11 +54,21 @@ def search_space_preparation(
             A .yml-formatted report including results of this experiment's phase.
             For its exact content please refer to the `search_space_prep_report_schema.yml` file.
     """
+    # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
+    # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
+    import sys
+
+    try:
+        import pysqlite3
+
+        sys.modules["sqlite3"] = pysqlite3
+    except ImportError:
+        pass
 
     import os
     from pathlib import Path
     from random import random
-    from typing import Any, Optional
+    from typing import Any, List, Optional
 
     import pandas as pd
     import yaml as yml
@@ -76,14 +76,10 @@ def search_space_preparation(
     from ai4rag.core.experiment.mps import ModelsPreSelector
     from ai4rag.rag.embedding.base_model import EmbeddingModel
     from ai4rag.rag.foundation_models.base_model import FoundationModel
-    from ai4rag.search_space.prepare.prepare_search_space import prepare_ai4rag_search_space
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
-    from kfp import dsl
     from langchain_core.documents import Document
 
-    # from proxy_objects import DisconnectedModelsPreSelector
-    # from utils import load_as_langchain_doc
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
     TOP_N_GENERATION_MODELS = 3  # change names (topNmodels? )
@@ -139,6 +135,7 @@ def search_space_preparation(
             return "Dummy response from a generation model!"
 
     class MockEmbeddingModel(EmbeddingModel):
+
         def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
             super().__init__(client, model_id, params)
 
@@ -183,13 +180,11 @@ def search_space_preparation(
         return documents
 
     def prepare_ai4rag_search_space():
-        if not generation_models:
-            generation_models_local = ["mocked_gen_model1"]
-        if not embeddings_models:
-            embedding_models_local = ["mocked_em_model1"]
+        generation_models_list = generation_models if generation_models else ["mocked_gen_model1"]
+        embeddings_models_list = embeddings_models if embeddings_models else ["mocked_em_model1"]
 
-        generation_models_local = list(map(MockGenerationModel, generation_models))
-        embedding_models_local = list(map(MockEmbeddingModel, embeddings_models))
+        generation_models_local = list(map(MockGenerationModel, generation_models_list))
+        embedding_models_local = list(map(MockEmbeddingModel, embeddings_models_list))
 
         return AI4RAGSearchSpace(
             params=[

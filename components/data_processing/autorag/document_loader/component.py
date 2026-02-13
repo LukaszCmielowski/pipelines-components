@@ -14,23 +14,19 @@ def document_loader(
 ):
     """Document Loader component.
 
-    Loads documents from S3 and performs sampling.
+    Loads documents from S3-compatible storage and performs sampling. Reads
+    credentials from environment variables (injected by the pipeline from a
+    Kubernetes secret).
 
     Args:
-        input_data_bucket_name: str
-            Name of the S3 bucket containing input data.
+        input_data_bucket_name: S3 (or compatible) bucket containing input data.
+        input_data_path: Path to folder with input documents within the bucket.
+        test_data: Optional input artifact containing test data for sampling.
+        sampling_config: Optional sampling configuration dictionary.
+        sampled_documents: Output artifact containing the downloaded documents.
 
-        input_data_path: str
-            Path to folder with input documents within bucket.
-
-        test_data: dict
-            Optional artifact containing test data for sampling.
-
-        sampling_config: dict
-            Optional sampling configuration dictionary.
-
-        sampled_documents: Output[Artifact]
-            artifact containing downloaded documents.
+    Environment variables (required when run with pipeline secret injection):
+        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
     """
     import json
     import logging
@@ -66,7 +62,7 @@ def document_loader(
         """Validate S3 credentials and download the input documents."""
         s3_creds = {
             k: os.environ.get(k)
-            for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
+            for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION"]
         }
         for k, v in s3_creds.items():
             if v is None:
@@ -76,8 +72,8 @@ def document_loader(
 
         s3_client = boto3.client(
             "s3",
-            endpoint_url=s3_creds["AWS_ENDPOINT_URL"],
-            region_name=s3_creds["AWS_REGION"],
+            endpoint_url=s3_creds["AWS_S3_ENDPOINT"],
+            region_name=s3_creds["AWS_DEFAULT_REGION"],
             aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
             aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
         )
