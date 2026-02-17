@@ -5,6 +5,7 @@ CUSTOM_CONTENT_MARKER = "<!-- custom-content -->"
 
 # README Templates
 CATEGORY_README_TEMPLATE = "CATEGORY_README.md.j2"
+ORG_README_TEMPLATE = "ORG_README.md.j2"
 README_TEMPLATE = "README.md.j2"
 
 # Exit codes

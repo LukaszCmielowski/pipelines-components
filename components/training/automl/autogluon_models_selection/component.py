@@ -2,8 +2,6 @@ from typing import List, NamedTuple
 
 from kfp import dsl
 
-# test
-
 
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
