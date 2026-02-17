@@ -7,7 +7,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
@@ -102,7 +102,7 @@ def search_space_preparation(
                     "foundation_model": "mistral1",
                     "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                     "question_scores": {
-                        "faithfulnesss": {
+                        "faithfulness": {
                             "q_id_0": 0.5,
                             "q_id_1": 0.8,
                         }
@@ -113,7 +113,7 @@ def search_space_preparation(
                     "foundation_model": "mistral2",
                     "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                     "question_scores": {
-                        "faithfulnesss": {
+                        "faithfulness": {
                             "q_id_0": 0.5,
                             "q_id_1": 0.8,
                         }

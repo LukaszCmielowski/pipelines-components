@@ -46,12 +46,15 @@ class DisconnectedAI4RAGExperiment(AI4RAGExperiment):
                 {"indexing_param_key": f"indexing_val{i}"},
                 {"rag_param_key": f"rag_param_val{i}"},
                 scores={
-                    "scores": {"faithfulness": {"mean": 0.1 * i, "ci_low": 0.4, "ci_high": 0.6}},
+                    "scores": {
+                        "answer_correctness": {"mean": 0.1 * i, "ci_low": 0.4, "ci_high": 0.6},
+                        "faithfulness": {"mean": 0.1 * i, "ci_low": 0.4, "ci_high": 0.6},
+                        "context_correctness": {"mean": 1.0, "ci_low": 0.9, "ci_high": 1.0},
+                    },
                     "question_scores": {
-                        "faithfulnesss": {
-                            "q_id_0": 0.5,
-                            "q_id_1": 0.8,
-                        }
+                        "answer_correctness": {"q_id_0": 0.5, "q_id_1": 0.8},
+                        "faithfulness": {"q_id_0": 0.5, "q_id_1": 0.8},
+                        "context_correctness": {"q_id_0": 1.0, "q_id_1": 1.0},
                     },
                 },
                 execution_time=0.5 * i,
@@ -59,21 +62,35 @@ class DisconnectedAI4RAGExperiment(AI4RAGExperiment):
             )
             eval_data = [
                 EvaluationData(
-                    question="benchmark_data.questions[idx]",
-                    answer='inference_response[idx]["answer"]',
-                    contexts="contexts",
-                    context_ids="context_ids",
-                    ground_truths="benchmark_data.answers[idx]",
-                    question_id="benchmark_data.questions_ids[idx]",
+                    question="What foundation models are available in watsonx.ai?",
+                    answer="I cannot answer this question, because I am just a mocked model.",
+                    contexts=[
+                        "Model architecture: encoder-only, decoder-only, encoder-decoder.",
+                        "Regional availability: same IBM Cloud regional data center as watsonx.",
+                    ],
+                    context_ids=[
+                        "120CAE8361AE4E0B6FE4D6F0D32EEE9517F11190_1.txt",
+                        "391DBD504569F02CCC48B181E3B953198C8F3C8A_8.txt",
+                    ],
+                    ground_truths=["flan-t5-xl-3b", "granite-13b-chat-v2", "llama-2-70b-chat"],
+                    question_id="q_id_0",
                     ground_truths_context_ids=None,
                 ),
                 EvaluationData(
-                    question="benchmark_data.questions[idx]2",
-                    answer='inference_response[idx]["answer"]2',
-                    contexts="contexts2",
-                    context_ids="context_ids2",
-                    ground_truths="benchmark_data.answers[idx]2",
-                    question_id="benchmark_data.questions_ids[idx]2",
+                    question="What is the difference between fine-tuning and prompt-tuning?",
+                    answer="I cannot answer this question, because I am just a mocked model.",
+                    contexts=[
+                        "Fine-tuning: changes the parameters of the underlying foundation model.",
+                        "Prompt-tuning: adjusts the content of the prompt; model parameters not edited.",
+                    ],
+                    context_ids=[
+                        "15A014C514B00FF78C689585F393E21BAE922DB2_0.txt",
+                        "B2593108FA446C4B4B0EF5ADC2CD5D9585B0B63C_0.txt",
+                    ],
+                    ground_truths=[
+                        "Fine-tuning changes model parameters; prompt-tuning only alters the prompt input.",
+                    ],
+                    question_id="q_id_1",
                     ground_truths_context_ids=None,
                 ),
             ]
@@ -99,7 +116,7 @@ class DisconnectedModelsPreSelector(ModelsPreSelector):
                 "foundation_model": "mistral1",
                 "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                 "question_scores": {
-                    "faithfulnesss": {
+                    "faithfulness": {
                         "q_id_0": 0.5,
                         "q_id_1": 0.8,
                     }
@@ -110,7 +127,7 @@ class DisconnectedModelsPreSelector(ModelsPreSelector):
                 "foundation_model": "mistral2",
                 "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                 "question_scores": {
-                    "faithfulnesss": {
+                    "faithfulness": {
                         "q_id_0": 0.5,
                         "q_id_1": 0.8,
                     }

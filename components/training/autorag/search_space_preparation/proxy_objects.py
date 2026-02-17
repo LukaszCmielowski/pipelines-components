@@ -24,7 +24,7 @@ class DisconnectedModelsPreSelector(ModelsPreSelector):
                 "foundation_model": "mistral1",
                 "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                 "question_scores": {
-                    "faithfulnesss": {
+                    "faithfulness": {
                         "q_id_0": 0.5,
                         "q_id_1": 0.8,
                     }
@@ -35,7 +35,7 @@ class DisconnectedModelsPreSelector(ModelsPreSelector):
                 "foundation_model": "mistral2",
                 "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
                 "question_scores": {
-                    "faithfulnesss": {
+                    "faithfulness": {
                         "q_id_0": 0.5,
                         "q_id_1": 0.8,
                     }

@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pyyaml",
@@ -141,12 +141,35 @@ def rag_templates_optimization(
                 )
                 eval_data = [
                     EvaluationData(
-                        question="benchmark_data.questions[idx]",
-                        answer='inference_response[idx]["answer"]',
-                        contexts="contexts",
-                        context_ids="context_ids",
-                        ground_truths="benchmark_data.answers[idx]",
-                        question_id="benchmark_data.questions_ids[idx]",
+                        question="What foundation models are available in watsonx.ai?",
+                        answer="I cannot answer this question, because I am just a mocked model.",
+                        contexts=[
+                            "Model architecture: encoder-only, decoder-only, encoder-decoder.",
+                            "Regional availability: same IBM Cloud regional data center as watsonx.",
+                        ],
+                        context_ids=[
+                            "120CAE8361AE4E0B6FE4D6F0D32EEE9517F11190_1.txt",
+                            "391DBD504569F02CCC48B181E3B953198C8F3C8A_8.txt",
+                        ],
+                        ground_truths=["flan-t5-xl-3b", "granite-13b-chat-v2", "llama-2-70b-chat"],
+                        question_id="q_id_0",
+                        ground_truths_context_ids=None,
+                    ),
+                    EvaluationData(
+                        question="What is the difference between fine-tuning and prompt-tuning?",
+                        answer="I cannot answer this question, because I am just a mocked model.",
+                        contexts=[
+                            "Fine-tuning: changes the parameters of the underlying foundation model.",
+                            "Prompt-tuning: adjusts the content of the prompt; model parameters not edited.",
+                        ],
+                        context_ids=[
+                            "15A014C514B00FF78C689585F393E21BAE922DB2_0.txt",
+                            "B2593108FA446C4B4B0EF5ADC2CD5D9585B0B63C_0.txt",
+                        ],
+                        ground_truths=[
+                            "Fine-tuning changes model parameters; prompt-tuning only alters the prompt input.",
+                        ],
+                        question_id="q_id_1",
                         ground_truths_context_ids=None,
                     ),
                 ]
