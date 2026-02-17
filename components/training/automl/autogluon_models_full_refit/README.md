@@ -52,10 +52,12 @@ includes `display_name` and `context` (e.g. `data_config`, `task_type`, `label_c
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
+    - Name: Pipelines, Version: >=2.14.4
 - **Tags**:
   - training
 - **Last Verified**: 2026-01-22 10:31:36+00:00
 - **Owners**:
-  - Approvers: None
-  - Reviewers: None
+  - Approvers:
+    - Mateusz-Switala
+  - Reviewers:
+    - Mateusz-Switala

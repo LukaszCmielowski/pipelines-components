@@ -12,8 +12,7 @@ sampled training data, then evaluates them on test data to identify the top N pe
 The component uses AutoGluon's TabularPredictor which automatically trains various model types (neural networks,
 tree-based models, linear models, etc.) and combines them using stacking with multiple levels and bagging. After
 training, models are evaluated on the test dataset and ranked by performance. The top N models are selected and their
-names are returned (with eval_metric and predictor_path) for use in subsequent refitting stages. The predictor is
-saved under the provided workspace_path (workspace_path / autogluon_predictor).
+names are returned for use in subsequent refitting stages. The predictor is saved under workspace_path.
 
 This component is part of a two-stage training pipeline where models are first built and evaluated on sampled data (for
 efficiency), then the best candidates are refitted on the full dataset for optimal performance.
@@ -21,21 +20,42 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `label_column` | `str` | — | Name of the target/label column used as the prediction target. |
-| `task_type` | `str` | — | Task type: `"binary"`, `"multiclass"` (classification) or `"regression"`. Determines metrics and model types. |
-| `top_n` | `int` | — | Number of top-performing models to select from the leaderboard (positive integer). |
-| `train_data` | `dsl.Input[dsl.Dataset]` | — | Dataset artifact (CSV) for training; must include label_column and feature columns. |
-| `test_data` | `dsl.Input[dsl.Dataset]` | — | Dataset artifact (CSV) for evaluation; schema should match training data. |
-| `workspace_path` | `str` | — | Workspace path; predictor saved under `workspace_path / autogluon_predictor`, returned as predictor_path. |
+|-----------|------|---------|-------------|
+| `label_column` | `str` | `None` | The name of the target/label column in the training
+and test datasets. This column will be used as the prediction target. |
+| `task_type` | `str` | `None` | The type of machine learning task. Supported values
+include "binary", "multiclass" (classification) or "regression". This
+determines the evaluation metrics and model types AutoGluon will use. |
+| `top_n` | `int` | `None` | The number of top-performing models to select from the leaderboard.
+Only the top N models will be returned and promoted to the refit stage.
+Must be a positive integer. |
+| `train_data` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the training data
+in CSV format. This data is used to train the AutoGluon models.
+The dataset should include the label_column and all feature columns. |
+| `test_data` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the test data in
+CSV format. This data is used to evaluate model performance and
+generate the leaderboard. The dataset should match the schema of
+the training data. |
+| `workspace_path` | `str` | `None` | Path (string) to the workspace directory where the
+trained TabularPredictor will be saved (under workspace_path /
+autogluon_predictor). This path is also returned as predictor_path
+for use by downstream components. |
 
 ## Outputs 📤
 
 | Name | Type | Description |
-| ---- | ---- | ----------- |
-| `top_models` | `List[str]` | Top N model names from the leaderboard, ranked by test performance. |
-| `eval_metric` | `str` | Metric used by TabularPredictor (e.g. "accuracy", "r2"), from task_type. |
-| `predictor_path` | `str` | Path to saved TabularPredictor (`workspace_path / autogluon_predictor`) for downstream use. |
+|------|------|-------------|
+| Output | `NamedTuple('outputs', top_models=List[str], eval_metric=str, predictor_path=str)` | A NamedTuple with the following fields:
+- top_models (List[str]): A list of model names (strings) representing
+  the top N performing models selected from the leaderboard, ranked
+  by performance on the test dataset.
+- eval_metric (str): The evaluation metric name used by the TabularPredictor
+  to assess model performance. This metric is automatically determined
+  based on the task_type (e.g., "accuracy" for classification,
+  "r2" for regression).
+- predictor_path (str): The path to the saved TabularPredictor
+  (workspace_path / autogluon_predictor), for use by downstream
+  components such as autogluon_models_full_refit. |
 
 ## Metadata 🗂️
 
@@ -43,10 +63,12 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
+    - Name: Pipelines, Version: >=2.14.4
 - **Tags**:
   - training
 - **Last Verified**: 2026-01-22 10:30:08+00:00
 - **Owners**:
-  - Approvers: None
-  - Reviewers: None
+  - Approvers:
+    - Mateusz-Switala
+  - Reviewers:
+    - Mateusz-Switala

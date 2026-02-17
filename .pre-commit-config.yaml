@@ -35,7 +35,7 @@ repos:
         name: validate-readme
         entry: >
           bash -c '
-          changed_dirs=$(echo "$@" | xargs -n1 dirname | grep -E "^(components|pipelines)/[^/]+/[^/]+$" | sort -u);
+          changed_dirs=$(echo "$@" | xargs -n1 dirname | grep -E "^(components|pipelines)/([^/]+/){1,2}[^/]+$" | sort -u);
           if [ -n "$changed_dirs" ]; then
             ./.github/scripts/validate_readmes/test-readme-check.sh $changed_dirs || exit 1;
           fi
