@@ -49,8 +49,8 @@ Issues = "https://github.com/kubeflow/pipelines-components/issues"
 packages = [
     "kfp_components",
     "kfp_components.components",
-    kfp_components.components.training,
-    kfp_components.components.training.automl,
+    "kfp_components.components.training",
+    "kfp_components.components.training.automl",
     "kfp_components.components.training.automl.autogluon_leaderboard_evaluation",
     "kfp_components.components.training.automl.autogluon_models_refit_full",
     "kfp_components.components.training.automl.autogluon_models_selection",
