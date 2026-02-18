@@ -48,8 +48,18 @@ class ReadmeWriter:
             self.source_file = pipeline_dir / "pipeline.py"
             self.function_type = "pipeline"
 
-        self.category_dir = self.source_dir.parent
-        self.category_index_file = self.category_dir / "README.md"
+        self._is_organization = self.source_dir.parent.parent.name != "components"
+        self.organization_dir = None
+        self.organization_index_file = None
+
+        if self._is_organization:
+            self.category_dir = self.source_dir.parent.parent
+            self.category_index_file = self.category_dir / "README.md"
+            self.organization_dir = self.source_dir.parent
+            self.organization_index_file = self.organization_dir / "README.md"
+        else:
+            self.category_dir = self.source_dir
+            self.category_index_file = self.category_dir / "README.md"
 
         self.parser = MetadataParser(self.source_file, self.function_type)
         self.metadata_file = self.source_dir / "metadata.yaml"
@@ -126,6 +136,21 @@ class ReadmeWriter:
             logger.warning(f"Out of sync: {self.category_index_file}")
         return has_diff
 
+    def _check_organization_index(self, organization_content: str) -> bool:
+        """Check if organization index matches expected content.
+
+        Args:
+            organization_content: The expected organization index content.
+
+        Returns:
+            True if there's a diff, False if content matches.
+        """
+        actual_content = self._read_file_content(self.organization_index_file)
+        has_diff = self._has_diff(organization_content, actual_content)
+        if has_diff:
+            logger.warning(f"Out of sync: {self.organization_index_file}")
+        return has_diff
+
     def _write_category_index(self, category_content: str) -> None:
         """Write the category-level README index.
 
@@ -145,6 +170,27 @@ class ReadmeWriter:
 
         except Exception as e:
             logger.error(f"Could not write category index: {e}")
+            sys.exit(EXIT_ERROR)
+
+    def _write_organization_index(self, organization_content: str) -> None:
+        """Write the organization-level README index.
+
+        Args:
+            organization_content: The generated organization index content to write.
+        """
+        if self.organization_index_file.exists():
+            logger.info(f"Organization index exists at {self.organization_index_file}, regenerating entries.")
+        else:
+            logger.info(f"Organization index does not exist yet at {self.organization_index_file}, creating new file")
+
+        try:
+            with open(self.organization_index_file, "w", encoding="utf-8") as f:
+                f.write(organization_content)
+
+            logger.info(f"Organization index generated at {self.organization_index_file}")
+
+        except Exception as e:
+            logger.error(f"Could not write organization index: {e}")
             sys.exit(EXIT_ERROR)
 
     def _check_readme_file(self, readme_content: str) -> bool:
@@ -228,19 +274,34 @@ class ReadmeWriter:
         readme_content = readme_content_generator.generate_readme()
 
         # Generate category index content
-        index_generator = CategoryIndexGenerator(self.category_dir, self.is_component)
+
+        index_generator = CategoryIndexGenerator(
+            self.category_dir, self.is_component, with_organization=self._is_organization
+        )
         index_content = index_generator.generate()
+
+        organization_has_diff = False
+        if self._is_organization:
+            index_generator_org = CategoryIndexGenerator(
+                self.organization_dir, self.is_component, with_organization=False
+            )
+            index_content_org = index_generator_org.generate()
+
+            # Check for diffs (in both modes)
+            organization_has_diff = self._check_organization_index(index_content_org)
 
         # Check for diffs (in both modes)
         readme_has_diff = self._check_readme_file(readme_content)
         category_has_diff = self._check_category_index(index_content)
-        has_diff = readme_has_diff or category_has_diff
+
+        has_diff = readme_has_diff or category_has_diff or organization_has_diff
 
         if has_diff and fix:
             # Fix mode: write files
             self._write_readme_file(readme_content)
             self._write_category_index(index_content)
-
+            if self._is_organization:
+                self._write_organization_index(index_content_org)
             # Log metadata statistics
             logger.debug(f"README content length: {len(readme_content)} characters")
             logger.debug(f"Target decorated function name: {metadata.get('name', 'Unknown')}")

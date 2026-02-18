@@ -98,26 +98,12 @@ def autogluon_tabular_training_pipeline(
     - Selecting optimal ensemble configurations
 
     Args:
-        train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access.
-            The following keys are required:
-            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
-        train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file.
-            The bucket should be accessible using the AWS credentials configured in the
-            'train_data_secret_name' Kubernetes secret.
-        train_data_file_key: The key (path) of the data file within the S3 bucket. The file should
-            be in CSV format and contain both feature columns and the target column.
-        label_column: The name of the target/label column in the dataset. This column
-            will be used as the prediction target for model training. The column must
-            exist in the loaded dataset.
-        task_type: The type of machine learning task. Supported values:
-            - "binary" or "multiclass": For classification tasks
-            - "regression": For regression tasks (predicting continuous values)
-            This parameter determines the evaluation metrics and model types AutoGluon
-            will use during training.
-        top_n: The number of top-performing models to select and refit (default: 3).
-            Must be a positive integer. Only the top N models from the initial training
-            stage will be promoted to the refitting stage. Higher values increase pipeline
-            execution time but provide more model options for final selection.
+        train_data_secret_name: The Kubernetes secret name with S3-compatible credentials for tabular data file access. Required keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
+        train_data_bucket_name: The name of the S3-compatible bucket containing the tabular data file. The bucket should be accessible using the AWS credentials configured in the train_data_secret_name Kubernetes secret.
+        train_data_file_key: The key (path) of the data file within the S3 bucket. The file should be in CSV format and contain both feature columns and the target column.
+        label_column: The name of the target/label column in the dataset. This column will be used as the prediction target for model training and must exist in the loaded dataset.
+        task_type: The type of machine learning task. Supported values: "binary" or "multiclass" for classification; "regression" for regression. Determines the evaluation metrics and model types AutoGluon will use.
+        top_n: The number of top-performing models to select and refit (default: 3). Must be a positive integer. Only the top N models from the initial training stage will be promoted to the refitting stage. Higher values increase pipeline execution time but provide more model options for final selection.
 
     Returns:
         An HTML artifact containing the leaderboard with evaluation metrics for all
@@ -147,7 +133,7 @@ def autogluon_tabular_training_pipeline(
             task_type="regression",
             top_n=3,
         )
-    """
+    """  # noqa: E501
     tabular_loader_task = automl_data_loader(bucket_name=train_data_bucket_name, file_key=train_data_file_key)
 
     use_secret_as_env(

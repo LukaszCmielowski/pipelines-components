@@ -12,7 +12,7 @@ Downloads the yoda_sentences dataset from HuggingFace, renames columns to match 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| ----------- | ------ | --------- | ------------- |
 | `yoda_train_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset for training. |
 | `yoda_eval_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset for evaluation. |
 | `yoda_input_dataset` | `str` | `dvgodoy/yoda_sentences` | Dataset to download from HuggingFace |

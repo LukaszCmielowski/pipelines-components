@@ -56,11 +56,11 @@ extract_dir_from_file() {
     local dir
     
     # Note: Pattern must be UNQUOTED for glob matching to work in [[ ]]
-    if [[ "$file" == components/*/*/* ]]; then
-        dir=$(echo "$file" | cut -d'/' -f1-3)  # components/<category>/<component>
+    if [[ "$file" == components/*/*/*/* ]]; then
+        dir=$(echo "$file" | cut -d'/' -f1-4)  # components/<category>/<group>/<component>
         components+=("$dir")
-    elif [[ "$file" == pipelines/*/*/* ]]; then
-        dir=$(echo "$file" | cut -d'/' -f1-3)  # pipelines/<category>/<pipeline>
+    elif [[ "$file" == pipelines/*/*/*/* ]]; then
+        dir=$(echo "$file" | cut -d'/' -f1-4)  # pipelines/<category>/<group>/<pipeline>
         pipelines+=("$dir")
     elif [[ "$file" == third_party/components/*/*/* ]]; then
         dir=$(echo "$file" | cut -d'/' -f1-4)  # third_party/components/<category>/<component>

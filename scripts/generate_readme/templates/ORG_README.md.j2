@@ -1,0 +1,7 @@
+# {{ category_name }} {{ type_name }}
+
+This directory contains {{ type_name | lower }} of the **{{ organization_name }}** organization in the **{{ category_name }}** category:
+
+{% for item in items %}
+- [{{ item.name }}]({{ item.link }}): {{ item.overview }}
+{% endfor %}

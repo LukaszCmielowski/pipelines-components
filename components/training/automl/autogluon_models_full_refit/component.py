@@ -33,22 +33,10 @@ def autogluon_models_full_refit(
     candidates are refitted on the full dataset for optimal performance.
 
     Args:
-        model_name: The name of the model to refit. This should match a model
-            name in the predictor. The refitted model will be saved with the
-            suffix "_FULL" appended to this name.
-        full_dataset: A Dataset artifact containing the complete training
-            dataset in CSV format. This dataset will be used to retrain the
-            specified model. The dataset should match the format and schema
-            of the data used during initial model training.
-        predictor_path: Path (string) to a trained AutoGluon TabularPredictor
-            that includes the model specified by model_name. The predictor
-            should have been trained previously, potentially on a sampled
-            subset of the data.
-        model_artifact: Output Model artifact where the refitted predictor
-            will be saved. The artifact will contain a cleaned predictor with
-            only the original model and its refitted "_FULL" version. Metrics
-            are written under model_artifact.path / model_name_FULL / metrics.
-            The metadata will include the model_name with "_FULL" suffix.
+        model_name: The name of the model to refit. Should match a model name in the predictor. The refitted model will be saved with the suffix "_FULL" appended to this name.
+        full_dataset: A Dataset artifact containing the complete training dataset in CSV format. Used to retrain the specified model. The dataset should match the format and schema of the data used during initial model training.
+        predictor_path: Path (string) to a trained AutoGluon TabularPredictor that includes the model specified by model_name. The predictor should have been trained previously, potentially on a sampled subset of the data.
+        model_artifact: Output Model artifact where the refitted predictor will be saved. The artifact will contain a cleaned predictor with only the original model and its refitted "_FULL" version. Metrics are written under model_artifact.path / model_name_FULL / metrics. The metadata will include the model_name with "_FULL" suffix.
 
     Returns:
         None. The refitted model is saved to the model_artifact output.
@@ -76,7 +64,7 @@ def autogluon_models_full_refit(
             )
             return refitted
 
-    """
+    """  # noqa: E501
     import json
     import os
     from pathlib import Path
