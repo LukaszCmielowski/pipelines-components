@@ -121,12 +121,14 @@ def document_loader(
             "count": len(documents),
         }
 
+        logger.info("Sampled documents descriptor content %s", descriptor)
+
         os.makedirs(sampled_documents.path, exist_ok=True)
         descriptor_path = os.path.join(sampled_documents.path, SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME)
         with open(descriptor_path, "w") as f:
             yaml.safe_dump(descriptor, f, default_flow_style=False, sort_keys=False)
 
-        logger.info("Wrote %s with %d documents, total_size_bytes=%d", descriptor_path, len(documents), total_size)
+        logger.info("Sampled documents descriptor written to %s", descriptor_path)
 
     build_and_write_descriptor()
 
