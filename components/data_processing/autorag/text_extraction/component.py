@@ -77,6 +77,7 @@ def text_extraction(
         for doc in documents:
             key = doc["key"]
             local_path = download_path / key
+            local_path.parent.mkdir(parents=True, exist_ok=True)
             try:
                 logger.info("Downloading %s", key)
                 s3_client.download_file(bucket, key, str(local_path))
@@ -96,7 +97,7 @@ def text_extraction(
         output_dir.mkdir(parents=True, exist_ok=True)
 
         files_to_process = [
-            f for f in download_path.iterdir()
+            f for f in download_path.rglob("*")
             if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
         ]
 
