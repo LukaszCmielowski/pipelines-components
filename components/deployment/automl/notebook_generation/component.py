@@ -114,13 +114,12 @@ def notebook_generation(
                 "metadata": {},
                 "outputs": [],
                 "source": [
-                    "%pip install \\\n",
-                    "    \"autogluon.tabular==1.5.0\" \\\n",
-                    "    \"catboost==1.2.8\" \\\n",
-                    "    \"fastai==2.8.7\" \\\n",
-                    "    \"lightgbm==4.6.0\" \\\n",
-                    "    \"torch==2.9.1\" \\\n",
-                    "    \"xgboost==3.1.3\" | tail -n 1"
+                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
+                    "%pip install catboost==1.2.8 | tail -n 1\n",
+                    "%pip install fastai==2.8.7 | tail -n 1\n",
+                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
+                    "%pip install torch==2.9.1 | tail -n 1\n",
+                    "%pip install xgboost==3.1.3 | tail -n 1\n",
                 ],
             },
             {
@@ -418,13 +417,12 @@ def notebook_generation(
                 "metadata": {},
                 "outputs": [],
                 "source": [
-                    "%pip install \\\n",
-                    "    \"autogluon.tabular==1.5.0\" \\\n",
-                    "    \"catboost==1.2.8\" \\\n",
-                    "    \"fastai==2.8.7\" \\\n",
-                    "    \"lightgbm==4.6.0\" \\\n",
-                    "    \"torch==2.9.1\" \\\n",
-                    "    \"xgboost==3.1.3\" | tail -n 1"
+                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
+                    "%pip install catboost==1.2.8 | tail -n 1\n",
+                    "%pip install fastai==2.8.7 | tail -n 1\n",
+                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
+                    "%pip install torch==2.9.1 | tail -n 1\n",
+                    "%pip install xgboost==3.1.3 | tail -n 1\n",
                 ],
             },
             {
