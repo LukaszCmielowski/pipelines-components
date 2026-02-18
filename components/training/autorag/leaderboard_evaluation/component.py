@@ -48,6 +48,33 @@ def leaderboard_evaluation(
         merged.update(rag_params or {})
         return merged
 
+    def _settings_from_rag_pattern(e: dict) -> dict | None:
+        """Build leaderboard config dict from rag_pattern.settings (legacy nested schema)."""
+        rp = (e.get("rag_pattern") or {}).get("settings")
+        if not rp:
+            return None
+        return {
+            "chunking": rp.get("chunking") or {},
+            "embeddings": {"model_id": (rp.get("embedding") or {}).get("model_id")},
+            "retrieval": {
+                "method": rp.get("method"),
+                "number_of_chunks": rp.get("number_of_chunks"),
+            },
+            "generation": {"model_id": (rp.get("generation") or {}).get("model_id")},
+        }
+
+    def _normalize_flat_settings(settings: dict | None) -> dict | None:
+        """Build leaderboard config dict from flat pattern.json settings (embedding, retrieval)."""
+        if not settings:
+            return None
+        emb = settings.get("embedding") or settings.get("embeddings") or {}
+        return {
+            "chunking": settings.get("chunking") or {},
+            "embeddings": {"model_id": emb.get("model_id")},
+            "retrieval": settings.get("retrieval") or {},
+            "generation": {"model_id": (settings.get("generation") or {}).get("model_id")},
+        }
+
     def _metric_to_mean_key(metric: str) -> str:
         return "mean_" + metric
 
@@ -87,10 +114,12 @@ def leaderboard_evaluation(
         "retrieval.number_of_chunks",
         "generation.model_id",
     ]
-    # Build metric columns present in data (preferred order above)
+    # Build metric columns present in data (preferred order above). Support flat scores (metric dict at top level) or nested scores.scores.
     all_metric_names = []
     for e in evaluations:
-        for m in (e.get("scores") or {}).get("scores") or {}:
+        raw = e.get("scores") or {}
+        aggregate = raw.get("scores") if isinstance(raw.get("scores"), dict) else raw
+        for m in aggregate or {}:
             if m not in all_metric_names:
                 all_metric_names.append(m)
     metric_columns = [c for c in leaderboard_metric_columns if c.replace("mean_", "", 1) in all_metric_names]
@@ -105,10 +134,17 @@ def leaderboard_evaluation(
 
     rows = []
     for e in evaluations:
-        pattern_name = e.get("pattern_name", "—")
-        scores = (e.get("scores") or {}).get("scores") or {}
-        merged = e.get("settings") or _merge_params(
-            e.get("indexing_params") or {}, e.get("rag_params") or {}
+        pattern_name = (
+            e.get("name") or e.get("pattern_name") or (e.get("rag_pattern") or {}).get("name", "—")
+        )
+        raw = e.get("scores") or {}
+        scores = raw.get("scores") if isinstance(raw.get("scores"), dict) else raw
+        merged = (
+            _settings_from_rag_pattern(e)
+            or _normalize_flat_settings(e.get("settings"))
+            or _merge_params(
+                e.get("indexing_params") or {}, e.get("rag_params") or {}
+            )
         )
 
         cells = [html.escape(str(pattern_name))]

@@ -48,13 +48,13 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
         └── <task_id>/
             └── rag_patterns_artifact/
                 ├── <pattern_name_0>/             # one per top-N RAG pattern
-                │   ├── pattern.json              # Pattern config, params, metrics (ai4rag + schema_version, settings)
-                │   ├── evaluation_result.json    # Per-question evaluation (question_id, answer, scores, etc.)
+                │   ├── pattern.json              # Flat schema: name, iteration, settings, scores, final_score
+                │   ├── evaluation_results.json    # Per-question evaluation (question, answer, correct_answers, scores, etc.)
                 │   ├── indexing_notebook.ipynb   # Notebook to build/populate the vector index
                 │   └── inference_notebook.ipynb  # Notebook for retrieval and generation
                 ├── <pattern_name_1>/
                 │   ├── pattern.json
-                │   ├── evaluation_result.json
+                │   ├── evaluation_results.json
                 │   ├── indexing_notebook.ipynb
                 │   └── inference_notebook.ipynb
                 └── ...
@@ -65,16 +65,107 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
 - Component folders (`leaderboard-evaluation`, `rag-pattern-generation`, etc.) align with pipeline steps; `<task_id>` is the KFP task ID for that step.
 - Pattern count and names depend on the run (e.g. `max_number_of_rag_patterns`).
 
-### RAG pattern artifact schema (pattern.json and evaluation_result.json)
+### RAG pattern artifact schema (pattern.json and evaluation_results.json)
 
 Each pattern directory under `rag_patterns_artifact/` contains:
 
-- **pattern.json** — Based on **ai4rag** `EvaluationResult`, with config in a single `settings` object:
-  - **Core**: `pattern_name`, `collection`, `scores` (aggregate and per-question `question_scores`), `execution_time`, `final_score`.
-  - **Schema**: `schema_version` (e.g. `"1.0"`), `producer` (`"ai4rag"`), and `settings` (chunking, embeddings, retrieval, generation config). `indexing_params` and `rag_params` are not written; their content is in `settings`.
-- **evaluation_result.json** — List of per-question evaluation entries. Each entry has `question_id`, `question`, `answer`, `correct_answers`, `answer_contexts` (list of `{text, document_id}`), and `scores` (per-metric score for that question). Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
+- **pattern.json**:
+  - **name**: pattern identifier.
+  - **iteration**, **max_combinations**, **duration_seconds**: optimization run metadata.
+  - **settings**: single object with **vector_store** (`datasource_type`, `collection_name`), **chunking** (`method`, `chunk_size`, `chunk_overlap`), **embedding** (`model_id`, `distance_metric`), **retrieval** (`method`, `number_of_chunks`), **generation** (`model_id`, `context_template_text`, `user_message_text`, `system_message_text`).
+  - **scores**: object whose keys are metric names (e.g. `answer_correctness`, `faithfulness`, `context_correctness`); each value is `{ "mean", "ci_low", "ci_high" }`.
+  - **final_score**: scalar optimization metric value.
+- **evaluation_results.json** — List of per-question evaluation entries. Each entry has `question`, `correct_answers`, `answer`, `answer_contexts` (list of `{text, document_id}`), and `scores` (per-metric score for that question). Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
 
-Consumers can rely on `schema_version` and `producer` to detect format and use `settings` for config (chunking, embeddings, retrieval, generation).
+**Sample pattern.json:**
+
+```json
+{
+  "name": "Pattern_0",
+  "iteration": 0,
+  "max_combinations": 390,
+  "duration_seconds": 100,
+  "settings": {
+    "vector_store": {
+      "datasource_type": "ls_milvus",
+      "collection_name": "collection0"
+    },
+    "chunking": {
+      "method": "recursive",
+      "chunk_size": 256,
+      "chunk_overlap": 128
+    },
+    "embedding": {
+      "model_id": "mock-embed-a",
+      "distance_metric": "cosine"
+    },
+    "retrieval": {
+      "method": "recursive",
+      "number_of_chunks": 5
+    },
+    "generation": {
+      "model_id": "mock-llm-1",
+      "context_template_text": "{document}",
+      "user_message_text": "\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
+      "system_message_text": "Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+    }
+  },
+  "scores": {
+    "answer_correctness": {
+      "mean": 0.5,
+      "ci_low": 0.4,
+      "ci_high": 0.7
+    },
+    "faithfulness": {
+      "mean": 0.2,
+      "ci_low": 0.1,
+      "ci_high": 0.5
+    },
+    "context_correctness": {
+      "mean": 1.0,
+      "ci_low": 0.9,
+      "ci_high": 1.0
+    }
+  },
+  "final_score": 0.5
+}
+```
+
+**Sample evaluation_results.json:**
+
+```json
+[
+  {
+    "question": "What foundation models are available in watsonx.ai?",
+    "correct_answers": ["The following models are available in watsonx.ai: flan-t5-xl-3b, ..."],
+    "answer": "Watsonx.ai provides foundation models such as flan-t5-xl-3b, granite-13b-instruct-v2, and others.",
+    "answer_contexts": [
+      { "text": "Model architecture influences how the model behaves.", "document_id": "120CAE8361AE4E0B6FE4D6F0D32EEE9517F11190_1.txt" },
+      { "text": "Learn more about governing assets in AI use cases.", "document_id": "0ECEAC44DA213D067B5B5EA66694E6283457A441_9.txt" }
+    ],
+    "scores": {
+      "answer_correctness": 0.72,
+      "faithfulness": 0.85,
+      "context_correctness": 1.0
+    }
+  },
+  {
+    "question": "How can I ensure generated answers are accurate and factual?",
+    "correct_answers": ["Utilize RAG, prompt engineering, and validate output."],
+    "answer": "Use retrieval-augmented generation and validate the model output against your data.",
+    "answer_contexts": [
+      { "text": "Retrieval-augmented generation in IBM watsonx.ai.", "document_id": "752D982C2F694FFEE2A312CEA6ADF22C2384D4B2_0.txt" }
+    ],
+    "scores": {
+      "answer_correctness": 0.65,
+      "faithfulness": 0.91,
+      "context_correctness": 0.8
+    }
+  }
+]
+```
+
+Consumers use top-level **settings** for config (chunking, embedding, retrieval, generation).
 
 ```python
 """Example usage of the documents_rag_optimization_pipeline."""
@@ -197,19 +288,15 @@ This pipeline orchestrates the following AutoRAG components:
 
 ## Artifacts 📦
 
-For each pipeline run, AutoRAG generates:
+For each pipeline run, the following artifacts are produced (see [Stored artifacts (S3 / results storage)](#stored-artifacts-s3--results-storage-) for the exact layout):
 
-- **RAG Pattern Artifact(s)**: Multiple RAG Patterns, each consisting of properties and URI to
-  tar archive with notebooks:
-  - **Index building notebook**: For building the vector index/collection (in-memory database) or
-    populating existing index/collection (persistent database) with all user documents
-  - **Retrieval/generation notebook**: For performing retrieval and generation operations
-- **AutoRAG Run Artifact**: Run status properties and URI to log file with messages
-- **AutoRAG Experiment Summary Markdown Artifact**: Experiment run report including:
-  - Data preparation details
-  - Search space and explored configurations
-  - Leaderboard of RAG Patterns ranked by performance
-  - Links to remaining Artifacts
+- **RAG Patterns Artifact** (`rag_patterns_artifact`): A directory containing one subdirectory per top-N RAG pattern (named by pattern). Each subdirectory includes:
+  - **pattern.json** — Flat schema with `name`, `iteration`, `max_combinations`, `duration_seconds`, `settings` (vector_store, chunking, embedding, retrieval, generation), `scores` (per-metric mean/ci_low/ci_high), and `final_score`
+  - **evaluation_results.json** — Per-question evaluation (question, answer, correct_answers, answer_contexts, scores)
+  - **indexing_notebook.ipynb** — Notebook for building or populating the vector index/collection
+  - **inference_notebook.ipynb** — Notebook for retrieval and generation
+- **AutoRAG Run Artifact** (`autorag_run_artifact`): Run status and URI to the run log
+- **Leaderboard HTML Artifact** (`html_artifact`): HTML leaderboard table of RAG patterns ranked by `final_score`, with pattern name, metrics (e.g. mean_answer_correctness, mean_faithfulness, mean_context_correctness), and config columns (chunking, embedding, retrieval, generation)
 
 ## Optimization Engine: ai4rag 🚀
 
