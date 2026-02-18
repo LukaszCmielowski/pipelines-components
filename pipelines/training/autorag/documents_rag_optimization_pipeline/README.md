@@ -165,10 +165,9 @@ Each pattern directory under `rag_patterns_artifact/` contains:
 ]
 ```
 
-Consumers use top-level **settings** for config (chunking, embedding, retrieval, generation).
+## Example usage
 
 ```python
-"""Example usage of the documents_rag_optimization_pipeline."""
 
 from kfp_components.pipelines.training.autorag.documents_rag_optimization_pipeline import (
     documents_rag_optimization_pipeline,
@@ -295,8 +294,130 @@ For each pipeline run, the following artifacts are produced (see [Stored artifac
   - **evaluation_results.json** — Per-question evaluation (question, answer, correct_answers, answer_contexts, scores)
   - **indexing_notebook.ipynb** — Notebook for building or populating the vector index/collection
   - **inference_notebook.ipynb** — Notebook for retrieval and generation
-- **AutoRAG Run Artifact** (`autorag_run_artifact`): Run status and URI to the run log
 - **Leaderboard HTML Artifact** (`html_artifact`): HTML leaderboard table of RAG patterns ranked by `final_score`, with pattern name, metrics (e.g. mean_answer_correctness, mean_faithfulness, mean_context_correctness), and config columns (chunking, embedding, retrieval, generation)
+
+`rag_patterns_artifact` metadata:
+```json
+{
+   "name":"rag_patterns_artifact",
+   "uri":"documents-rag-optimization-pipeline/b888dca4-11de-49f5-8b60-e820613a623d/rag-templates-optimization/29a02588-7bed-4bf2-a595-66ae503440d3/rag_patterns/",
+   "metadata":{
+      "patterns":[
+         {
+            "name":"pattern0",
+            "iteration":0,
+            "max_combinations":3,
+            "duration_seconds":20,
+            "location": {
+               "evaluation_results": "pattern0/evaluation_results.json",
+               "indexing_notebook": "pattern0/indexing_notebook.ipynb",  
+               "inference_notebook": "pattern0/inference_notebook.ipynb",
+               "pattern_descriptor": "pattern0/pattern.json"
+            },  
+            "settings":{
+               "vector_store":{
+                  "datasource_type":"ls_milvus",
+                  "collection_name":"collection0"
+               },
+               "chunking":{
+                  "method":"recursive",
+                  "chunk_size":256,
+                  "chunk_overlap":128
+               },
+               "embedding":{
+                  "model_id":"mock-embed-a",
+                  "distance_metric":"cosine"
+               },
+               "retrieval":{
+                  "method":"window",
+                  "number_of_chunks":5
+               },
+               "generation":{
+                  "model_id":"mock-llm-1",
+                  "context_template_text":"{document}",
+                  "user_message_text":"\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
+                  "system_message_text":"Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+               }
+            },
+            "scores":{
+               "answer_correctness":{
+                  "mean":0.5,
+                  "ci_low":0.4,
+                  "ci_high":0.7
+               },
+               "faithfulness":{
+                  "mean":0.2,
+                  "ci_low":0.1,
+                  "ci_high":0.5
+               },
+               "context_correctness":{
+                  "mean":1.0,
+                  "ci_low":0.9,
+                  "ci_high":1.0
+               }
+            },
+            "final_score":0.5
+         },
+         {
+            "name":"pattern1",
+            "iteration":2,
+            "max_combinations":3,
+            "duration_seconds":10,
+            "location": {
+               "evaluation_results": "pattern1/evaluation_results.json",
+               "indexing_notebook": "pattern1/indexing_notebook.ipynb",  
+               "inference_notebook": "pattern1/inference_notebook.ipynb",
+               "pattern_descriptor": "pattern1/pattern.json"
+            },  
+            "settings":{
+               "vector_store":{
+                  "datasource_type":"ls_milvus",
+                  "collection_name":"collection0"
+               },
+               "chunking":{
+                  "method":"recursive",
+                  "chunk_size":256,
+                  "chunk_overlap":128
+               },
+               "embedding":{
+                  "model_id":"mock-embed-a",
+                  "distance_metric":"cosine"
+               },
+               "retrieval":{
+                  "method":"window",
+                  "number_of_chunks":5
+               },
+               "generation":{
+                  "model_id":"mock-llm-1",
+                  "context_template_text":"{document}",
+                  "user_message_text":"\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
+                  "system_message_text":"Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+               }
+            },
+            "scores":{
+               "answer_correctness":{
+                  "mean":0.5,
+                  "ci_low":0.4,
+                  "ci_high":0.7
+               },
+               "faithfulness":{
+                  "mean":0.2,
+                  "ci_low":0.1,
+                  "ci_high":0.5
+               },
+               "context_correctness":{
+                  "mean":1.0,
+                  "ci_low":0.9,
+                  "ci_high":1.0
+               }
+            },
+            "final_score":0.5
+         }
+      ]
+   }
+}
+```
+
 
 ## Optimization Engine: ai4rag 🚀
 
