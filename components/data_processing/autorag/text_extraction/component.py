@@ -58,7 +58,7 @@ def text_extraction(
     documents = descriptor["documents"]
 
     s3_creds = {
-        k: os.environ.get(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_REGION"]
+        k: os.environ.get(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION"]
     }
     for k, v in s3_creds.items():
         if v is None:
@@ -67,7 +67,7 @@ def text_extraction(
     s3_client = boto3.client(
         "s3",
         endpoint_url=s3_creds["AWS_S3_ENDPOINT"],
-        region_name=s3_creds["AWS_REGION"],
+        region_name=s3_creds["AWS_DEFAULT_REGION"],
         aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
     )
