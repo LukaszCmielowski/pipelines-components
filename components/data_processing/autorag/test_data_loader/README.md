@@ -28,15 +28,15 @@ AutoRAG pipeline, as the test data is needed for document sampling in subsequent
 To access the test data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
 
 | Environment variable name | Description                                         |
-|---------------------------|-----------------------------------------------------|
-| `AWS_ACCESS_KEY_ID`       | access key used to authenticate with the S3 service |
-| `AWS_SECRET_ACCESS_KEY`   | secret key used to authenticate with the S3 service |
-| `AWS_ENDPOINT_URL`        | endpoint URL of the S3 instance                     |
-| `AWS_REGION`              | region in which the S3 instance is deployed         |
+|--------------------------|-----------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`      | access key used to authenticate with the S3 service |
+| `AWS_SECRET_ACCESS_KEY`  | secret key used to authenticate with the S3 service |
+| `AWS_S3_ENDPOINT`        | endpoint URL of the S3 instance                     |
+| `AWS_REGION`             | region in which the S3 instance is deployed         |
 
 ## Outputs 📤
 
-| Output c    | Type           | Description                                          |
+| Output      | Type           | Description                                          |
 |-------------|----------------|------------------------------------------------------|
 | `test_data` | `dsl.Artifact` | The loaded test data as a pandas DataFrame artifact. |
 

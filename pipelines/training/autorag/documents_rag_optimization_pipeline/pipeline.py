@@ -3,7 +3,7 @@ from typing import List, Optional
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 
-from components.data_processing.autorag.document_loader import document_loader
+from components.data_processing.autorag.documents_sampling import documents_sampling
 from components.data_processing.autorag.test_data_loader import test_data_loader
 from components.data_processing.autorag.text_extraction import text_extraction
 from components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
@@ -63,22 +63,25 @@ def documents_rag_optimization_pipeline(
         vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus).
             If not provided, an in-memory database may be used.
     """
-
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,
         test_data_path=test_data_key,
     )
 
-    document_loader_task = document_loader(
+    documents_sampling_task = documents_sampling(
         input_data_bucket_name=input_data_bucket_name,
         input_data_path=input_data_key,
         test_data=test_data_loader_task.outputs["test_data"],
         sampling_config={},
     )
 
+    text_extraction_task = text_extraction(
+        sampled_documents_descriptor=documents_sampling_task.outputs["sampled_documents"],
+    )
+
     for task, secret_name in zip(
-        [test_data_loader_task, document_loader_task],
-        [test_data_secret_name, input_data_secret_name],
+        [test_data_loader_task, documents_sampling_task, text_extraction_task],
+        [test_data_secret_name, input_data_secret_name, input_data_secret_name],
     ):
         use_secret_as_env(
             task,
@@ -90,8 +93,6 @@ def documents_rag_optimization_pipeline(
                 "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
             },
         )
-
-    text_extraction_task = text_extraction(documents=document_loader_task.outputs["sampled_documents"])
 
     mps_task = search_space_preparation(
         test_data=test_data_loader_task.outputs["test_data"],

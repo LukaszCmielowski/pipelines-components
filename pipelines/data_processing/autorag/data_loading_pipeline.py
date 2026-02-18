@@ -1,6 +1,6 @@
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-from kfp_components.components.data_processing.autorag.document_loader.component import document_loader
+from kfp_components.components.data_processing.autorag.documents_sampling.component import documents_sampling
 from kfp_components.components.data_processing.autorag.test_data_loader.component import test_data_loader
 from kfp_components.components.data_processing.autorag.text_extraction.component import text_extraction
 
@@ -9,13 +9,13 @@ from kfp_components.components.data_processing.autorag.text_extraction.component
     name="AutoRAG Data Processing Pipeline", description="Pipeline to load test data and documents for AutoRAG."
 )
 def data_loading_pipeline(
-    test_data_secret_name: str,
-    input_data_secret_name: str,
-    test_data_bucket_name: str,
-    test_data_key: str,
-    input_data_bucket_name: str,
-    input_data_key: str,
-    sampling_config: dict,
+    test_data_secret_name: str = "autorag-input-data-secret",
+    input_data_secret_name: str = "autorag-input-data-secret",
+    test_data_bucket_name: str = "autorag-test-bucket",
+    test_data_key: str = "benchmark.json",
+    input_data_bucket_name: str = "autorag-test-bucket",
+    sampling_config: dict = {"max_size_gigabytes": 1},
+    input_data_key: str = "documents",
 ):
     """Defines a pipeline to load and sample input data for AutoRAG.
 
@@ -48,16 +48,23 @@ def data_loading_pipeline(
         test_data_path=test_data_key,
     )
 
-    document_loader_task = document_loader(
+    documents_sampling_task = documents_sampling(
         input_data_bucket_name=input_data_bucket_name,
         input_data_path=input_data_key,
         test_data=test_data_loader_task.outputs["test_data"],
         sampling_config=sampling_config,
     )
 
+    documents_sampling_task.set_caching_options(enable_caching=False)
+    test_data_loader_task.set_caching_options(enable_caching=False)
+
+    text_extraction_task = text_extraction(
+        sampled_documents_descriptor=documents_sampling_task.outputs["sampled_documents"],
+    )
+
     for task, secret_name in zip(
-        [test_data_loader_task, document_loader_task],
-        [test_data_secret_name, input_data_secret_name],
+        [test_data_loader_task, documents_sampling_task, text_extraction_task],
+        [test_data_secret_name, input_data_secret_name, input_data_secret_name],
     ):
         use_secret_as_env(
             task,
@@ -69,8 +76,6 @@ def data_loading_pipeline(
                 "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
             },
         )
-
-    text_extraction(documents=document_loader_task.outputs["sampled_documents"])
 
 
 if __name__ == "__main__":

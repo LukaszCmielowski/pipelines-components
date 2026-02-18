@@ -1,5 +1,5 @@
 ---
-name: document_loader
+name: documents_sampling
 stability: alpha  # New component without proven track record
 dependencies:
   kubeflow:
@@ -13,7 +13,7 @@ dependencies:
 tags:
   - data-processing
   - autorag
-  - document-loading
+  - documents-sampling
 lastVerified: 2026-01-23T10:29:35Z
 # links:  # Add relevant links
 #   documentation: https://your-docs-url.com
