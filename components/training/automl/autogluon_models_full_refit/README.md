@@ -24,27 +24,17 @@ are `regression`, `binary`, and `multiclass`; any other type raises `ValueError`
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `model_name` | `str` | — | Name of the model to refit (refitted model saved with `_FULL` suffix). |
-| `full_dataset` | `dsl.Input[dsl.Dataset]` | — | Dataset artifact (CSV) with complete training data; format must match initial training. |
-| `predictor_path` | `str` | — | Path to a trained AutoGluon TabularPredictor that includes the model specified by `model_name`. |
-| `sampling_config` | `dict` | — | Configuration for data sampling (stored in artifact metadata). |
-| `split_config` | `dict` | — | Configuration for data splitting (stored in artifact metadata). |
-| `model_config` | `dict` | — | Configuration for model training (stored in artifact metadata). |
-| `pipeline_name` | `str` | — | Name of the pipeline run (used in generated notebook; last hyphen-separated segment is stripped for display). |
-| `run_id` | `str` | — | ID of the pipeline run (used in generated notebook). |
-| `sample_row` | `str` | — | JSON string of a list of row objects (e.g. `[{"feature1": 1, "target": 0}]`). Used as example input in the generated notebook; the label column is stripped per row. |
-| `model_artifact` | `dsl.Output[dsl.Model]` | — | Output where the refitted predictor, metrics, and generated notebook are saved. |
+| ----------- | ------ | --------- | ------------- |
+| `model_name` | `str` | `None` | The name of the model to refit. Should match a model name in the predictor. The refitted model will be saved with the suffix "_FULL" appended to this name. |
+| `full_dataset` | `dsl.Input[dsl.Dataset]` | `None` | A Dataset artifact containing the complete training dataset in CSV format. Used to retrain the specified model. The dataset should match the format and schema of the data used during initial model training. |
+| `predictor_path` | `str` | `None` | Path (string) to a trained AutoGluon TabularPredictor that includes the model specified by model_name. The predictor should have been trained previously, potentially on a sampled subset of the data. |
+| `model_artifact` | `dsl.Output[dsl.Model]` | `None` | Output Model artifact where the refitted predictor will be saved. The artifact will contain a cleaned predictor with only the original model and its refitted "_FULL" version. Metrics are written under model_artifact.path / model_name_FULL / metrics. The metadata will include the model_name with "_FULL" suffix. |
 
 ## Outputs 📤
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `model_name` | `str` | Name of the refitted model (i.e. `model_name` with `_FULL` suffix). |
-
-The refitted predictor, metrics under `model_artifact.path` / `model_name_FULL` / `metrics`, and
-`model_artifact.path` / `automl_predictor_notebook.ipynb` are written to the `model_artifact` output. Artifact metadata
-includes `display_name` and `context` (e.g. `data_config`, `task_type`, `label_column`, `model_config`, `location`, `metrics`).
+| Name | Type | Description |
+| ------ | ------ | ------------- |
+| Output | `NamedTuple('outputs', model_name=str)` | None. The refitted model is saved to the model_artifact output. |
 
 ## Metadata 🗂️
 

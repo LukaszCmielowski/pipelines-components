@@ -4,21 +4,15 @@
 
 ## Overview 🧾
 
-Automl Data Loader component.
-
-TODO: Add a detailed description of what this component does.
-
-Args: input_param: Description of the component parameter. # Add descriptions for other parameters
-
-Returns: Description of what the component returns.
+Loads a tabular CSV dataset from an S3-compatible bucket using AWS credentials.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `file_key` | `str` | `None` |  |
-| `bucket_name` | `str` | `None` |  |
-| `full_dataset` | `dsl.Output[dsl.Dataset]` | `None` |  |
+| ----------- | ------ | --------- | ------------- |
+| `file_key` | `str` | `None` | Path to the CSV file in the S3 bucket. |
+| `bucket_name` | `str` | `None` | Name of the S3 bucket. |
+| `full_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output artifact for the downloaded dataset. |
 
 ## Metadata 🗂️
 

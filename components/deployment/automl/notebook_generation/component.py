@@ -1,168 +1,48 @@
-from typing import NamedTuple
-
 from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
-    packages_to_install=[
-        "autogluon.tabular==1.5.0",
-        "catboost==1.2.8",
-        "fastai==2.8.5",
-        "lightgbm==4.6.0",
-        "torch==2.9.1",
-        "xgboost==3.1.3",
-    ],
+    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
-def autogluon_models_full_refit(
+def notebook_generation(
+    problem_type: str,
     model_name: str,
-    full_dataset: dsl.Input[dsl.Dataset],
-    predictor_path: str,
-    sampling_config: dict,
-    split_config: dict,
-    model_config: dict,
+    notebook_artifact: dsl.Output[dsl.Artifact],
     pipeline_name: str,
     run_id: str,
     sample_row: str,
-    model_artifact: dsl.Output[dsl.Model],
-) -> NamedTuple("outputs", model_name=str):
-    """Refit a specific AutoGluon model on the full training dataset.
+    label_column: str,
+):
+    """Generate a Jupyter notebook for reviewing and running an AutoGluon predictor.
 
-    This component takes a trained AutoGluon TabularPredictor, loaded from
-    predictor_path, and refits a specific model, identified by model_name, on
-    the full training data. By default AutoGluon refit_full uses the
-    predictor's training and validation data; the full_dataset is used for
-    evaluation and for writing metrics. The refitted model is saved with the
-    suffix "_FULL" appended to model_name.
+    Produces a notebook artifact (automl_predictor_notebook.ipynb) that lets users
+    review the experiment leaderboard, load a trained AutoGluon model from S3, and
+    run predictions. The notebook is pre-filled with pipeline run details, model
+    name, and a sample row for prediction.
 
-    The component clones the predictor to model_artifact.path / model_name_FULL
-    / predictor, keeps only the specified model and its refitted version,
-    sets the refitted model as best, and saves space by removing other models.
-    Evaluation metrics, feature importance, and (for classification) confusion
-    matrix are written under model_artifact.path / model_name_FULL / metrics.
-    A Jupyter notebook (automl_predictor_notebook.ipynb) is written under
-    model_artifact.path / model_name_FULL / notebooks for inference and
-    exploration; pipeline_name, run_id, and sample_row are used to fill in
-    run context and example input (the label column is stripped from sample_row
-    in the notebook). Artifact metadata includes display_name, context
-    (data_config, task_type, label_column, model_config, location, metrics),
-    and context.location.notebook. Supported problem types are regression,
-    binary, and multiclass; any other type raises ValueError.
+    **Problem types:** Use ``problem_type`` to select the template:
 
-    This component is typically used in a two-stage training pipeline where
-    models are first trained on sampled data for exploration, then the best
-    candidates are refitted on the full dataset for optimal performance.
+    - **regression**: Template uses ``predict(score_df)`` for numeric targets.
+    - **binary** or **multiclass**: Template uses ``predict_proba(score_df)`` and
+      includes a confusion matrix section. Both values share the same classification
+      template.
+
+    Invalid values raise ``ValueError``.
 
     Args:
-        model_name: The name of the model to refit. Should match a model name in the predictor. The refitted model will be saved with the suffix "_FULL" appended to this name.
-        full_dataset: A Dataset artifact containing the complete training dataset in CSV format. Used to retrain the specified model. The dataset should match the format and schema of the data used during initial model training.
-        predictor_path: Path (string) to a trained AutoGluon TabularPredictor that includes the model specified by model_name. The predictor should have been trained previously, potentially on a sampled subset of the data.
-        model_artifact: Output Model artifact where the refitted predictor will be saved. The artifact will contain a cleaned predictor with only the original model and its refitted "_FULL" version. Metrics are written under model_artifact.path / model_name_FULL / metrics. The metadata will include the model_name with "_FULL" suffix.
+        problem_type: One of "regression", "binary", or "multiclass". Determines which notebook template is used.
+        model_name: Name of the trained model to load, matching the leaderboard model column.
+        notebook_artifact: Output artifact where the generated notebook file (automl_predictor_notebook.ipynb) is written.
+        pipeline_name: Full pipeline run name (e.g. from KFP); used to locate artifacts in S3. The component strips the last hyphen-separated segment (run suffix) for the notebook path.
+        run_id: Pipeline run ID; used with pipeline_name to form the S3 prefix for leaderboard and model artifacts.
+        sample_row: JSON string of a single row (object of feature names to values), used in the notebook's prediction example. The component parses it, removes the label column, and injects the result. Expected format: '[{"col1": "val1","col2":"val2"},{"col1":"val3","col2":"val4"}]'.
+        label_column: Key in the parsed sample_row for the target/label column; this column is omitted from the sample row in the notebook.
 
     Returns:
-        NamedTuple with field model_name: the refitted model name (model_name
-        with "_FULL" suffix). The refitted predictor and artifacts are also
-        written to model_artifact.
-
-    Raises:
-        FileNotFoundError: If the predictor path or full_dataset path
-            cannot be found.
-        ValueError: If the predictor cannot be loaded, model_name is not
-            found in the predictor, refit fails, or problem_type is not
-            regression, binary, or multiclass.
-        KeyError: If required model files are missing from the predictor.
-
-    Example:
-        from kfp import dsl
-        from components.training.automl.autogluon_models_full_refit import (
-            autogluon_models_full_refit,
-        )
-
-        @dsl.pipeline(name="model-refit-pipeline")
-        def refit_pipeline(train_data, predictor_path, pipeline_name, run_id):
-            refitted = autogluon_models_full_refit(
-                model_name="LightGBM_BAG_L1",
-                full_dataset=train_data,
-                predictor_path=predictor_path,
-                sampling_config={},
-                split_config={},
-                model_config={},
-                pipeline_name=pipeline_name,
-                run_id=run_id,
-                sample_row='[{"feature1": 1, "target": 1.0}]',
-                model_artifact=dsl.Output(type="Model"),
-            )
-            return refitted.model_name
-
+        None. Writes the notebook to notebook_artifact.path.
     """  # noqa: E501
     import json
-    import os
     from pathlib import Path
-
-    import pandas as pd
-    from autogluon.tabular import TabularPredictor
-
-    full_dataset_df = pd.read_csv(full_dataset.path)
-
-    predictor = TabularPredictor.load(predictor_path)
-
-    # save refitted model to output artifact
-    model_name_full = model_name + "_FULL"
-    output_path = Path(model_artifact.path) / model_name_full
-
-    # set the name of the model artifact and its metadata
-    model_artifact.metadata["display_name"] = model_name_full
-    model_artifact.metadata["context"] = {}
-    model_artifact.metadata["context"]["data_config"] = {
-        "sampling_config": sampling_config,
-        "split_config": split_config,
-    }
-
-    model_artifact.metadata["context"]["task_type"] = predictor.problem_type
-    model_artifact.metadata["context"]["label_column"] = predictor.label
-
-    model_artifact.metadata["context"]["model_config"] = model_config
-    model_artifact.metadata["context"]["location"] = {
-        "model_directory": f"{model_name_full}",
-        "predictor": f"{model_name_full}/predictor.pkl",
-    }
-
-    # clone the predictor to the output artifact path and delete unnecessary models
-    predictor_clone = predictor.clone(path=output_path / "predictor", return_clone=True, dirs_exist_ok=True)
-    predictor_clone.delete_models(models_to_keep=[model_name])
-
-    # by default, autogluon refit on traing + validation data
-    predictor_clone.refit_full(model=model_name)
-
-    predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
-    predictor_clone.save_space()
-
-    eval_results = predictor_clone.evaluate(full_dataset_df)
-    model_artifact.metadata["context"]["metrics"] = {"val_data": eval_results}
-    feature_importance = predictor_clone.feature_importance(full_dataset_df)
-
-    # save evaluation results to output artifact
-    os.makedirs(str(output_path / "metrics"), exist_ok=True)
-    with (output_path / "metrics" / "metrics.json").open("w") as f:
-        json.dump(eval_results, f)
-
-    # save feature importance to output artifact
-    with (output_path / "metrics" / "feature_importance.json").open("w") as f:
-        json.dump(feature_importance.to_dict(), f)
-
-    # generate confusion matrix for classification problem types
-    if predictor.problem_type in {"binary", "multiclass"}:
-        from autogluon.core.metrics import confusion_matrix
-
-        confusion_matrix_res = confusion_matrix(
-            solution=predictor_clone.predict(full_dataset_df),
-            prediction=full_dataset_df[predictor.label],
-            output_format="pandas_dataframe",
-        )
-        with (output_path / "metrics" / "confusion_matrix.json").open("w") as f:
-            json.dump(confusion_matrix_res.to_dict(), f)
-
-    # Notebook generation
 
     # TODO: Move to build package in next stages
 
@@ -223,14 +103,7 @@ def autogluon_models_full_refit(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": [
-                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
-                    "%pip install catboost==1.2.8 | tail -n 1\n",
-                    "%pip install fastai==2.8.5 | tail -n 1\n",
-                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
-                    "%pip install torch==2.9.1 | tail -n 1\n",
-                    "%pip install xgboost==3.1.3 | tail -n 1\n",
-                ],
+                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
             },
             {
                 "cell_type": "markdown",
@@ -385,7 +258,7 @@ def autogluon_models_full_refit(
                 "source": [
                     "from autogluon.tabular import TabularPredictor\n",
                     "\n",
-                    'predictor = TabularPredictor.load(os.path.join(best_model_path, "predictor"))',
+                    "predictor = TabularPredictor.load(best_model_path)",
                 ],
             },
             {
@@ -526,14 +399,7 @@ def autogluon_models_full_refit(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": [
-                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
-                    "%pip install catboost==1.2.8 | tail -n 1\n",
-                    "%pip install fastai==2.8.5 | tail -n 1\n",
-                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
-                    "%pip install torch==2.9.1 | tail -n 1\n",
-                    "%pip install xgboost==3.1.3 | tail -n 1\n",
-                ],
+                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
             },
             {
                 "cell_type": "markdown",
@@ -705,7 +571,7 @@ def autogluon_models_full_refit(
                 "source": [
                     "from autogluon.tabular import TabularPredictor\n",
                     "\n",
-                    'predictor = TabularPredictor.load(os.path.join(best_model_path, "predictor"))',
+                    "predictor = TabularPredictor.load(best_model_path)",
                 ],
             },
             {
@@ -782,7 +648,6 @@ def autogluon_models_full_refit(
         "nbformat_minor": 5,
     }
 
-    problem_type = predictor.problem_type
     match problem_type:
         case "regression":
             notebook = REGRESSION
@@ -797,44 +662,27 @@ def autogluon_models_full_refit(
 
     pipeline_name = retrieve_pipeline_name(pipeline_name)
 
-    RUN_ID_INDEX = 6
-    PIPELINE_NAME_INDEX = 6
-    MODEL_NAME_INDEX = 10
-    notebook["cells"][RUN_ID_INDEX]["source"][1] = notebook["cells"][RUN_ID_INDEX]["source"][1].replace(
-        "<RUN_ID>", run_id
-    )
-    notebook["cells"][PIPELINE_NAME_INDEX]["source"][0] = notebook["cells"][PIPELINE_NAME_INDEX]["source"][0].replace(
-        "<PIPELINE_NAME>", pipeline_name
-    )
-    notebook["cells"][MODEL_NAME_INDEX]["source"][0] = notebook["cells"][MODEL_NAME_INDEX]["source"][0].replace(
-        "<MODEL_NAME>", model_name_full
-    )
+    notebook["cells"][6]["source"][1] = notebook["cells"][6]["source"][1].replace("<RUN_ID>", run_id)
+    notebook["cells"][6]["source"][0] = notebook["cells"][6]["source"][0].replace("<PIPELINE_NAME>", pipeline_name)
+    notebook["cells"][10]["source"][0] = notebook["cells"][10]["source"][0].replace("<MODEL_NAME>", model_name)
 
-    sample_row_list = json.loads(sample_row)
-
-    # remove label column from sample row
-    sample_row_formatted = [
-        {col: value for col, value in row.items() if col != predictor.label} for row in sample_row_list
-    ]
+    sample_row = json.loads(sample_row)
+    sample_row = [{col: value for col, value in row.items() if col != label_column} for row in sample_row]
 
     sample_row_idx = 20 + int((problem_type in {"binary", "multiclass"}))
     notebook["cells"][sample_row_idx]["source"][2] = notebook["cells"][sample_row_idx]["source"][2].replace(
-        "<SAMPLE_ROW>", str(sample_row_formatted)
+        "<SAMPLE_ROW>", str(sample_row)
     )
-    notebook_path = output_path / "notebooks"
-    notebook_path.mkdir(parents=True, exist_ok=True)
-    with (notebook_path / "automl_predictor_notebook.ipynb").open("w", encoding="utf-8") as f:
+    path = Path(notebook_artifact.path)
+    path.mkdir(parents=True, exist_ok=True)
+    with (path / "automl_predictor_notebook.ipynb").open("w", encoding="utf-8") as f:
         json.dump(notebook, f)
-
-    model_artifact.metadata["context"]["location"]["notebook"] = "notebooks/automl_predictor_notebook.ipynb"
-
-    return NamedTuple("outputs", model_name=str)(model_name=model_name_full)
 
 
 if __name__ == "__main__":
     from kfp.compiler import Compiler
 
     Compiler().compile(
-        autogluon_models_full_refit,
+        notebook_generation,
         package_path=__file__.replace(".py", "_component.yaml"),
     )
