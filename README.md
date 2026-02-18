@@ -25,13 +25,29 @@ The Kubeflow Pipelines Components repository serves as:
 ```text
 ├── components/ # Core reusable components
 │   ├── <component category>/
+│   │   ├── <group name>/
+│   │   │   ├── <component name>/
+│   │   │   └── <component name>/
+│   │   └── <group name>/
+│   │       ├── <component name>/
+│   │       └── <component name>/
 │   ├── <component category>/
+│   │   └── ...
 │   └── <component category>/
+│       └── ...
 │
 ├── pipelines/ # Complete AI pipelines
-│   ├── <component category>/
-│   ├── <component category>/
-│   └── <component category>/
+│   ├── <pipeline category>/
+│   │   ├── <group name>/
+│   │   │   ├── <pipeline name>/
+│   │   │   └── <pipeline name>/
+│   │   └── <group name>/
+│   │       ├── <pipeline name>/
+│   │       └── <pipeline name>/
+│   ├── <pipeline category>/
+│   │   └── ...
+│   └── <pipeline category>/
+│       └── ...
 │
 ├── docs/                # Documentation
 └── scripts/             # Utility scripts
@@ -72,7 +88,7 @@ Once the packages are available, you'll be able to verify the installation:
 from kfp_components.components import training, evaluation, data_processing
 
 # Example: Use a training component
-from kfp_components.components.training import my_component
+from kfp_components.components.training.group import my_component
 
 # List available components
 print(dir(training))
@@ -84,8 +100,8 @@ print(dir(training))
 
 ```python
 from kfp import dsl
-from kfp_components.components.training import model_trainer
-from kfp_components.components.evaluation import model_evaluator
+from kfp_components.components.training.group import model_trainer
+from kfp_components.components.evaluation.group import model_evaluator
 
 @dsl.pipeline(
     name="my-ai-pipeline",

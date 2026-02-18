@@ -1,68 +1,25 @@
-# Train Test Split ✂️
+# Train Test Split ✨
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
 
 ## Overview 🧾
 
-Splits data into train/test sets and performs sampling for AutoML workflows.
+Train Test Split component.
 
-The Train Test Split component is a critical step in the AutoML pipeline that prepares data for model
-training and evaluation. It splits the tabular data into training and test sets using appropriate
-sampling techniques (random, stratified, or time-series driven). Additionally, it samples a subset
-of the training data (default: 500 samples) for initial model building to reduce computational
-cost during the exploration phase.
+TODO: Add a detailed description of what this component does.
 
-This component supports multiple task types (classification, regression, time-series) and adapts its splitting strategy accordingly. For classification tasks, it supports stratified sampling to maintain class distribution. For time-series tasks, it uses chronological splitting to preserve temporal order.
+Args: input_param: Description of the component parameter. # Add descriptions for other parameters
+
+Returns: Description of what the component returns.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the full training data. |
-| `test_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the test data. |
-| `sampled_train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset with sampled training data for initial model building. |
-| `tabular_data` | `dsl.Input[dsl.Dataset]` | `None` | Input dataset artifact (raw tabular data from data-loader). |
-| `task_type` | `str` | `None` | ML task type: `"classification"`, `"regression"`, or `"time_series"`. |
-| `label_column` | `str` | `None` | Name of the label/target column. Required. |
-| `sampling_config` | `dict` | `None` | Optional sampling config; see [Sampling Configuration](#sampling-configuration). |
-| `split_config` | `dict` | `None` | Optional train/test split config; see [Split Configuration](#split-configuration). |
-
-### Sampling Configuration
-
-The `sampling_config` dictionary supports:
-
-```python
-{
-    "n_samples": 500,              # Number of samples for initial model building (default: 500)
-    "sampling_method": "random"   # Sampling method: "random", "stratified", or "truncate"
-}
-```
-
-**Sampling Methods:**
-
-- `"random"` - Random sampling for general use cases
-- `"stratified"` - Stratified sampling for classification tasks to maintain class distribution
-- `"truncate"` - Sampling last n records for time-series forecasting tasks
-
-### Split Configuration
-
-The `split_config` dictionary supports:
-
-```python
-{
-    "test_size": 0.2,        # Proportion of dataset for test split (default: 0.2)
-    "random_state": 42,      # Random seed for reproducibility (default: 42)
-    "stratify": True         # Enable stratified splitting for classification (default: True for classification)
-}
-```
-
-For time-series tasks:
-
-```python
-{
-    "n_last_rows": 100       # Number of last rows to use as test set for time-series
-}
-```
+|-----------|------|---------|-------------|
+| `dataset` | `dsl.Input[dsl.Dataset]` | `None` |  |
+| `sampled_train_dataset` | `dsl.Output[dsl.Dataset]` | `None` |  |
+| `sampled_test_dataset` | `dsl.Output[dsl.Dataset]` | `None` |  |
+| `test_size` | `float` | `0.3` |  |
 
 ## Outputs 📤
 
@@ -163,23 +120,16 @@ The sampled dataset (default: 500 samples) is used in the model-building-selecti
 
 ## Metadata 🗂️
 
-- **Name**: train-test-split
+- **Name**: train_test_split
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:
     - Name: Pipelines, Version: >=2.15.2
-  - External Services:
-    - Name: pandas, Version: >=2.0.0
-    - Name: scikit-learn, Version: >=1.0.0
 - **Tags**:
-  - automl
   - data-processing
-  - train-test-split
-  - data-sampling
-- **Last Verified**: 2025-01-27 00:00:00+00:00
-
-## Additional Resources 📚
-
-- **AutoML Documentation**: [AutoML README](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/README.md)
-- **Components Documentation**: [Components Structure](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/components.md)
-- **Issue Tracker**: [GitHub Issues](https://github.com/kubeflow/pipelines-components/issues)
+- **Last Verified**: 2026-01-22 10:28:49+00:00
+- **Owners**:
+  - Approvers:
+    - Mateusz-Switala
+  - Reviewers:
+    - Mateusz-Switala

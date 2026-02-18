@@ -24,7 +24,9 @@ best-performing models. The output is written as HTML that can be used for repor
 
 ## Outputs 📤
 
-This component does not return any outputs. The leaderboard is written directly to the `html_artifact` output.
+| Name | Type | Description |
+|------|------|-------------|
+| Output | `NamedTuple('outputs', best_model=str)` |  |
 
 ## Metadata 🗂️
 
@@ -37,5 +39,7 @@ This component does not return any outputs. The leaderboard is written directly 
   - training
 - **Last Verified**: 2026-01-22 10:59:58+00:00
 - **Owners**:
-  - Approvers: None
-  - Reviewers: None
+  - Approvers:
+    - Mateusz-Switala
+  - Reviewers:
+    - Mateusz-Switala

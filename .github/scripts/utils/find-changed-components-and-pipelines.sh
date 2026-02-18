@@ -59,14 +59,8 @@ extract_dir_from_file() {
     if [[ "$file" == components/*/*/*/* ]]; then
         dir=$(echo "$file" | cut -d'/' -f1-4)  # components/<category>/<group>/<component>
         components+=("$dir")
-    elif [[ "$file" == components/*/*/* ]]; then
-        dir=$(echo "$file" | cut -d'/' -f1-3)  # components/<category>/<component>
-        components+=("$dir")
     elif [[ "$file" == pipelines/*/*/*/* ]]; then
         dir=$(echo "$file" | cut -d'/' -f1-4)  # pipelines/<category>/<group>/<pipeline>
-        pipelines+=("$dir")
-    elif [[ "$file" == pipelines/*/*/* ]]; then
-        dir=$(echo "$file" | cut -d'/' -f1-3)  # pipelines/<category>/<pipeline>
         pipelines+=("$dir")
     elif [[ "$file" == third_party/components/*/*/* ]]; then
         dir=$(echo "$file" | cut -d'/' -f1-4)  # third_party/components/<category>/<component>
@@ -105,7 +99,6 @@ fi
 # Deduplicate and output space-separated list
 all_targets=("${components[@]}" "${pipelines[@]}")
 unique_targets=($(printf '%s\n' "${all_targets[@]}" | sort -u))
-
 echo "${unique_targets[@]}"
 
 
