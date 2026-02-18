@@ -63,7 +63,6 @@ def documents_rag_optimization_pipeline(
         vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus).
             If not provided, an in-memory database may be used.
     """
-
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,
         test_data_path=test_data_key,
