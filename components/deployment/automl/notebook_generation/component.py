@@ -113,7 +113,15 @@ def notebook_generation(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
+                "source": [
+                    "%pip install \\\n",
+                    "    \"autogluon.tabular==1.5.0\" \\\n",
+                    "    \"catboost==1.2.8\" \\\n",
+                    "    \"fastai==2.8.7\" \\\n",
+                    "    \"lightgbm==4.6.0\" \\\n",
+                    "    \"torch==2.9.1\" \\\n",
+                    "    \"xgboost==3.1.3\" | tail -n 1"
+                ],
             },
             {
                 "cell_type": "markdown",
@@ -409,7 +417,15 @@ def notebook_generation(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
+                "source": [
+                    "%pip install \\\n",
+                    "    \"autogluon.tabular==1.5.0\" \\\n",
+                    "    \"catboost==1.2.8\" \\\n",
+                    "    \"fastai==2.8.7\" \\\n",
+                    "    \"lightgbm==4.6.0\" \\\n",
+                    "    \"torch==2.9.1\" \\\n",
+                    "    \"xgboost==3.1.3\" | tail -n 1"
+                ],
             },
             {
                 "cell_type": "markdown",
