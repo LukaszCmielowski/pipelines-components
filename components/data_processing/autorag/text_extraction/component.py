@@ -55,14 +55,11 @@ def text_extraction(
     documents = descriptor["documents"]
 
     s3_creds = {
-        k: os.environ.get(k)
-        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
+        k: os.environ.get(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
     }
     for k, v in s3_creds.items():
         if v is None:
-            raise ValueError(
-                f"{k} environment variable not set. Check if kubernetes secret was configured properly."
-            )
+            raise ValueError(f"{k} environment variable not set. Check if kubernetes secret was configured properly.")
 
     s3_client = boto3.client(
         "s3",
@@ -97,8 +94,7 @@ def text_extraction(
         output_dir.mkdir(parents=True, exist_ok=True)
 
         files_to_process = [
-            f for f in download_path.rglob("*")
-            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+            f for f in download_path.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
         ]
 
         logger.info("Starting text extraction for %d documents.", len(files_to_process))

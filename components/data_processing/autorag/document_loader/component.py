@@ -108,10 +108,12 @@ def document_loader(
         for file_info in selected:
             key = file_info["Key"]
             size_bytes = file_info["Size"]
-            documents.append({
-                "key": key,
-                "size_bytes": size_bytes,
-            })
+            documents.append(
+                {
+                    "key": key,
+                    "size_bytes": size_bytes,
+                }
+            )
 
         descriptor = {
             "bucket": input_data_bucket_name,
