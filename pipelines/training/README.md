@@ -1,4 +1,4 @@
-#  Pipelines
+# Pipelines
 
 This directory contains groups of pipelines in the **** category:
 
