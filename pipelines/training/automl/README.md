@@ -1,4 +1,4 @@
-# Pipelines Pipelines
+# Pipelines
 
 This directory contains pipelines of the **automl** organization in the **Pipelines** category:
 
