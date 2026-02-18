@@ -47,18 +47,10 @@ echo "=================================================="
 
 # Run the README generator in check mode for each target
 for target_dir in "${TARGET_DIRS[@]}"; do
-    echo "Checking $target_dir..."
     # Determine if it's a component or pipeline
     if [[ "$target_dir" == components/* ]]; then
-        # Check if the target_dir contains component.py; if not, skip to next directory
-        if [ ! -f "$target_dir/component.py" ]; then
-            continue
-        fi
         TYPE_FLAG="--component"
     elif [[ "$target_dir" == pipelines/* ]]; then
-        if [ ! -f "$target_dir/pipeline.py" ]; then
-            continue
-        fi
         TYPE_FLAG="--pipeline"
     else
         print_error "Invalid directory: $target_dir. Must be in components/ or pipelines/"

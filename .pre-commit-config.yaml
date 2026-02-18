@@ -35,13 +35,13 @@ repos:
         name: validate-readme
         entry: >
           bash -c '
-          changed_dirs=$(echo "$@" | xargs -n1 dirname | grep -E "^(components|pipelines)/([^/]+/){1,2}[^/]+$" | sort -u);
+          changed_dirs=$(echo "$@" | xargs -n1 dirname | grep -E "^(components|pipelines)/[^/]+/[^/]+/[^/]+$" | sort -u);
           if [ -n "$changed_dirs" ]; then
             ./.github/scripts/validate_readmes/test-readme-check.sh $changed_dirs || exit 1;
           fi
           ' --
         language: system
-        files: ^(components|pipelines)/[^/]+/[^/]+/
+        files: ^(components|pipelines)/[^/]+/[^/]+/[^/]+/
       - id: markdownlint
         name: markdownlint
         entry: npx markdownlint-cli@0.39.0 --fix -c .markdownlint.json
