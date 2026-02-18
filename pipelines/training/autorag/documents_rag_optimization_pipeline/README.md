@@ -25,7 +25,7 @@ externally provided MLFlow server to support advanced experiment tracking featur
 | `input_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (input documents). Same env vars as above. |
 | `input_data_bucket_name` | `str` | — | S3 (or compatible) bucket name for the input documents. |
 | `input_data_key` | `str` | — | Object key (path) of the input documents in the input data bucket. |
-| `llama_stack_secret_name` | `str` | — | Kubernetes secret name for llama-stack API connection (provides LLAMASTACK_CLIENT_CONNECTION). |
+| `llama_stack_secret_name` | `str` | — | Kubernetes secret name for llama-stack API connection. The secret must define: `LLAMA_STACK_CLIENT_API_KEY`, `LLAMA_STACK_CLIENT_BASE_URL`. |
 | `embeddings_models` | `Optional[List]` | `None` | Optional list of embedding model identifiers for the search space. |
 | `generation_models` | `Optional[List]` | `None` | Optional list of foundation/generation model identifiers for the search space. |
 | `optimization_metric` | `str` | `"faithfulness"` | Metric to optimize. Supported: `faithfulness`, `answer_correctness`, `context_correctness`. |
@@ -49,7 +49,7 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
             └── rag_patterns_artifact/
                 ├── <pattern_name_0>/             # one per top-N RAG pattern
                 │   ├── pattern.json              # Flat schema: name, iteration, settings, scores, final_score
-                │   ├── evaluation_results.json    # Per-question evaluation (question, answer, correct_answers, scores, etc.)
+                │   ├── evaluation_results.json   # Per-question evaluation (question, answer, correct_answers, scores, etc.)
                 │   ├── indexing_notebook.ipynb   # Notebook to build/populate the vector index
                 │   └── inference_notebook.ipynb  # Notebook for retrieval and generation
                 ├── <pattern_name_1>/
@@ -260,7 +260,7 @@ The following parameters are required to run the pipeline:
 - `input_data_secret_name` - Kubernetes secret for S3 credentials (input documents)
 - `input_data_bucket_name` - Bucket containing the input documents
 - `input_data_key` - Object key to the input documents (folder or file)
-- `llama_stack_secret_name` - Kubernetes secret for llama-stack API connection
+- `llama_stack_secret_name` - Kubernetes secret for llama-stack API connection (must define `LLAMA_STACK_CLIENT_API_KEY`, `LLAMA_STACK_CLIENT_BASE_URL`)
 
 Optional parameters (`embeddings_models`, `generation_models`, `optimization_metric`, `vector_database_id`) use defaults or search-space defaults when omitted.
 
