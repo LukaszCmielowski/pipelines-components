@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD013 -->
-# Document Loader 📄
+# Documents sampling 📄
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
 
@@ -9,7 +9,7 @@ Lists documents from S3 and performs document sampling.
 It writes a YAML manifest (descriptor) describing the sampled set so that downstream
 components (e.g. text extraction) can fetch only the documents they need.
 
-The Document Loader component is the initial step in the AutoRAG pipeline workflow.
+The documents sampling component is the initial step in the AutoRAG pipeline workflow.
 It lists objects in the given S3 bucket/prefix, filters by supported document formats,
 and applies sampling (e.g. test-data–driven with a size limit). It doesn't download
 or copy document bytes; it only produces a manifest file. The component integrates
@@ -29,11 +29,11 @@ with S3 via environment-based credentials (e.g. RHOAI Connections) using ibm_bot
 To access the input data stored in an S3-compatible storage, the component requires the following environment variables to be available at runtime:
 
 | Environment variable name | Description                                         |
-|---------------------------|-----------------------------------------------------|
-| `AWS_ACCESS_KEY_ID`       | access key used to authenticate with the S3 service |
-| `AWS_SECRET_ACCESS_KEY`   | secret key used to authenticate with the S3 service |
-| `AWS_ENDPOINT_URL`        | endpoint URL of the S3 instance                     |
-| `AWS_REGION`              | region in which the S3 instance is deployed         |
+|--------------------------|-----------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`      | access key used to authenticate with the S3 service |
+| `AWS_SECRET_ACCESS_KEY`  | secret key used to authenticate with the S3 service |
+| `AWS_S3_ENDPOINT`        | endpoint URL of the S3 instance                     |
+| `AWS_REGION`             | region in which the S3 instance is deployed         |
 
 ### Sampling Configuration
 
@@ -69,12 +69,12 @@ It describes the sampled set and S3 locations so downstream components can fetch
 
 ```python
 from kfp import dsl
-from kfp_components.components.data_processing.autorag.document_loader import document_loader
+from kfp_components.components.data_processing.autorag.documents_sampling import documents_sampling
 
 @dsl.pipeline(name="document-loading-pipeline")
 def my_pipeline():
     """Example pipeline demonstrating document loading."""
-    load_task = document_loader(
+    load_task = documents_sampling(
         input_data_bucket_name="s3-documents-bucket",
         input_data_path="documents-path"
     )
@@ -87,7 +87,7 @@ def my_pipeline():
 @dsl.pipeline(name="document-loading-with-sampling-pipeline")
 def my_pipeline(test_data):
     """Example pipeline with document sampling."""
-    load_task = document_loader(
+    load_task = documents_sampling(
         input_data_bucket_name="s3-documents-bucket",
         input_data_path="documents-path",
         test_data=test_data,
@@ -113,11 +113,11 @@ def my_pipeline(test_data):
 - **No download**: This component does not download or copy document bytes; it only lists S3 and writes the descriptor YAML.
 - **Document sampling**: Sampling is integrated (e.g. test-data–driven, up to 1GB total size); selected keys are written in the descriptor.
 - **Downstream fetch**: Use the descriptor with the text_extraction component (or similar) to fetch and process documents from S3.
-- **Credentials**: S3 access requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`, and `AWS_REGION` at runtime.
+- **Credentials**: S3 access requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_ENDPOINT`, and `AWS_REGION` at runtime.
 
 ## Metadata 🗂️
 
-- **Name**: document_loader
+- **Name**: documents_sampling
 - **Stability**: alpha
 - **Dependencies**:
   - Kubeflow:

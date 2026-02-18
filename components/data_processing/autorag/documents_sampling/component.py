@@ -5,14 +5,14 @@ from kfp import dsl
     base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
     packages_to_install=["boto3"],
 )
-def document_loader(
+def documents_sampling(
     input_data_bucket_name: str,
     input_data_path: str,
     test_data: dsl.Input[dsl.Artifact] = None,
     sampling_config: dict = None,
     sampled_documents: dsl.Output[dsl.Artifact] = None,
 ):
-    """Document Loader component.
+    """Documents sampling component.
 
     Lists available documents list from S3, applies sampling, and writes a YAML manifest
     (sampled_documents_descriptor.yaml) with metadata. Does not download document contents.
@@ -134,6 +134,6 @@ if __name__ == "__main__":
     from kfp.compiler import Compiler
 
     Compiler().compile(
-        document_loader,
+        documents_sampling,
         package_path=__file__.replace(".py", "_component.yaml"),
     )

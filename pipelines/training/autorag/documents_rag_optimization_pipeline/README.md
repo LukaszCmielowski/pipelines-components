@@ -186,7 +186,7 @@ This pipeline orchestrates the following AutoRAG components:
 1. **[Test Data Loader](../components/data_processing/autorag/test_data_loader/README.md)** -
    Loads test data from JSON files
 
-2. **[Document Loader](../components/data_processing/autorag/document_loader/README.md)** -
+2. **[Documents sampling](../components/data_processing/autorag/documents_sampling/README.md)** -
    Loads documents from data sources and performs document sampling
 
 3. **[Text Extraction](../components/data_processing/autorag/text_extraction/README.md)** -
