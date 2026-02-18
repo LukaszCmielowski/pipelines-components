@@ -30,27 +30,17 @@ def notebook_generation(
     Invalid values raise ``ValueError``.
 
     Args:
-        problem_type: One of ``"regression"``, ``"binary"``, or ``"multiclass"``.
-            Determines which notebook template is used.
-        model_name: Name of the trained model to load, matching the leaderboard
-            model column.
-        notebook_artifact: Output artifact where the generated notebook file
-            (automl_predictor_notebook.ipynb) is written.
-        pipeline_name: Full pipeline run name (e.g. from KFP); used to locate
-            artifacts in S3. The component strips the last hyphen-separated
-            segment (run suffix) for the notebook path.
-        run_id: Pipeline run ID; used with pipeline_name to form the S3 prefix
-            for leaderboard and model artifacts.
-        sample_row: JSON string of a single row (object of feature names to
-            values), used in the notebook's prediction example. The component
-            parses it, removes the label column, and injects the result.
-            Expected format: '[{"col1": "val1","col2":"val2"},{"col1":"val3","col2":"val4"}]'
-        label_column: Key in the parsed sample_row for the target/label column;
-            this column is omitted from the sample row in the notebook.
+        problem_type: One of "regression", "binary", or "multiclass". Determines which notebook template is used.
+        model_name: Name of the trained model to load, matching the leaderboard model column.
+        notebook_artifact: Output artifact where the generated notebook file (automl_predictor_notebook.ipynb) is written.
+        pipeline_name: Full pipeline run name (e.g. from KFP); used to locate artifacts in S3. The component strips the last hyphen-separated segment (run suffix) for the notebook path.
+        run_id: Pipeline run ID; used with pipeline_name to form the S3 prefix for leaderboard and model artifacts.
+        sample_row: JSON string of a single row (object of feature names to values), used in the notebook's prediction example. The component parses it, removes the label column, and injects the result. Expected format: '[{"col1": "val1","col2":"val2"},{"col1":"val3","col2":"val4"}]'.
+        label_column: Key in the parsed sample_row for the target/label column; this column is omitted from the sample row in the notebook.
 
     Returns:
         None. Writes the notebook to notebook_artifact.path.
-    """
+    """  # noqa: E501
     import json
     from pathlib import Path
 

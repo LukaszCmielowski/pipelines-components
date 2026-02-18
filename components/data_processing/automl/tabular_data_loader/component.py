@@ -4,17 +4,13 @@ from kfp import dsl
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
-def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):  # noqa: D417
-    """Automl Data Loader component.
-
-    TODO: Add a detailed description of what this component does.
+def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):
+    """Loads a tabular CSV dataset from an S3-compatible bucket using AWS credentials.
 
     Args:
-        input_param: Description of the component parameter.
-        # Add descriptions for other parameters
-
-    Returns:
-        Description of what the component returns.
+        file_key (str): Path to the CSV file in the S3 bucket.
+        bucket_name (str): Name of the S3 bucket.
+        full_dataset (dsl.Output[dsl.Dataset]): Output artifact for the downloaded dataset.
     """
     import os
 

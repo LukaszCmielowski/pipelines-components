@@ -52,27 +52,13 @@ multi-level stacking - Using bootstrap aggregation (bagging) for robustness - Se
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `train_data_secret_name` | `str` | `None` | The Kubernetes secret name with S3-compatible credentials for tabular data file access.
-The following keys are required:
-AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
-| `train_data_bucket_name` | `str` | `None` | The name of the S3-compatible bucket containing the tabular data file.
-The bucket should be accessible using the AWS credentials configured in the
-'train_data_secret_name' Kubernetes secret. |
-| `train_data_file_key` | `str` | `None` | The key (path) of the data file within the S3 bucket. The file should
-be in CSV format and contain both feature columns and the target column. |
-| `label_column` | `str` | `None` | The name of the target/label column in the dataset. This column
-will be used as the prediction target for model training. The column must
-exist in the loaded dataset. |
-| `task_type` | `str` | `None` | The type of machine learning task. Supported values:
-- "binary" or "multiclass": For classification tasks
-- "regression": For regression tasks (predicting continuous values)
-This parameter determines the evaluation metrics and model types AutoGluon
-will use during training. |
-| `top_n` | `int` | `3` | The number of top-performing models to select and refit (default: 3).
-Must be a positive integer. Only the top N models from the initial training
-stage will be promoted to the refitting stage. Higher values increase pipeline
-execution time but provide more model options for final selection. |
+| ----------- | ------ | --------- | ------------- |
+| `train_data_secret_name` | `str` | `None` | The Kubernetes secret name with S3-compatible credentials for tabular data file access. Required keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
+| `train_data_bucket_name` | `str` | `None` | The name of the S3-compatible bucket containing the tabular data file. The bucket should be accessible using the AWS credentials configured in the train_data_secret_name Kubernetes secret. |
+| `train_data_file_key` | `str` | `None` | The key (path) of the data file within the S3 bucket. The file should be in CSV format and contain both feature columns and the target column. |
+| `label_column` | `str` | `None` | The name of the target/label column in the dataset. This column will be used as the prediction target for model training and must exist in the loaded dataset. |
+| `task_type` | `str` | `None` | The type of machine learning task. Supported values: "binary" or "multiclass" for classification; "regression" for regression. Determines the evaluation metrics and model types AutoGluon will use. |
+| `top_n` | `int` | `3` | The number of top-performing models to select and refit (default: 3). Must be a positive integer. Only the top N models from the initial training stage will be promoted to the refitting stage. Higher values increase pipeline execution time but provide more model options for final selection. |
 
 ## Metadata 🗂️
 

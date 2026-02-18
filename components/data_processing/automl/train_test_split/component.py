@@ -6,25 +6,22 @@ from kfp import dsl
 @dsl.component(
     base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
 )
-def train_test_split(  # noqa: D417
-    # Add your component parameters here
+def train_test_split(
     dataset: dsl.Input[dsl.Dataset],
     sampled_train_dataset: dsl.Output[dsl.Dataset],
     sampled_test_dataset: dsl.Output[dsl.Dataset],
     test_size: float = 0.3,
-    # Add your output artifacts here
-    # output_artifact: dsl.Output[dsl.Artifact]
 ) -> NamedTuple("outputs", sample_row=str):
-    """Train Test Split component.
-
-    TODO: Add a detailed description of what this component does.
+    """Splits a tabular dataset into train and test sets and writes them to output artifacts.
 
     Args:
-        input_param: Description of the component parameter.
-        # Add descriptions for other parameters
+        dataset: Input CSV dataset to split.
+        sampled_train_dataset: Output dataset artifact for the train split.
+        sampled_test_dataset: Output dataset artifact for the test split.
+        test_size: Proportion of the data to include in the test split.
 
     Returns:
-        Description of what the component returns.
+        sample_row: JSON string representing a sample row from the test set.
     """
     import pandas as pd
 

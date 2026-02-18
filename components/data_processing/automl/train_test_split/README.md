@@ -4,28 +4,22 @@
 
 ## Overview 🧾
 
-Train Test Split component.
-
-TODO: Add a detailed description of what this component does.
-
-Args: input_param: Description of the component parameter. # Add descriptions for other parameters
-
-Returns: Description of what the component returns.
+Splits a tabular dataset into train and test sets and writes them to output artifacts.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `dataset` | `dsl.Input[dsl.Dataset]` | `None` |  |
-| `sampled_train_dataset` | `dsl.Output[dsl.Dataset]` | `None` |  |
-| `sampled_test_dataset` | `dsl.Output[dsl.Dataset]` | `None` |  |
-| `test_size` | `float` | `0.3` |  |
+| ----------- | ------ | --------- | ------------- |
+| `dataset` | `dsl.Input[dsl.Dataset]` | `None` | Input CSV dataset to split. |
+| `sampled_train_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact for the train split. |
+| `sampled_test_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact for the test split. |
+| `test_size` | `float` | `0.3` | Proportion of the data to include in the test split. |
 
 ## Outputs 📤
 
 | Name | Type | Description |
-|------|------|-------------|
-| Output | `NamedTuple('outputs', sample_row=str)` |  |
+| ------ | ------ | ------------- |
+| Output | `NamedTuple('outputs', sample_row=str)` | JSON string representing a sample row from the test set. |
 
 ## Metadata 🗂️
 
