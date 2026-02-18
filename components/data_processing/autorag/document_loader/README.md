@@ -5,31 +5,24 @@
 
 ## Overview 🧾
 
-Reads unstructured data from data sources
-(S3, local filesystem) and performs document sampling.
+Lists documents from S3 and performs document sampling.
+It writes a YAML manifest (descriptor) describing the sampled set so that downstream
+components (e.g. text extraction) can fetch only the documents they need.
 
-The Document Loader component is the first step in the AutoRAG pipeline workflow.
-It loads documents from various sources including S3
-(via RHOAI Connections API) or local filesystem.
-The component supports multiple document formats and performs
-document sampling based on test data to prepare a
-subset of documents for processing.
-Document sampling functionality is integrated within this component.
-
-This component integrates with RHOAI Connections
-API for accessing documents from S3 or other cloud storage systems.
-The component handles authentication and data retrieval transparently,
-allowing users to specify data sources through connection IDs.
+The Document Loader component is the initial step in the AutoRAG pipeline workflow.
+It lists objects in the given S3 bucket/prefix, filters by supported document formats,
+and applies sampling (e.g. test-data–driven with a size limit). It doesn't download
+or copy document bytes; it only produces a manifest file. The component integrates
+with S3 via environment-based credentials (e.g. RHOAI Connections) using ibm_boto3.
 
 ## Inputs 📥
 
-| Parameter                | Type                       | Default   | Description                                                         |
-|--------------------------|----------------------------|-----------|---------------------------------------------------------------------|
-| `input_data_bucket_name` | `str`                      | Mandatory | Name of the S3 bucket containing input data.                        |
-| `input_data_path`        | `str`                      | Mandatory | Path to folder with input documents within bucket.                  |
-| `sampled_documents`      | `dsl.Output[dsl.Artifact]` | `None`    | Output artifact containing the sampled documents.                   |
-| `test_data`              | `dsl.Input[dsl.Artifact]`  | `None`    | Optional input artifact containing test data for document sampling. |
-| `sampling_config`        | `dict`                     | `None`    | Optional dictionary with sampling configuration.                    |
+| Parameter                | Type                      | Default   | Description                                                         |
+|--------------------------|---------------------------|-----------|---------------------------------------------------------------------|
+| `input_data_bucket_name` | `str`                     | Mandatory | Name of the S3 bucket containing input data.                        |
+| `input_data_path`        | `str`                     | Mandatory | Path prefix for listing objects (folder with input documents).      |
+| `test_data`              | `dsl.Input[dsl.Artifact]` | `None`    | Optional input artifact containing test data for document sampling. |
+| `sampling_config`        | `dict`                    | `None`    | Optional dictionary with sampling configuration.                    |
 
 ### Input data
 
@@ -53,7 +46,22 @@ The `sampling_config` dictionary supports test data driven sampling:
 
 | Output              | Type           | Description                                               |
 |---------------------|----------------|-----------------------------------------------------------|
-| `sampled_documents` | `dsl.Artifact` | The sampled documents artifact ready for text extraction. |
+| `sampled_documents` | `dsl.Artifact` | Artifact containing `sampled_documents_descriptor.yaml`   |  
+
+### Sampled documents descriptor (YAML)
+
+The artifact is a directory containing a single file: **`sampled_documents_descriptor.yaml`**.
+It describes the sampled set and S3 locations so downstream components can fetch documents on demand.
+
+| Field               | Description                                              |
+|---------------------|----------------------------------------------------------|
+| `bucket`            | S3 bucket name.                                          |
+| `prefix`            | Path prefix used when listing objects.                   |
+| `documents`         | List of entries, each with:                              |
+| → `key`             | S3 object key (full path in bucket).                     |
+| → `size_bytes`      | File size in bytes.                                      |
+| `total_size_bytes`  | Sum of `size_bytes` for all documents.                   |
+| `count`             | Number of documents.                                     |
 
 ## Usage Examples 💡
 
@@ -102,12 +110,10 @@ def my_pipeline(test_data):
 
 ## Notes 📝
 
-- **Document Sampling**: Sampling functionality is integrated within this component
-- **Test Data Driven Sampling**: Samples documents referenced in test data and adds noise documents
-  up to 1GB limit (in-memory)
-- **Connection Management**: Uses RHOAI Connections API for secure access to S3 and other cloud
-  storage systems
-- **Format Support**: Automatically detects and handles multiple document formats
+- **No download**: This component does not download or copy document bytes; it only lists S3 and writes the descriptor YAML.
+- **Document sampling**: Sampling is integrated (e.g. test-data–driven, up to 1GB total size); selected keys are written in the descriptor.
+- **Downstream fetch**: Use the descriptor with the text_extraction component (or similar) to fetch and process documents from S3.
+- **Credentials**: S3 access requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`, and `AWS_REGION` at runtime.
 
 ## Metadata 🗂️
 

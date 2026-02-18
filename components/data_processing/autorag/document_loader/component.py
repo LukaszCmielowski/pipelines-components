@@ -22,7 +22,7 @@ def document_loader(
         input_data_path: Path to folder with input documents within the bucket.
         test_data: Optional input artifact containing test data for sampling.
         sampling_config: Optional sampling configuration dictionary.
-        sampled_documents: Output artifact containing the downloaded documents.
+        sampled_documents: Output artifact containing the sampled documents descriptor yaml file.
 
     Environment variables (required when run with pipeline secret injection):
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.

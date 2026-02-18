@@ -38,6 +38,12 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
 ```
 <pipeline_name>/
 └── <run_id>/
+    ├── documents-sampling/
+    │   └── <task_id>/
+    │       └── sampled_documents_atrifact                     # YAML artifact containing sampled documents metadata
+    ├── text-extraction/
+    │   └── <task_id>/
+    │       └── extracted_text_artifact           # Folder containing markdown files with extracted text
     ├── leaderboard-evaluation/
     │   └── <task_id>/
     │       └── html_artifact                     # HTML leaderboard (RAG pattern names + metrics); single file at path
