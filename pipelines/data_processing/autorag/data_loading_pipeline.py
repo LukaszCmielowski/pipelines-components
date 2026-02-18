@@ -55,9 +55,16 @@ def data_loading_pipeline(
         sampling_config=sampling_config,
     )
 
+    document_loader_task.set_caching_options(enable_caching=False)
+    test_data_loader_task.set_caching_options(enable_caching=False)
+
+    text_extraction_task = text_extraction(
+        sampled_documents_descriptor=document_loader_task.outputs["sampled_documents"],
+    )
+
     for task, secret_name in zip(
-        [test_data_loader_task, document_loader_task],
-        [test_data_secret_name, input_data_secret_name],
+        [test_data_loader_task, document_loader_task, text_extraction_task],
+        [test_data_secret_name, input_data_secret_name, input_data_secret_name],
     ):
         use_secret_as_env(
             task,
@@ -69,8 +76,6 @@ def data_loading_pipeline(
                 "aws_region_name": "AWS_REGION",
             },
         )
-
-    text_extraction(documents=document_loader_task.outputs["sampled_documents"])
 
 
 if __name__ == "__main__":

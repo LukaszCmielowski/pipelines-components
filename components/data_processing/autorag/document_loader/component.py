@@ -11,7 +11,8 @@ def document_loader(
 ):
     """Document Loader component.
 
-    Loads documents from S3 and performs sampling.
+    Lists documents from S3, applies sampling, and writes a YAML manifest
+    (sampled_documents_descriptor.yaml) with metadata. Does not download document contents.
 
     Args:
         input_data_bucket_name: str
@@ -27,7 +28,9 @@ def document_loader(
             Optional sampling configuration dictionary.
 
         sampled_documents: Output[Artifact]
-            artifact containing downloaded documents.
+            Artifact containing sampled_documents_descriptor.yaml with bucket, prefix,
+            documents (key, s3_uri, size_bytes, loading_time_seconds, local_path),
+            total_size_bytes, and count.
     """
     import json
     import logging
@@ -35,7 +38,9 @@ def document_loader(
     import sys
 
     import boto3
+    import yaml
 
+    SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
     MAX_SIZE_BYTES = 1024**3  # 1 GB
 
@@ -59,8 +64,8 @@ def document_loader(
 
         return docs_names
 
-    def download_docs_s3():
-        """Validate S3 credentials and download the input documents."""
+    def build_and_write_descriptor():
+        """Validate S3 credentials, list objects, sample, and write YAML descriptor."""
         s3_creds = {
             k: os.environ.get(k)
             for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
@@ -89,32 +94,41 @@ def document_loader(
             raise Exception("No supported documents found.")
 
         test_data_docs_names = get_test_data_docs_names()
-
         supported_files.sort(key=lambda c: c["Key"] not in test_data_docs_names)
 
         total_size = 0
-        documents_to_download = []
-
+        selected = []
         for file in supported_files:
             if total_size + file["Size"] > MAX_SIZE_BYTES:
                 continue
-            documents_to_download.append(file)
+            selected.append(file)
             total_size += file["Size"]
 
-        for file_info in documents_to_download:
+        documents = []
+        for file_info in selected:
             key = file_info["Key"]
-            safe_name = key.replace("/", "__")
-            local_path = os.path.join(sampled_documents.path, safe_name)
+            size_bytes = file_info["Size"]
+            documents.append({
+                "key": key,
+                "size_bytes": size_bytes,
+            })
 
-            try:
-                logger.info(f"Downloading {key} to {local_path}")
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                s3_client.download_file(input_data_bucket_name, key, local_path)
-            except Exception as e:
-                logger.error("Failed to fetch %s: %s", key, e)
-                raise
+        descriptor = {
+            "bucket": input_data_bucket_name,
+            "prefix": input_data_path,
+            "documents": documents,
+            "total_size_bytes": total_size,
+            "count": len(documents),
+        }
 
-    download_docs_s3()
+        os.makedirs(sampled_documents.path, exist_ok=True)
+        descriptor_path = os.path.join(sampled_documents.path, SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME)
+        with open(descriptor_path, "w") as f:
+            yaml.safe_dump(descriptor, f, default_flow_style=False, sort_keys=False)
+
+        logger.info("Wrote %s with %d documents, total_size_bytes=%d", descriptor_path, len(documents), total_size)
+
+    build_and_write_descriptor()
 
 
 if __name__ == "__main__":

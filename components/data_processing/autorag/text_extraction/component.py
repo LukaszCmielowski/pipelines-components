@@ -3,29 +3,33 @@ from kfp import dsl
 
 @dsl.component(base_image="quay.io/wnowogorski-org/autorag_data_loading:latest")
 def text_extraction(
-    documents: dsl.Input[dsl.Artifact],
+    sampled_documents_descriptor: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Output[dsl.Artifact],
 ):
     """Text Extraction component.
 
-    Extracts text from provided documents (PDF, DOCX, PPTX, MD, HTML, TXT) using the docling library.
+    Reads the sampled_documents_descriptor YAML (from document_loader), fetches
+    the listed documents from S3, and extracts text using the docling library.
 
     Args:
-        documents: Input artifact containing the documents to process.
+        sampled_documents_descriptor: Input artifact containing
+            sampled_documents_descriptor.yaml with bucket, prefix, and documents list.
         extracted_text: Output artifact where the extracted text content will be stored.
-
-    Returns:
-        A message indicating the completion status and processing statistics.
     """
     import logging
     import os
     import sys
+    import tempfile
     from concurrent.futures import ThreadPoolExecutor
     from pathlib import Path
 
+    import boto3
+    import yaml
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
 
     logger = logging.getLogger("Text Extraction component logger")
     logger.setLevel(logging.INFO)
@@ -33,51 +37,95 @@ def text_extraction(
         handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(handler)
 
-    pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr = False
-    pipeline_options.do_table_structure = True
-
-    converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)})
-
-    input_dir = Path(documents.path)
-    output_dir = Path(extracted_text.path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
 
-    if not input_dir.exists():
-        msg = f"Input directory {input_dir} does not exist."
-        logger.error(msg)
-        return msg
+    descriptor_root = Path(sampled_documents_descriptor.path)
+    if descriptor_root.is_dir():
+        descriptor_path = descriptor_root / SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME
+    else:
+        descriptor_path = descriptor_root
 
-    files_to_process = [f for f in input_dir.iterdir() if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+    if not descriptor_path.exists():
+        raise FileNotFoundError(f"Descriptor not found: {descriptor_path}")
 
-    logger.info(f"Starting text extraction for {len(files_to_process)} documents.")
+    with open(descriptor_path) as f:
+        descriptor = yaml.safe_load(f)
 
-    def process_file(file_path: Path):
-        try:
-            logger.info(f"Processing document: {file_path.name}")
+    bucket = descriptor["bucket"]
+    documents = descriptor["documents"]
 
-            result = converter.convert(file_path)
+    s3_creds = {
+        k: os.environ.get(k)
+        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT_URL", "AWS_REGION"]
+    }
+    for k, v in s3_creds.items():
+        if v is None:
+            raise ValueError(
+                f"{k} environment variable not set. Check if kubernetes secret was configured properly."
+            )
 
-            markdown_content = result.document.export_to_markdown()
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=s3_creds["AWS_ENDPOINT_URL"],
+        region_name=s3_creds["AWS_REGION"],
+        aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
+    )
 
-            output_file_name = f"{file_path.stem}.md"
-            output_file_path = output_dir / output_file_name
+    with tempfile.TemporaryDirectory() as download_dir:
+        download_path = Path(download_dir)
+        for doc in documents:
+            key = doc["key"]
+            local_path = download_path / key
+            try:
+                logger.info("Downloading %s", key)
+                s3_client.download_file(bucket, key, str(local_path))
+            except Exception as e:
+                logger.error("Failed to fetch %s: %s", key, e)
+                raise
 
-            with open(output_file_path, "w", encoding="utf-8") as f:
-                f.write(markdown_content)
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = True
 
-            logger.info(f"Successfully extracted text from {file_path.name}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to process {file_path.name}: {str(e)}")
-            return False
+        converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        )
 
-    max_workers = min(len(files_to_process), (os.cpu_count() or 1) * 2) if files_to_process else 1
+        output_dir = Path(extracted_text.path)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(executor.map(process_file, files_to_process))
+        files_to_process = [
+            f for f in download_path.iterdir()
+            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+        ]
+
+        logger.info("Starting text extraction for %d documents.", len(files_to_process))
+
+        def process_file(file_path: Path):
+            try:
+                logger.info("Processing document: %s", file_path.name)
+
+                result = converter.convert(file_path)
+
+                markdown_content = result.document.export_to_markdown()
+
+                output_file_name = f"{file_path.stem}.md"
+                output_file_path = output_dir / output_file_name
+
+                with open(output_file_path, "w", encoding="utf-8") as f:
+                    f.write(markdown_content)
+
+                logger.info("Successfully extracted text from %s", file_path.name)
+                return True
+            except Exception as e:
+                logger.error("Failed to process %s: %s", file_path.name, e)
+                return False
+
+        max_workers = min(len(files_to_process), (os.cpu_count() or 1) * 2) if files_to_process else 1
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(process_file, files_to_process))
 
     processed_count = sum(1 for r in results if r)
     error_count = len(results) - processed_count
