@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
     packages_to_install=[
         "autogluon.tabular==1.5.0",
         "catboost==1.2.8",
@@ -18,6 +18,9 @@ def autogluon_models_full_refit(
     model_name: str,
     full_dataset: dsl.Input[dsl.Dataset],
     predictor_path: str,
+    sampling_config: dict,
+    split_config: dict,
+    model_config: dict,
     model_artifact: dsl.Output[dsl.Model],
 ) -> NamedTuple("outputs", model_name=str):
     """Refit a specific AutoGluon model on the full training dataset.
@@ -56,6 +59,9 @@ def autogluon_models_full_refit(
             only the original model and its refitted "_FULL" version. Metrics
             are written under model_artifact.path / model_name_FULL / metrics.
             The metadata will include the model_name with "_FULL" suffix.
+        sampling_config: Configuration dictionary for the data sampling.
+        split_config: Configuration dictionary for the data splitting.
+        model_config: Configuration dictionary for the model training.
 
     Returns:
         None. The refitted model is saved to the model_artifact output.
@@ -80,6 +86,9 @@ def autogluon_models_full_refit(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=train_data,
                 predictor_path=predictor_path,
+                sampling_config=sampling_config,
+                split_config=split_config,
+                model_config=model_config,
             )
             return refitted
 
@@ -98,7 +107,23 @@ def autogluon_models_full_refit(
     # save refitted model to output artifact
     model_name_full = model_name + "_FULL"
     path = Path(model_artifact.path) / model_name_full
-    model_artifact.metadata["model_name"] = model_name_full
+
+    # set the name of the model artifact and its metadata
+    model_artifact.metadata["display_name"] = model_name_full
+    model_artifact.metadata["context"] = {}
+    model_artifact.metadata["context"]["data_config"] = {
+        "sampling_config": sampling_config,
+        "split_config": split_config,
+    }
+
+    model_artifact.metadata["context"]["task_type"] = predictor.problem_type
+    model_artifact.metadata["context"]["label_column"] = predictor.label
+
+    # TODO: Add runtime ver
+    # model_artifact["context"]["runtime_version"] = {"name": "autogluon_1.0.0"}
+    model_artifact.metadata["context"]["model_config"] = model_config
+
+    # clone the predictor to the output artifact path and delete unnecessary models
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=[model_name])
 
@@ -108,6 +133,7 @@ def autogluon_models_full_refit(
     predictor_clone.save_space()
 
     eval_results = predictor_clone.evaluate(full_dataset_df)
+    model_artifact.metadata["context"]["metrics"] = {"val_data": eval_results}
     feature_importance = predictor_clone.feature_importance(full_dataset_df)
 
     # save evaluation results to output artifact

@@ -53,6 +53,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
                 predictor_path=mock_predictor_artifact.path,
+                sampling_config={},
+                split_config={},
+                model_config={},
                 model_artifact=mock_model_artifact,
             )
 
@@ -87,8 +90,8 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Verify save_space was called
             mock_predictor_clone.save_space.assert_called_once()
 
-            # Verify metadata was set correctly
-            assert mock_model_artifact.metadata["model_name"] == "LightGBM_BAG_L1_FULL"
+            # Verify artifact name was set correctly
+            assert mock_model_artifact.name == "LightGBM_BAG_L1_FULL"
 
             # Verify metrics files were written (under model_name_FULL/metrics/)
             metrics_dir = Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "metrics"
@@ -127,6 +130,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
                 predictor_path="/nonexistent/predictor",
+                sampling_config={},
+                split_config={},
+                model_config={},
                 model_artifact=mock_model_artifact,
             )
 
@@ -160,6 +166,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_name="NonexistentModel",
                 full_dataset=mock_full_dataset,
                 predictor_path="/tmp/predictor",
+                sampling_config={},
+                split_config={},
+                model_config={},
                 model_artifact=mock_model_artifact,
             )
 
@@ -193,6 +202,9 @@ class TestAutogluonModelsFullRefitUnitTests:
             model_name="LightGBM_BAG_L1",
             full_dataset=mock_full_dataset,
             predictor_path=mock_predictor_artifact.path,
+            sampling_config={},
+            split_config={},
+            model_config={},
             model_artifact=mock_model_artifact,
         )
 
@@ -247,6 +259,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
                 predictor_path=mock_predictor_artifact.path,
+                sampling_config={},
+                split_config={},
+                model_config={},
                 model_artifact=mock_model_artifact,
             )
 
