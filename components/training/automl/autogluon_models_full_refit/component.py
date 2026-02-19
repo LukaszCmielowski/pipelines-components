@@ -4,8 +4,15 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
-    packages_to_install=["autogluon.tabular[all]==1.5.0"],
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    packages_to_install=[
+        "autogluon.tabular==1.5.0",
+        "catboost==1.2.8",
+        "fastai==2.8.5",
+        "lightgbm==4.6.0",
+        "torch==2.9.1",
+        "xgboost==3.1.3",
+    ],
 )
 def autogluon_models_full_refit(
     model_name: str,

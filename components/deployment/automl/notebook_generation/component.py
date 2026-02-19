@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="quay.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9:rhoai-3.2",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
 )
 def notebook_generation(
     problem_type: str,
@@ -113,7 +113,14 @@ def notebook_generation(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
+                "source": [
+                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
+                    "%pip install catboost==1.2.8 | tail -n 1\n",
+                    "%pip install fastai==2.8.5 | tail -n 1\n",
+                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
+                    "%pip install torch==2.9.1 | tail -n 1\n",
+                    "%pip install xgboost==3.1.3 | tail -n 1\n",
+                ],
             },
             {
                 "cell_type": "markdown",
@@ -409,7 +416,14 @@ def notebook_generation(
                 "id": "cec84205-8ee9-4aaf-a97e-4ef576e7b9da",
                 "metadata": {},
                 "outputs": [],
-                "source": ["%pip install autogluon.tabular[all]==1.5 | tail -n 1"],
+                "source": [
+                    "%pip install autogluon.tabular==1.5.0 | tail -n 1\n",
+                    "%pip install catboost==1.2.8 | tail -n 1\n",
+                    "%pip install fastai==2.8.5 | tail -n 1\n",
+                    "%pip install lightgbm==4.6.0 | tail -n 1\n",
+                    "%pip install torch==2.9.1 | tail -n 1\n",
+                    "%pip install xgboost==3.1.3 | tail -n 1\n",
+                ],
             },
             {
                 "cell_type": "markdown",
