@@ -8,7 +8,7 @@ from kfp import dsl
     packages_to_install=[
         "autogluon.tabular==1.5.0",
         "catboost==1.2.8",
-        "fastai==2.8.7",
+        "fastai==2.8.5",
         "lightgbm==4.6.0",
         "torch==2.9.1",
         "xgboost==3.1.3",
