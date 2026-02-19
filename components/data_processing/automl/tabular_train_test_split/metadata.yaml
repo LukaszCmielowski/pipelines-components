@@ -1,5 +1,5 @@
 ---
-name: train_test_split
+name: tabular_train_test_split
 stability: alpha  # New component without proven track record
 dependencies:
   kubeflow:

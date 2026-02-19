@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
 )
 def leaderboard_evaluation(
     models: List[dsl.Model],
@@ -17,11 +17,11 @@ def leaderboard_evaluation(
     (reading pre-computed metrics from JSON) and generates an HTML-formatted
     leaderboard ranking the models by their performance metrics. Each model
     artifact is expected to contain metrics at
-    model.path / model.metadata["model_name"] / metrics / metrics.json.
+    model.path / model.metadata["display_name"] / metrics / metrics.json.
 
     Args:
         models: A list of Model artifacts. Each should have metadata containing
-            a "model_name" field and metrics file at
+            a "display_name" field and metrics file at
             model.path / model_name / metrics / metrics.json.
         eval_metric: The name of the evaluation metric to use for ranking.
             Must match a key in the metrics JSON (e.g., "accuracy" for
@@ -33,7 +33,7 @@ def leaderboard_evaluation(
 
     Raises:
         FileNotFoundError: If any model metrics path cannot be found.
-        KeyError: If model metadata does not contain "model_name" or the
+        KeyError: If model metadata does not contain "display_name" or the
             metrics JSON does not contain the eval_metric key.
 
     Example:
@@ -58,14 +58,16 @@ def leaderboard_evaluation(
     results = []
     for model in models:
         eval_results = json.load(
-            (Path(model.path) / model.metadata["model_name"] / "metrics" / "metrics.json").open("r")
+            (Path(model.path) / model.metadata["display_name"] / "metrics" / "metrics.json").open("r")
         )
-        results.append({"model": model.metadata["model_name"]} | eval_results)
+        results.append({"model": model.metadata["display_name"]} | eval_results)
 
     leaderboard_df = pd.DataFrame(results).sort_values(by=eval_metric, ascending=False)
     with open(html_artifact.path, "w") as f:
         f.write(leaderboard_df.to_html())
 
+    html_artifact.metadata["data"] = leaderboard_df.to_dict()
+    html_artifact.metadata["display_name"] = "automl_leaderboard"
     best_model = leaderboard_df.iloc[0]["model"]
     return NamedTuple("outputs", best_model=str)(best_model=best_model)
 

@@ -1,25 +1,32 @@
+from typing import NamedTuple
+
 from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
 )
-def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]):  # noqa: D417
-    """Automl Data Loader component.
-
-    TODO: Add a detailed description of what this component does.
+def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output[dsl.Dataset]) -> NamedTuple(
+    "outputs", sample_config=dict
+):
+    """Downloads a dataset from S3, samples 50% of the rows, and saves the sample to the output artifact.
 
     Args:
-        input_param: Description of the component parameter.
-        # Add descriptions for other parameters
+        file_key (str): The S3 object key (path) for the dataset file.
+        bucket_name (str): The S3 bucket containing the dataset file.
+        full_dataset (dsl.Output[dsl.Dataset]): Output artifact where the sampled dataset (CSV) will be written.
 
     Returns:
-        Description of what the component returns.
+        NamedTuple: Contains a sample configuration dictionary.
     """
     import os
 
     import boto3
     import pandas as pd
+
+    # set constants
+    DEFAULT_N_SAMPLES = 500
+    DEFAULT_RANDOM_STATE = 42
 
     def download_from_s3():
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -51,9 +58,10 @@ def automl_data_loader(file_key: str, bucket_name: str, full_dataset: dsl.Output
     full_dataset_df = pd.read_csv(full_dataset.path)
 
     # Sampling
-    sampled_dataset = full_dataset_df.sample(frac=0.5, random_state=42)
+    sampled_dataset = full_dataset_df.sample(n=DEFAULT_N_SAMPLES, random_state=DEFAULT_RANDOM_STATE)
 
     sampled_dataset.to_csv(full_dataset.path, index=False)
+    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": DEFAULT_N_SAMPLES})
 
 
 if __name__ == "__main__":

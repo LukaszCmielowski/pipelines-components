@@ -18,7 +18,7 @@ def _run_component(tmpdir, problem_type="regression", **kwargs):
     mock_artifact = type("Artifact", (), {"path": tmpdir})()
     defaults = {
         "problem_type": problem_type,
-        "model_name": "TestModel",
+        "display_name": "TestModel",
         "notebook_artifact": mock_artifact,
         "pipeline_name": "pipeline-foo",
         "run_id": "run-1",

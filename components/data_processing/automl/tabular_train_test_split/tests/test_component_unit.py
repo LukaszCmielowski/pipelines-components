@@ -1,6 +1,6 @@
-"""Tests for the train_test_split component."""
+"""Tests for the tabular_train_test_split component."""
 
-from ..component import train_test_split
+from ..component import tabular_train_test_split
 
 
 class TestTrainTestSplitUnitTests:
@@ -8,15 +8,15 @@ class TestTrainTestSplitUnitTests:
 
     def test_component_function_exists(self):
         """Test that the component function is properly imported."""
-        assert callable(train_test_split)
-        assert hasattr(train_test_split, "python_func")
+        assert callable(tabular_train_test_split)
+        assert hasattr(tabular_train_test_split, "python_func")
 
     def test_component_with_default_parameters(self):
         """Test component with valid input parameters."""
         # TODO: Implement unit tests for your component
 
         # Example test structure:
-        result = train_test_split.python_func(input_param="test_value")
+        result = tabular_train_test_split.python_func(input_param="test_value")
         assert isinstance(result, str)
         assert "test_value" in result
 
