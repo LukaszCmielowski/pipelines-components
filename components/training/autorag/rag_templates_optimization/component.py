@@ -15,8 +15,8 @@ def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
-    rag_patterns: dsl.OutputPath(dsl.Artifact),
-    autorag_run_artifact: dsl.Output[dsl.Artifact],  # uri to log, WML status object-like (from WML)
+    rag_patterns: dsl.Output[dsl.Artifact],
+    autorag_run_artifact: dsl.Output[dsl.Artifact],
     vector_database_id: Optional[str] = None,
     optimization_settings: Optional[dict] = None,
 ):
@@ -79,7 +79,6 @@ def rag_templates_optimization(
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
     from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
-
     from langchain_core.documents import Document
 
     MAX_NUMBER_OF_RAG_PATTERNS = 8
@@ -281,11 +280,6 @@ def rag_templates_optimization(
             params.append(Parameter(param, "C", values=values))
     search_space = AI4RAGSearchSpace(params=params)
 
-    # TODO chunking should be handled externally
-    # OR
-    # should be a separate component run previously (or within text extraction)
-    # documents_splits = MarkdownTextSplitter().create_documents(documents)
-
     event_handler = TmpEventHandler()
     optimiser_settings = OptimiserSettings(
         max_evals=optimization_settings.get("max_number_of_rag_patterns", MAX_NUMBER_OF_RAG_PATTERNS)
@@ -324,25 +318,24 @@ def rag_templates_optimization(
         for ev in eval_data_list:
             answer_contexts = []
             if getattr(ev, "contexts", None) and getattr(ev, "context_ids", None):
-                answer_contexts = [
-                    {"text": t, "document_id": doc_id}
-                    for t, doc_id in zip(ev.contexts, ev.context_ids)
-                ]
+                answer_contexts = [{"text": t, "document_id": doc_id} for t, doc_id in zip(ev.contexts, ev.context_ids)]
             scores = {}
             q_scores = (evaluation_result.scores or {}).get("question_scores") or {}
             for key in q_scores:
                 if isinstance(q_scores[key], dict) and getattr(ev, "question_id", None) in q_scores[key]:
                     scores[key] = q_scores[key][ev.question_id]
-            out.append({
-                "question": getattr(ev, "question", ""),
-                "correct_answers": getattr(ev, "ground_truths", None),
-                "answer": getattr(ev, "answer", ""),
-                "answer_contexts": answer_contexts,
-                "scores": scores,
-            })
+            out.append(
+                {
+                    "question": getattr(ev, "question", ""),
+                    "correct_answers": getattr(ev, "ground_truths", None),
+                    "answer": getattr(ev, "answer", ""),
+                    "answer_contexts": answer_contexts,
+                    "scores": scores,
+                }
+            )
         return out
 
-    rag_patterns_dir = Path(rag_patterns)
+    rag_patterns_dir = Path(rag_patterns.path)
     evaluation_data_list = getattr(rag_exp.results, "evaluation_data", [])
 
     def _build_pattern_json(evaluation_result, iteration: int, max_combinations: int) -> dict:
@@ -380,9 +373,7 @@ def rag_templates_optimization(
                 },
                 "generation": {
                     "model_id": generation.get("model_id", ""),
-                    "context_template_text": generation.get(
-                        "context_template_text", "{document}"
-                    ),
+                    "context_template_text": generation.get("context_template_text", "{document}"),
                     "user_message_text": generation.get(
                         "user_message_text",
                         "\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
@@ -396,10 +387,11 @@ def rag_templates_optimization(
         }
 
     evaluations_list = list(rag_exp.results.evaluations)
-    max_combinations = getattr(
-        rag_exp.results, "max_combinations", len(evaluations_list)
-    ) or 24
+    max_combinations = getattr(rag_exp.results, "max_combinations", len(evaluations_list)) or 24
 
+    rag_patterns.metadata["name"] = "rag_patterns_artifact"
+    rag_patterns.metadata["uri"] = rag_patterns.uri
+    rag_patterns.metadata["metadata"] = {"patterns": []}
     for i, eval in enumerate(evaluations_list):
         patt_dir = rag_patterns_dir / eval.pattern_name
         patt_dir.mkdir(parents=True, exist_ok=True)
@@ -408,6 +400,7 @@ def rag_templates_optimization(
         # Flat schema: scores = per-metric aggregates (mean, ci_low, ci_high); final_score
         pattern_data["scores"] = (getattr(eval, "scores", None) or {}).get("scores") or {}
         pattern_data["final_score"] = getattr(eval, "final_score", None)
+        rag_patterns.metadata["metadata"]["patterns"].append(pattern_data)
         with (patt_dir / "pattern.json").open("w+", encoding="utf-8") as pattern_details:
             json_dump(pattern_data, pattern_details, indent=2)
 
@@ -420,12 +413,8 @@ def rag_templates_optimization(
         eval_data = evaluation_data_list[i] if i < len(evaluation_data_list) else []
         try:
             q_scores = (eval.scores or {}).get("question_scores") or {}
-            if q_scores and all(
-                isinstance(q_scores.get(k), dict) for k in q_scores
-            ):
-                evaluation_result_list = ExperimentResults.create_evaluation_results_json(
-                    eval_data, eval
-                )
+            if q_scores and all(isinstance(q_scores.get(k), dict) for k in q_scores):
+                evaluation_result_list = ExperimentResults.create_evaluation_results_json(eval_data, eval)
             else:
                 evaluation_result_list = _evaluation_result_fallback(eval_data, eval)
         except (KeyError, TypeError):
