@@ -53,12 +53,14 @@ packages = [
     "kfp_components.components.training",
     "kfp_components.components.evaluation",
     "kfp_components.components.data_processing",
+    "kfp_components.components.data_processing.autorag",
     "kfp_components.components.data_processing.yoda_data_processor",
     "kfp_components.components.deployment",
     "kfp_components.pipelines",
     "kfp_components.pipelines.training",
     "kfp_components.pipelines.evaluation",
     "kfp_components.pipelines.data_processing",
+    "kfp_components.pipelines.data_processing.autorag",
     "kfp_components.pipelines.deployment",
 ]
 
