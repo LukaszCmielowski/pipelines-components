@@ -2,7 +2,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="wnowogorski-org/autorag_data_loading",
     packages_to_install=["docling[ort]"],
 )
 def text_extraction(
@@ -73,22 +73,31 @@ def text_extraction(
         aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
     )
 
+    # Cap parallel downloads to avoid overwhelming S3 and memory; boto3 client is thread-safe.
+    DOWNLOAD_MAX_WORKERS = 8
+
+    def download_one(doc):
+        key = doc["key"]
+        local_path = download_path / key
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            logger.info("Downloading %s", key)
+            s3_client.download_file(bucket, key, str(local_path))
+            return True
+        except Exception as e:
+            logger.error("Failed to fetch %s: %s", key, e)
+            raise
+
     with tempfile.TemporaryDirectory() as download_dir:
         download_path = Path(download_dir)
-        for doc in documents:
-            key = doc["key"]
-            local_path = download_path / key
-            local_path.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                logger.info("Downloading %s", key)
-                s3_client.download_file(bucket, key, str(local_path))
-            except Exception as e:
-                logger.error("Failed to fetch %s: %s", key, e)
-                raise
+        download_workers = min(DOWNLOAD_MAX_WORKERS, len(documents)) if documents else 1
+        with ThreadPoolExecutor(max_workers=download_workers) as executor:
+            list(executor.map(download_one, documents))
 
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = False
-        pipeline_options.do_table_structure = True
+        # Disable table structure to avoid slow TableFormer model; enable only if you need table extraction.
+        pipeline_options.do_table_structure = False
 
         converter = DocumentConverter(
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
