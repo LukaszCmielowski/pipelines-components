@@ -23,7 +23,7 @@ deployment.
 |-----------|------|---------|-------------|
 | `extracted_text` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a file (or a folder of files) containing extracted texts from input documents. |
 | `test_data` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a .json file containing test data for evaluation. |
-| `phase_report` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a .yml file containing short report on the first experiment's phase (search space preparation). |
+| `search_space_prep_report` | `dsl.InputPath[dsl.Artifact]` | --- | Path to a .yml file containing short report on the first experiment's phase (search space preparation). |
 | `vector_database_id` | `str` | `None` | Optional vector database ID (e.g., registered in llama-stack Milvus database). If not provided, an in-memory database will be used. |
 | `optimization_settings` | `dict` | `None` | Optional dictionary with optimization settings. See [Optimization Settings](#optimization-settings) below. |
 
@@ -34,7 +34,7 @@ The `optimization_settings` dictionary supports:
 ```python
 {
     "max_number_of_rag_patterns": 4,      # Maximum number of RAG patterns to generate
-    "metric": "answer_correctness"         # Metric to optimize: "answer_correctness" or "faithfulness"
+    "metric": "answer_correctness"         # Metric to optimize: Literal["answer_correctness", "faithfulness", "context_correctness"] 
 }
 ```
 
@@ -48,7 +48,7 @@ The `optimization_settings` dictionary supports:
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `rag_patterns` | `dsl.OutputPath[dsl.Artifact]` | Directory of RAG Pattern artifacts; each subdir contains `pattern.json`, `indexing_notebook.ipynb`, and `inference_notebook.ipynb`. Consumed by the **leaderboard_evaluation** component to produce the HTML leaderboard. |
+| `rag_patterns` | `dsl.Output[dsl.Artifact]` | Directory of RAG Pattern artifacts; each subdir contains `pattern.json`, `evaluation_results.json`, `indexing_notebook.ipynb`, and `inference_notebook.ipynb`. Consumed by the **leaderboard_evaluation** component to produce the HTML leaderboard. |
 | `autorag_run_artifact` | `dsl.Output[dsl.Artifact]` | General type artifact pointing to the log file and an experiment status object. |
 
 ## Usage Examples 💡
@@ -62,12 +62,12 @@ from kfp_components.components.training.autorag.rag_templates_optimization impor
 )
 
 @dsl.pipeline(name="rag-optimization-pipeline")
-def my_pipeline(validated_configurations, test_data, extracted_text):
+def my_pipeline(extracted_text, test_data, search_space_prep_report):
     """Example pipeline for RAG optimization."""
     opt_task = rag_templates_optimization(
-        validated_configurations=validated_configurations,
-        test_data=test_data,
         extracted_text=extracted_text,
+        test_data=test_data,
+        search_space_prep_report=search_space_prep_report,
         optimization_settings={
             "max_number_of_rag_patterns": 4,
             "metric": "answer_correctness"
@@ -80,31 +80,17 @@ def my_pipeline(validated_configurations, test_data, extracted_text):
 
 ```python
 @dsl.pipeline(name="rag-optimization-with-vector-db-pipeline")
-def my_pipeline(validated_configurations, test_data, extracted_text):
+def my_pipeline(extracted_text, test_data, search_space_prep_report):
     """Example pipeline with persistent vector database."""
     opt_task = rag_templates_optimization(
-        validated_configurations=validated_configurations,
-        test_data=test_data,
         extracted_text=extracted_text,
+        test_data=test_data,
+        search_space_prep_report=search_space_prep_report,
         vector_database_id="milvus-database",
         optimization_settings={
             "max_number_of_rag_patterns": 4,
             "metric": "faithfulness"
         }
-    )
-    return opt_task
-```
-
-### Minimal Configuration
-
-```python
-@dsl.pipeline(name="rag-optimization-minimal-pipeline")
-def my_pipeline(validated_configurations, test_data, extracted_text):
-    """Example pipeline with minimal configuration."""
-    opt_task = rag_templates_optimization(
-        validated_configurations=validated_configurations,
-        test_data=test_data,
-        extracted_text=extracted_text
     )
     return opt_task
 ```
