@@ -119,9 +119,11 @@ def autogluon_models_full_refit(
     model_artifact.metadata["context"]["task_type"] = predictor.problem_type
     model_artifact.metadata["context"]["label_column"] = predictor.label
 
-    # TODO: Add runtime ver
-    # model_artifact["context"]["runtime_version"] = {"name": "autogluon_1.0.0"}
     model_artifact.metadata["context"]["model_config"] = model_config
+    model_artifact.metadata["context"]["location"] = {
+        "model_directory": f"{model_name_full}",
+        "predictor": f"{model_name_full}/predictor.pkl",
+    }
 
     # clone the predictor to the output artifact path and delete unnecessary models
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)

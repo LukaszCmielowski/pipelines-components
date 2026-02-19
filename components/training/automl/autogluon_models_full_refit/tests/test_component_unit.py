@@ -90,8 +90,8 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Verify save_space was called
             mock_predictor_clone.save_space.assert_called_once()
 
-            # Verify artifact name was set correctly
-            assert mock_model_artifact.name == "LightGBM_BAG_L1_FULL"
+            # Verify artifact metadata display_name was set correctly
+            assert mock_model_artifact.metadata["display_name"] == "LightGBM_BAG_L1_FULL"
 
             # Verify metrics files were written (under model_name_FULL/metrics/)
             metrics_dir = Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "metrics"
