@@ -208,8 +208,8 @@ def search_space_preparation(
         metric=metric if metric else METRIC,
     )
 
-    if not os.environ.get("LLAMASTACK_CLIENT_CONNECTION", None):
-        # TODO the exact env variable name is yet to be defined
+    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
+    if not (os.environ.get("LLAMA_STACK_CLIENT_BASE_URL") and os.environ.get("LLAMA_STACK_CLIENT_API_KEY")):
         mps = DisconnectedModelsPreSelector(mps)
 
     mps.evaluate_patterns()

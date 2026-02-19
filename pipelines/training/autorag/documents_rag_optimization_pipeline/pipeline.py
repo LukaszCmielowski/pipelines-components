@@ -54,7 +54,7 @@ def documents_rag_optimization_pipeline(
         input_data_bucket_name: S3 (or compatible) bucket name for the input documents.
         input_data_key: Object key (path) of the input documents in the input data bucket.
         llama_stack_secret_name: Name of the Kubernetes secret for llama-stack API connection.
-            The secret is expected to provide the LLAMASTACK_CLIENT_CONNECTION environment variable.
+            The secret must define: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL.
         embeddings_models: Optional list of embedding model identifiers to use in the search space.
         generation_models: Optional list of foundation/generation model identifiers to use in the
             search space.

@@ -287,8 +287,10 @@ def rag_templates_optimization(
 
     benchmark_data = pd.read_json(Path(test_data))
 
-    # TODO exact naming of the secret is yet to be defined
-    client_connection = os.environ.get("LLAMASTACK_CLIENT_CONNECTION", None)
+    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
+    client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL")
+    client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY")
+    client_connection = client_base_url if (client_base_url and client_api_key) else None
 
     # ai4rag does not accept None for vector_store_type; use a supported default when omitted
     vector_store_type = vector_database_id if vector_database_id else "ls_milvus"
