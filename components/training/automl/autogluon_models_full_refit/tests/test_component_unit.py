@@ -10,6 +10,11 @@ import pytest
 
 from ..component import autogluon_models_full_refit
 
+# Default args for pipeline_name, run_id, sample_row (required by component signature)
+PIPELINE_NAME = "test-pipeline-run-123"
+RUN_ID = "run-456"
+SAMPLE_ROW = '[{"feature1": 1, "target": 1.1}]'
+
 
 class TestAutogluonModelsFullRefitUnitTests:
     """Unit tests for component logic."""
@@ -30,6 +35,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         feature_importance_dict = {"feature1": 0.1, "feature2": 0.05}
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: feature_importance_dict)
         mock_predictor.problem_type = "regression"
+        mock_predictor.label = "target"
 
         # Mock DataFrame for dataset
         mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -49,15 +55,24 @@ class TestAutogluonModelsFullRefitUnitTests:
             mock_model_artifact.metadata = {}
 
             # Call the component function
-            autogluon_models_full_refit.python_func(
+            result = autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=mock_full_dataset,
                 predictor_path=mock_predictor_artifact.path,
                 sampling_config={},
                 split_config={},
                 model_config={},
+                pipeline_name=PIPELINE_NAME,
+                run_id=RUN_ID,
+                sample_row=SAMPLE_ROW,
                 model_artifact=mock_model_artifact,
             )
+
+            assert result.model_name == "LightGBM_BAG_L1_FULL"
+            assert mock_model_artifact.metadata["display_name"] == "LightGBM_BAG_L1_FULL"
+            assert mock_model_artifact.metadata["context"]["task_type"] == "regression"
+            assert mock_model_artifact.metadata["context"]["label_column"] == mock_predictor.label
+            assert mock_model_artifact.metadata["context"]["metrics"]["val_data"] == eval_results
 
             # Verify read_csv was called with correct path
             mock_read_csv.assert_called_once_with("/tmp/full_dataset.csv")
@@ -104,6 +119,11 @@ class TestAutogluonModelsFullRefitUnitTests:
             assert json.loads(fi_path.read_text()) == feature_importance_dict
             # Regression: no confusion matrix
             assert not (metrics_dir / "confusion_matrix.json").exists()
+            # Verify notebook was written at artifact root
+            notebook_path = Path(model_output_dir) / "automl_predictor_notebook.ipynb"
+            assert notebook_path.exists()
+            notebook = json.loads(notebook_path.read_text())
+            assert "cells" in notebook
         finally:
             shutil.rmtree(model_output_dir, ignore_errors=True)
 
@@ -133,6 +153,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 sampling_config={},
                 split_config={},
                 model_config={},
+                pipeline_name=PIPELINE_NAME,
+                run_id=RUN_ID,
+                sample_row=SAMPLE_ROW,
                 model_artifact=mock_model_artifact,
             )
 
@@ -169,6 +192,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 sampling_config={},
                 split_config={},
                 model_config={},
+                pipeline_name=PIPELINE_NAME,
+                run_id=RUN_ID,
+                sample_row=SAMPLE_ROW,
                 model_artifact=mock_model_artifact,
             )
 
@@ -205,6 +231,9 @@ class TestAutogluonModelsFullRefitUnitTests:
             sampling_config={},
             split_config={},
             model_config={},
+            pipeline_name=PIPELINE_NAME,
+            run_id=RUN_ID,
+            sample_row=SAMPLE_ROW,
             model_artifact=mock_model_artifact,
         )
 
@@ -262,6 +291,9 @@ class TestAutogluonModelsFullRefitUnitTests:
                 sampling_config={},
                 split_config={},
                 model_config={},
+                pipeline_name=PIPELINE_NAME,
+                run_id=RUN_ID,
+                sample_row=SAMPLE_ROW,
                 model_artifact=mock_model_artifact,
             )
 
@@ -271,6 +303,45 @@ class TestAutogluonModelsFullRefitUnitTests:
             assert json.loads(cm_path.read_text()) == confusion_matrix_dict
         finally:
             shutil.rmtree(model_output_dir, ignore_errors=True)
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("autogluon.tabular.TabularPredictor")
+    def test_full_refit_raises_on_invalid_problem_type(self, mock_predictor_class, mock_read_csv):
+        """Test that ValueError is raised when problem_type is not regression/binary/multiclass."""
+        import pandas as pd
+
+        mock_predictor = mock.MagicMock()
+        mock_predictor_clone = mock.MagicMock()
+        mock_predictor.clone.return_value = mock_predictor_clone
+        mock_predictor_class.load.return_value = mock_predictor
+        mock_predictor_clone.evaluate.return_value = {"r2": 0.9}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f": 0.1})
+        mock_predictor.problem_type = "unknown"
+        mock_predictor.label = "target"
+
+        mock_read_csv.return_value = pd.DataFrame({"feature1": [1], "target": [1.0]})
+        mock_full_dataset = mock.MagicMock()
+        mock_full_dataset.path = "/tmp/full_dataset.csv"
+        mock_model_artifact = mock.MagicMock()
+        mock_model_artifact.path = tempfile.mkdtemp()
+        mock_model_artifact.metadata = {}
+
+        try:
+            with pytest.raises(ValueError, match="Invalid problem type: unknown"):
+                autogluon_models_full_refit.python_func(
+                    model_name="LightGBM_BAG_L1",
+                    full_dataset=mock_full_dataset,
+                    predictor_path="/tmp/predictor",
+                    sampling_config={},
+                    split_config={},
+                    model_config={},
+                    pipeline_name=PIPELINE_NAME,
+                    run_id=RUN_ID,
+                    sample_row=SAMPLE_ROW,
+                    model_artifact=mock_model_artifact,
+                )
+        finally:
+            shutil.rmtree(mock_model_artifact.path, ignore_errors=True)
 
     def test_component_imports_correctly(self):
         """Test that the component can be imported and has required attributes."""

@@ -2,7 +2,6 @@ from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
 from kfp_components.components.data_processing.automl.tabular_train_test_split import tabular_train_test_split
-from kfp_components.components.deployment.automl.notebook_generation.component import notebook_generation
 from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
 from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
 from kfp_components.components.training.automl.autogluon_models_selection import models_selection
@@ -186,21 +185,15 @@ def autogluon_tabular_training_pipeline(
             sampling_config=tabular_loader_task.outputs["sample_config"],
             split_config=train_test_split_task.outputs["split_config"],
             model_config=selection_task.outputs["model_config"],
+            pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
+            run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+            sample_row=train_test_split_task.outputs["sample_row"],
         )
 
     # Generate leaderboard
-    leaderboard_evaluation_task = leaderboard_evaluation(
+    leaderboard_evaluation(
         models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
         eval_metric=selection_task.outputs["eval_metric"],
-    )
-
-    _ = notebook_generation(
-        problem_type=task_type,
-        model_name=leaderboard_evaluation_task.outputs["best_model"],
-        pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
-        run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
-        sample_row=train_test_split_task.outputs["sample_row"],
-        label_column=label_column,
     )
 
 
