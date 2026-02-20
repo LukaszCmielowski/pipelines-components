@@ -76,6 +76,7 @@ class TestModelsSelectionUnitTests:
             num_stack_levels=1,
             num_bag_folds=2,
             use_bag_holdout=True,
+            holdout_frac=0.2,
             time_limit=3600,
             presets="medium_quality",
         )

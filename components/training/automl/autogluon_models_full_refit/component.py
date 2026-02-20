@@ -136,7 +136,8 @@ def autogluon_models_full_refit(
     predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=[model_name])
 
-    predictor_clone.refit_full(train_data_extra=full_dataset_df, model=model_name)
+    # by default, autogluon refit on traing + validation data
+    predictor_clone.refit_full(model=model_name)
 
     predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
     predictor_clone.save_space()

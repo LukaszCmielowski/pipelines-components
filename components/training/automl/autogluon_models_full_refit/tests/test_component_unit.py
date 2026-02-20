@@ -81,9 +81,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             mock_predictor_class.load.assert_called_once_with("/tmp/predictor")
 
             # Verify refit_full was called with correct parameters (on clone)
-            mock_predictor_clone.refit_full.assert_called_once_with(
-                train_data_extra=mock_dataset_df, model="LightGBM_BAG_L1"
-            )
+            mock_predictor_clone.refit_full.assert_called_once_with(model="LightGBM_BAG_L1")
 
             # Verify evaluate and feature_importance called with full dataset dataframe (on clone)
             mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
