@@ -830,6 +830,8 @@ def autogluon_models_full_refit(
     with (path / "automl_predictor_notebook.ipynb").open("w", encoding="utf-8") as f:
         json.dump(notebook, f)
 
+    model_artifact.metadata["context"]["location"]["notebook"] = "automl_predictor_notebook.ipynb"
+
     return NamedTuple("outputs", model_name=str)(model_name=model_name_full)
 
 
