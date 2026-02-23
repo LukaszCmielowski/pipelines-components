@@ -129,6 +129,7 @@ def models_selection(
         num_stack_levels=1,  # TODO: discuss optimal value
         num_bag_folds=2,
         use_bag_holdout=True,
+        holdout_frac=0.2,  # 0.2 = 20% of the data is used for validation
         time_limit=DEFAULT_TIME_LIMIT,
         presets=DEFAULT_PRESET,
     )
