@@ -18,10 +18,9 @@ class TestAutomlDataLoaderUnitTests:
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
-    def test_component_with_default_parameters_first_n_rows(self, mock_boto_client, tmp_path):
-        """Test component with default sampling_method (first_n_rows) and no target_column."""
+    def test_component_with_default_parameters(self, mock_boto_client, tmp_path):
+        """Test component with default sampling_method=None (resolved from task_type=regression -> random)."""
         pd = pytest.importorskip("pandas")
-        # CSV content: small dataset
         csv_content = "a,b,c\n1,2,3\n4,5,6\n7,8,9\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
 
@@ -39,13 +38,13 @@ class TestAutomlDataLoaderUnitTests:
         )
 
         assert result is not None
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 3
-        assert list(result.columns) == ["a", "b", "c"]
+        assert hasattr(result, "sample_config")
+        assert result.sample_config["n_samples"] == 3
         mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/file.csv")
         assert (tmp_path / "output.csv").exists()
         saved = pd.read_csv(full_dataset.path)
-        pd.testing.assert_frame_equal(saved, result)
+        assert list(saved.columns) == ["a", "b", "c"]
+        assert len(saved) == 3
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
@@ -69,9 +68,11 @@ class TestAutomlDataLoaderUnitTests:
             sampling_method="first_n_rows",
         )
 
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 2
-        assert list(result.columns) == ["x", "y", "z"]
+        assert hasattr(result, "sample_config")
+        assert result.sample_config["n_samples"] == 2
+        saved = pd.read_csv(full_dataset.path)
+        assert list(saved.columns) == ["x", "y", "z"]
+        assert len(saved) == 2
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
@@ -97,12 +98,14 @@ class TestAutomlDataLoaderUnitTests:
             target_column="target",
         )
 
-        assert isinstance(result, pd.DataFrame)
-        assert "target" in result.columns
-        assert set(result["target"].unique()) == {"A", "B", "C"}
-        assert len(result) == 9  # all rows under 1GB, so all kept
+        assert hasattr(result, "sample_config")
+        assert result.sample_config["n_samples"] == 9
         mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/train.csv")
         assert (tmp_path / "stratified_out.csv").exists()
+        saved = pd.read_csv(full_dataset.path)
+        assert "target" in saved.columns
+        assert set(saved["target"].unique()) == {"A", "B", "C"}
+        assert len(saved) == 9
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
@@ -173,10 +176,11 @@ class TestAutomlDataLoaderUnitTests:
             target_column="target",
         )
 
-        assert isinstance(result, pd.DataFrame)
-        # Row with NA in target is dropped; singleton classes may also be removed
-        assert result["target"].notna().all()
-        assert len(result) >= 2
+        assert hasattr(result, "sample_config")
+        assert result.sample_config["n_samples"] >= 2
+        saved = pd.read_csv(full_dataset.path)
+        assert saved["target"].notna().all()
+        assert len(saved) >= 2
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")

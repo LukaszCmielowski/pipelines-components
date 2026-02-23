@@ -10,7 +10,7 @@ def automl_data_loader(
     file_key: str,
     bucket_name: str,
     full_dataset: dsl.Output[dsl.Dataset],
-    sampling_method: str = "first_n_rows",
+    sampling_method: Optional[str] = None,
     target_column: Optional[str] = None,
     task_type: str = "regression",
 ):
@@ -25,10 +25,10 @@ def automl_data_loader(
         bucket_name: Name of the S3 bucket containing the file.
         target_column: Name of the column containing labels/target values for stratified sampling.
         full_dataset: Output dataset artifact where the sampled data will be saved.
-        sampling_method: Type of sampling strategy. Options: "first_n_rows" (default), "stratified", or "random".
+        sampling_method: Type of sampling strategy. Options: "first_n_rows", "stratified", or "random".
+            If None (default), derived from task_type: "stratified" for binary/multiclass, "random" for regression.
         task_type: The type of machine learning task. Supported values: "binary", "multiclass", or "regression"
-            (default). For classification use "binary" or "multiclass"; for predicting continuous values use
-            "regression". Currently unused in the component implementation; reserved for future use.
+            (default). Used when sampling_method is None to choose the sampling strategy.
 
     Returns:
         NamedTuple: Contains a sample configuration dictionary.
@@ -38,6 +38,12 @@ def automl_data_loader(
 
     import boto3
     import pandas as pd
+
+    if sampling_method is None:
+        if task_type in ("binary", "multiclass"):
+            sampling_method = "stratified"
+        else:
+            sampling_method = "random"
 
     # 1GB limit in bytes
     MAX_SIZE_BYTES = 1024 * 1024 * 1024
