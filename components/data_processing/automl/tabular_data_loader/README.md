@@ -1,147 +1,112 @@
-# Data Loader 📊
+# Tabular Data Loader 📊
 
 > ⚠️ **Stability: alpha** — This asset is not yet stable and may change.
 
 ## Overview 🧾
 
-Reads tabular data from data sources (S3, local filesystem) for AutoML processing.
+Loads tabular (CSV) data from S3 for AutoML processing. The component reads data in chunks (up to 1GB in memory) and supports configurable sampling strategies.
 
-The Data Loader component is the first step in the AutoML pipeline workflow. It loads tabular data from
-various sources including S3 (via RHOAI Connections API) or local filesystem. The component supports
-multiple data formats including CSV, Parquet, and XLSX. It returns tabular data artifacts that are
-used by subsequent components in the AutoML pipeline.
-
-This component integrates with RHOAI Connections API for accessing data from S3 or other cloud storage systems. The component handles authentication and data retrieval transparently, allowing users to specify data sources through connection IDs.
+The Tabular Data Loader is typically the first step in the AutoML pipeline. It streams CSV data from an S3 bucket, optionally samples it using one of the supported strategies, and writes the result to an output dataset artifact. Authentication uses AWS-style credentials provided via environment variables (e.g. from a Kubernetes secret).
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `tabular_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the loaded training data. |
-| `input_data_reference` | `dict` | `None` | Dict with `connection_id`, `bucket`, `path`; optional `format`. |
-| `test_data` | `dsl.Output[dsl.Dataset]` | `None` | Optional output dataset artifact for test data. |
-| `test_data_reference` | `dict` | `None` | Optional dict defining test data source; same structure as `input_data_reference`. |
+| Parameter        | Type                     | Default     | Description |
+| --------------- | ------------------------ | ----------- | ----------- |
+| `file_key`      | `str`                    | *required*  | Path to the CSV file within the S3 bucket. |
+| `bucket_name`  | `str`                    | *required*  | Name of the S3 bucket containing the file. |
+| `full_dataset` | `dsl.Output[dsl.Dataset]` | *required*  | Output artifact where the sampled CSV will be written. |
+| `sampling_method` | `Optional[str]`       | `None`      | Sampling strategy: `"first_n_rows"`, `"stratified"`, or `"random"`. If `None`, derived from `task_type`: `"stratified"` for binary/multiclass, `"random"` for regression. |
+| `label_column`  | `Optional[str]`          | `None`      | Name of the target/label column. Required when `sampling_method="stratified"`. |
+| `task_type`     | `str`                    | `"regression"` | Machine learning task: `"binary"`, `"multiclass"`, or `"regression"`. Used when `sampling_method` is `None` to choose the strategy. |
 
-### Input Data Reference Structure
+### Sampling strategies
 
-The `input_data_reference` dictionary should contain:
+- **first_n_rows** — Read rows from the start of the file until the 1GB size limit.
+- **stratified** — Iterate over all batches, merge with accumulated data, and subsample proportionally by `label_column` when over the limit. Requires `label_column`.
+- **random** — Iterate over all batches, merge with accumulated data, and randomly subsample when over the limit.
 
-```python
-{
-    "connection_id": "s3-data-connection",  # RHOAI Connection ID for S3 access
-    "bucket": "my-ml-data-bucket",          # Bucket name containing the data
-    "path": "tabular_data/train.csv"        # Path within bucket/filesystem to data file
-}
-```
+### Credentials
 
-For local filesystem:
+S3 access uses environment variables (e.g. from a Kubernetes secret):
 
-```python
-{
-    "connection_id": None,                  # Not required for local filesystem
-    "bucket": None,                         # Not required for local filesystem
-    "path": "/local/path/to/data.csv"       # Local filesystem path
-}
-```
+- `AWS_S3_ENDPOINT`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` — required for S3.
 
 ## Outputs 📤
 
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `tabular_data` | `dsl.Dataset` | Loaded training dataset artifact (data file and metadata). |
-| `test_data` | `dsl.Dataset` | Optional test dataset artifact if `test_data_reference` is provided. |
-| Return value | `str` | Message indicating the completion status of data loading. |
+| Output          | Type     | Description |
+| --------------- | -------- | ----------- |
+| `full_dataset`  | `dsl.Dataset` | CSV artifact with the loaded (and optionally sampled) data. |
+| Return value    | `NamedTuple`  | `sample_config`: dict with `n_samples` (number of rows written). |
 
 ## Usage Examples 💡
 
-### Basic Usage
+### Basic usage (default: sampling from task_type)
+
+With default parameters, `sampling_method` is derived from `task_type` (e.g. regression → random sampling):
 
 ```python
 from kfp import dsl
-from kfp_components.components.training.automl.data_processing.data_loader import data_loader
+from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
 
-@dsl.pipeline(name="data-loading-pipeline")
+@dsl.pipeline(name="automl-training-pipeline")
 def my_pipeline():
-    """Example pipeline demonstrating data loading."""
-    load_task = data_loader(
-        input_data_reference={
-            "connection_id": "s3-data-connection",
-            "bucket": "my-ml-data-bucket",
-            "path": "tabular_data/train.csv"
-        }
+    load_task = automl_data_loader(
+        bucket_name="my-ml-bucket",
+        file_key="data/train.csv",
+        label_column="target",
+        task_type="regression",
     )
     return load_task
 ```
 
-### With Test Data
+### Explicit sampling method
 
 ```python
-@dsl.pipeline(name="data-loading-with-test-pipeline")
-def my_pipeline():
-    """Example pipeline with both training and test data."""
-    load_task = data_loader(
-        input_data_reference={
-            "connection_id": "s3-data-connection",
-            "bucket": "my-ml-data-bucket",
-            "path": "tabular_data/train.csv"
-        },
-        test_data_reference={
-            "connection_id": "s3-data-connection",
-            "bucket": "my-ml-data-bucket",
-            "path": "tabular_data/test.csv"
-        }
-    )
-    return load_task
+load_task = automl_data_loader(
+    bucket_name="my-ml-bucket",
+    file_key="data/train.csv",
+    full_dataset=...,
+    sampling_method="first_n_rows",
+)
 ```
 
-### Local Filesystem
+### Stratified sampling (classification)
 
 ```python
-@dsl.pipeline(name="local-data-loading-pipeline")
-def my_pipeline():
-    """Example pipeline loading from local filesystem."""
-    load_task = data_loader(
-        input_data_reference={
-            "connection_id": None,
-            "bucket": None,
-            "path": "/local/path/to/data.csv"
-        }
-    )
-    return load_task
+load_task = automl_data_loader(
+    bucket_name="my-ml-bucket",
+    file_key="data/train.csv",
+    full_dataset=...,
+    sampling_method="stratified",
+    label_column="target",
+)
 ```
 
-## Supported Formats 📋
+## Supported formats and limits 📋
 
-- **CSV** (`.csv`) - Comma-separated values
-- **Parquet** (`.parquet`) - Columnar storage format
-- **XLSX** (`.xlsx`) - Excel format
+- **Format**: CSV only.
+- **Size limit**: Up to 1GB of data in memory (sampled if larger).
+- **Streaming**: Data is read in batches (10k rows per chunk) to handle large files.
 
-## Notes 📝
+## Logging 📝
 
-- **Torch Compatible Data Loader**: Torch compatible data loader to be explored in future versions
-- **Data Cache Support**: Data cache support to be explored in next stage
-- **Connection Management**: Uses RHOAI Connections API for secure access to S3 and other cloud storage systems
-- **Format Detection**: Data format is automatically detected from file extension if not explicitly specified
+The component logs at INFO level:
+
+- Which sampling method is used (including when derived from `task_type`).
+- Number of rows read and the S3 location (`bucket_name`, `file_key`).
 
 ## Metadata 🗂️
 
-- **Name**: data-loader
+- **Name**: tabular_data_loader
 - **Stability**: alpha
 - **Dependencies**:
-  - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
-  - External Services:
-    - Name: RHOAI Connections API, Version: >=1.0.0
-    - Name: pandas, Version: >=2.0.0
-    - Name: pyarrow, Version: >=14.0.0
+  - Kubeflow Pipelines >= 2.15.2
 - **Tags**:
-  - automl
   - data-processing
-  - tabular-data
-  - data-loading
-- **Last Verified**: 2025-01-27 00:00:00+00:00
+  - automl
+- **Last Verified**: 2026-02-23 14:30:00+00:00
 
-## Additional Resources 📚
+## Additional resources 📚
 
 - **AutoML Documentation**: [AutoML README](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/README.md)
 - **Components Documentation**: [Components Structure](https://github.com/LukaszCmielowski/architecture-decision-records/blob/autox_arch_docs/documentation/components/automl/components.md)
