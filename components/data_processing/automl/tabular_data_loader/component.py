@@ -12,6 +12,7 @@ def automl_data_loader(
     full_dataset: dsl.Output[dsl.Dataset],
     sampling_method: str = "first_n_rows",
     target_column: Optional[str] = None,
+    task_type: str = "regression",
 ):
     """Automl Data Loader component.
 
@@ -25,6 +26,9 @@ def automl_data_loader(
         target_column: Name of the column containing labels/target values for stratified sampling.
         full_dataset: Output dataset artifact where the sampled data will be saved.
         sampling_method: Type of sampling strategy. Options: "first_n_rows" (default), "stratified", or "random".
+        task_type: The type of machine learning task. Supported values: "binary", "multiclass", or "regression"
+            (default). For classification use "binary" or "multiclass"; for predicting continuous values use
+            "regression". Currently unused in the component implementation; reserved for future use.
 
     Returns:
         NamedTuple: Contains a sample configuration dictionary.
@@ -64,203 +68,143 @@ def automl_data_loader(
             aws_secret_access_key=secret_key,
         )
 
+    PANDAS_CHUNK_SIZE = 10000  # Rows per batch for streaming read
+
+    def _sample_first_n_rows(text_stream, chunk_size, max_size_bytes):
+        """Take rows from the start of the stream until the size limit is reached."""
+        chunk_list = []
+        accumulated_size = 0
+
+        try:
+            for chunk_df in pd.read_csv(text_stream, chunksize=chunk_size):
+                chunk_memory = chunk_df.memory_usage(deep=True).sum()
+
+                if accumulated_size + chunk_memory > max_size_bytes:
+                    remaining_bytes = max_size_bytes - accumulated_size
+                    bytes_per_row = chunk_memory / len(chunk_df) if len(chunk_df) > 0 else 0
+                    if bytes_per_row > 0:
+                        rows_to_take = max(1, int(remaining_bytes / bytes_per_row))
+                        chunk_df = chunk_df.head(rows_to_take)
+                        chunk_list.append(chunk_df)
+                    break
+
+                chunk_list.append(chunk_df)
+                accumulated_size += chunk_memory
+
+                if accumulated_size >= max_size_bytes:
+                    break
+        except Exception as e:
+            if not chunk_list:
+                raise ValueError(f"Error reading CSV from S3: {str(e)}")
+
+        return pd.concat(chunk_list, ignore_index=True) if chunk_list else pd.DataFrame()
+
+    def _sample_stratified(text_stream, chunk_size, max_size_bytes, target_column):
+        """Merge batches and subsample proportionally by target column to stay under the size limit."""
+        subsampled_data = None
+
+        try:
+            for chunk_df in pd.read_csv(text_stream, chunksize=chunk_size):
+                chunk_df = chunk_df.dropna(subset=[target_column])
+                if chunk_df.empty:
+                    continue
+
+                if target_column not in chunk_df.columns:
+                    raise ValueError(
+                        f"Target column '{target_column}' not found in the dataset. "
+                        f"Available columns: {list(chunk_df.columns)}"
+                    )
+
+                stats = chunk_df[target_column].value_counts()
+                singleton_indexes = stats[stats == 1].index.values
+                for idx in singleton_indexes:
+                    chunk_df = chunk_df[chunk_df[target_column] != idx]
+                if chunk_df.empty:
+                    continue
+
+                combined_data = (
+                    pd.concat([subsampled_data, chunk_df], ignore_index=True)
+                    if subsampled_data is not None
+                    else chunk_df
+                )
+                combined_memory = combined_data.memory_usage(deep=True).sum()
+
+                if combined_memory <= max_size_bytes:
+                    subsampled_data = combined_data
+                else:
+                    sampling_frac = max_size_bytes / combined_memory
+                    subsampled_data = (
+                        combined_data.groupby(target_column, group_keys=False)
+                        .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=42))
+                        .reset_index(drop=True)
+                    )
+
+            if subsampled_data is None:
+                return pd.DataFrame()
+            return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
+
+        except Exception as e:
+            if subsampled_data is None or subsampled_data.empty:
+                raise ValueError(f"Error reading CSV from S3: {str(e)}")
+            return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
+
+    def _sample_random(text_stream, chunk_size, max_size_bytes):
+        """Iterate all batches, merge with accumulated data, randomly subsample when over the limit."""
+        subsampled_data = None
+
+        try:
+            for chunk_df in pd.read_csv(text_stream, chunksize=chunk_size):
+                data = (
+                    pd.concat([subsampled_data, chunk_df], ignore_index=True)
+                    if subsampled_data is not None
+                    else chunk_df
+                )
+                combined_memory = data.memory_usage(deep=True).sum()
+
+                if combined_memory <= max_size_bytes:
+                    subsampled_data = data
+                else:
+                    sampling_frac = max_size_bytes / combined_memory
+                    subsampled_data = data.sample(
+                        frac=min(sampling_frac, 1.0), random_state=42
+                    ).reset_index(drop=True)
+
+            return subsampled_data if subsampled_data is not None else pd.DataFrame()
+
+        except Exception as e:
+            if subsampled_data is None or subsampled_data.empty:
+                raise ValueError(f"Error reading CSV from S3: {str(e)}")
+            return subsampled_data
+
     def load_data_in_batches(
         s3_client,
         bucket_name,
         file_key,
-        max_size_bytes=MAX_SIZE_BYTES,
-        sampling_method="first_n_rows",
-        target_column=None,
+        max_size_bytes,
+        sampling_method,
+        target_column,
     ):
-        """Load CSV data from S3 in batches, sampling up to max_size_bytes.
+        """Load CSV from S3 in batches and return a sampled dataframe using the chosen strategy."""
+        if sampling_method == "stratified" and target_column is None:
+            raise ValueError("target_column must be provided when sampling_method='stratified'")
 
-        Reads the file from S3 in streaming mode and processes it in chunks using pandas,
-        accumulating data until reaching the maximum size limit (1GB by default).
-        Supports different sampling strategies: first_n_rows, stratified, or random.
-        For stratified sampling, sampling is performed incrementally during batch reading.
-        For random sampling, all batches are iterated; each batch is merged with accumulated data,
-        then randomly subsampled to fit within the size limit when total exceeds it.
-
-        Args:
-            s3_client: Boto3 S3 client instance.
-            bucket_name: Name of the S3 bucket.
-            file_key: Key/path of the file in S3.
-            max_size_bytes: Maximum size of data to read in bytes (default: 1GB).
-            sampling_method: Type of sampling strategy ("first_n_rows", "stratified", or "random").
-            target_column: Name of the target column for stratified sampling (required if sampling_method="stratified").
-
-        Returns:
-            pandas.DataFrame: Sampled dataframe containing up to max_size_bytes of data.
-        """
-        # Validate stratified sampling parameters
-        if sampling_method == "stratified":
-            if target_column is None:
-                raise ValueError("target_column must be provided when sampling_method='stratified'")
-
-        # Get the S3 object for streaming
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-
-        # Create a text wrapper around the streaming body
-        # This allows pandas to read directly from the S3 stream
-        body_stream = response["Body"]
-        text_stream = io.TextIOWrapper(body_stream, encoding="utf-8")
-
-        # Initialize variables for batch reading
-        pandas_chunk_size = 10000  # Read 10k rows at a time
+        text_stream = io.TextIOWrapper(response["Body"], encoding="utf-8")
 
         if sampling_method == "stratified":
-            # For stratified sampling, maintain subsampled data incrementally
-            subsampled_data = None
-            accumulated_size = 0
+            return _sample_stratified(
+                text_stream, PANDAS_CHUNK_SIZE, max_size_bytes, target_column
+            )
+        if sampling_method == "random":
+            return _sample_random(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
+        return _sample_first_n_rows(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
 
-            try:
-                for chunk_df in pd.read_csv(text_stream, chunksize=pandas_chunk_size):
-                    # Drop rows with NA values in target column
-                    chunk_df = chunk_df.dropna(subset=[target_column])
-
-                    if chunk_df.empty:
-                        continue
-
-                    # Check if target column exists
-                    if target_column not in chunk_df.columns:
-                        raise ValueError(
-                            f"Target column '{target_column}' not found in the dataset. "
-                            f"Available columns: {list(chunk_df.columns)}"
-                        )
-
-                    # Remove singleton classes (classes with only 1 sample in this chunk)
-                    # This helps maintain class distribution quality
-                    stats = chunk_df[target_column].value_counts()
-                    singleton_indexes = stats[stats == 1].index.values
-                    for idx in singleton_indexes:
-                        chunk_df = chunk_df[chunk_df[target_column] != idx]
-
-                    if chunk_df.empty:
-                        continue
-
-                    # Join previous subsampled batch with new one
-                    if subsampled_data is not None:
-                        combined_data = pd.concat([subsampled_data, chunk_df], ignore_index=True)
-                    else:
-                        combined_data = chunk_df
-
-                    # Calculate memory usage of combined data
-                    combined_memory = combined_data.memory_usage(deep=True).sum()
-
-                    if combined_memory <= max_size_bytes:
-                        # If under limit, keep all data
-                        subsampled_data = combined_data
-                        accumulated_size = combined_memory
-                    else:
-                        # If over limit, perform stratified sampling to bring it under limit
-                        # Calculate sampling fraction based on memory
-                        sampling_frac = max_size_bytes / combined_memory
-
-                        # Perform stratified sampling: sample proportionally from each class
-                        # This preserves the class distribution while reducing size
-                        subsampled_data = (
-                            combined_data.groupby(target_column, group_keys=False)
-                            .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=42))
-                            .reset_index(drop=True)
-                        )
-
-                        accumulated_size = subsampled_data.memory_usage(deep=True).sum()
-
-                        # Continue reading to potentially improve class distribution
-                        # The sampling will be applied again if we exceed the limit
-
-                # Return the final subsampled data
-                if subsampled_data is None:
-                    return pd.DataFrame()
-
-                # Shuffle to mix classes
-                result_df = subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
-                return result_df
-
-            except Exception as e:
-                if subsampled_data is None or subsampled_data.empty:
-                    raise ValueError(f"Error reading CSV from S3: {str(e)}")
-                # Return what we have so far
-                return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
-
-        elif sampling_method == "random":
-            # Iterate over all batches; merge each with accumulated data, then randomly subsample if over limit
-            subsampled_data = None
-
-            try:
-                for chunk_df in pd.read_csv(text_stream, chunksize=pandas_chunk_size):
-                    if subsampled_data is not None:
-                        data = pd.concat([subsampled_data, chunk_df], ignore_index=True)
-                    else:
-                        data = chunk_df
-
-                    combined_memory = data.memory_usage(deep=True).sum()
-
-                    if combined_memory <= max_size_bytes:
-                        subsampled_data = data
-                    else:
-                        sampling_frac = max_size_bytes / combined_memory
-                        subsampled_data = (
-                            data.sample(frac=min(sampling_frac, 1.0), random_state=42).reset_index(drop=True)
-                        )
-
-                if subsampled_data is None:
-                    result_df = pd.DataFrame()
-                else:
-                    result_df = subsampled_data
-                return result_df
-
-            except Exception as e:
-                if subsampled_data is None or subsampled_data.empty:
-                    raise ValueError(f"Error reading CSV from S3: {str(e)}")
-                return subsampled_data
-
-        else:
-            # For "first_n_rows" sampling, use the original approach
-            chunk_list = []
-            accumulated_size = 0
-
-            try:
-                for chunk_df in pd.read_csv(text_stream, chunksize=pandas_chunk_size):
-                    # Calculate memory usage of this chunk
-                    chunk_memory = chunk_df.memory_usage(deep=True).sum()
-
-                    if accumulated_size + chunk_memory > max_size_bytes:
-                        # Take only a portion of this chunk to stay within limit
-                        remaining_bytes = max_size_bytes - accumulated_size
-                        # Estimate rows to take based on average memory per row
-                        bytes_per_row = chunk_memory / len(chunk_df) if len(chunk_df) > 0 else 0
-                        if bytes_per_row > 0:
-                            rows_to_take = max(1, int(remaining_bytes / bytes_per_row))
-                            chunk_df = chunk_df.head(rows_to_take)
-                            chunk_list.append(chunk_df)
-                        break
-
-                    chunk_list.append(chunk_df)
-                    accumulated_size += chunk_memory
-
-                    if accumulated_size >= max_size_bytes:
-                        break
-            except Exception as e:
-                # If there's an error, try to return what we have so far
-                if not chunk_list:
-                    raise ValueError(f"Error reading CSV from S3: {str(e)}")
-
-            # Combine all chunks into a single dataframe
-            if chunk_list:
-                result_df = pd.concat(chunk_list, ignore_index=True)
-            else:
-                # If no chunks were read, return empty dataframe
-                result_df = pd.DataFrame()
-
-            return result_df
-
-    # Load data in batches
     s3_client = get_s3_client()
     sampled_dataframe = load_data_in_batches(
         s3_client,
         bucket_name,
         file_key,
+        max_size_bytes=MAX_SIZE_BYTES,
         sampling_method=sampling_method,
         target_column=target_column,
     )
