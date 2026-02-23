@@ -1,5 +1,4 @@
 from kfp import dsl
-from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.automl.tabular_data_loader import automl_data_loader
 from kfp_components.components.data_processing.automl.tabular_train_test_split import tabular_train_test_split
 from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
@@ -133,6 +132,8 @@ def autogluon_tabular_training_pipeline(
             top_n=3,
         )
     """  # noqa: E501
+    from kfp.kubernetes import use_secret_as_env
+
     tabular_loader_task = automl_data_loader(bucket_name=train_data_bucket_name, file_key=train_data_file_key)
 
     use_secret_as_env(

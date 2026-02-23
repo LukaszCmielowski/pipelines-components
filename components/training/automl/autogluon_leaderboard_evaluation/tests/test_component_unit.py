@@ -18,9 +18,14 @@ def _create_model_metrics_dir(metrics_dict, model_name="Model1"):
     return tmp_dir
 
 
+# Mock pandas so unit tests run without installing pandas (patch resolves "pandas.DataFrame")
+_MOCK_PANDAS = mock.MagicMock()
+
+
 class TestLeaderboardEvaluationUnitTests:
     """Unit tests for component logic."""
 
+    @mock.patch.dict("sys.modules", {"pandas": _MOCK_PANDAS})
     @mock.patch("pandas.DataFrame")
     def test_leaderboard_evaluation_with_single_model(self, mock_dataframe_class):
         """Test leaderboard evaluation with a single model."""
@@ -69,6 +74,7 @@ class TestLeaderboardEvaluationUnitTests:
         finally:
             shutil.rmtree(model_dir, ignore_errors=True)
 
+    @mock.patch.dict("sys.modules", {"pandas": _MOCK_PANDAS})
     @mock.patch("pandas.DataFrame")
     def test_leaderboard_evaluation_with_multiple_models(self, mock_dataframe_class):
         """Test leaderboard evaluation with multiple models."""
@@ -124,6 +130,7 @@ class TestLeaderboardEvaluationUnitTests:
             for d in model_dirs:
                 shutil.rmtree(d, ignore_errors=True)
 
+    @mock.patch.dict("sys.modules", {"pandas": _MOCK_PANDAS})
     @mock.patch("pandas.DataFrame", create=True)
     def test_leaderboard_evaluation_sorts_by_rmse(self, mock_dataframe_class):
         """Test that leaderboard is sorted by RMSE in descending order."""
@@ -169,6 +176,7 @@ class TestLeaderboardEvaluationUnitTests:
             for d in model_dirs:
                 shutil.rmtree(d, ignore_errors=True)
 
+    @mock.patch.dict("sys.modules", {"pandas": _MOCK_PANDAS})
     @mock.patch("pandas.DataFrame", create=True)
     def test_leaderboard_evaluation_writes_html_file(self, mock_dataframe_class):
         """Test that HTML file is written correctly."""

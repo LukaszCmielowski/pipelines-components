@@ -7,10 +7,30 @@ import pytest
 
 from ..component import models_selection
 
+# Mock pandas and autogluon so unit tests run without installing them (patches resolve these modules)
+_MOCK_PANDAS = mock.MagicMock()
+_MOCK_AUTOGLUON = mock.MagicMock()
+_MOCK_AUTOGLUON.tabular = mock.MagicMock()
+_AUTOGLUON_PANDAS_MODULES = {
+    "pandas": _MOCK_PANDAS,
+    "autogluon": _MOCK_AUTOGLUON,
+    "autogluon.tabular": _MOCK_AUTOGLUON.tabular,
+}
+
+
+def _make_leaderboard_mock(top_model_names):
+    """Build a mock leaderboard so .head(n)[\"model\"].values.tolist() returns top_model_names."""
+    mock_head = mock.MagicMock()
+    mock_head.__getitem__.return_value.values.tolist.return_value = top_model_names
+    mock_leaderboard = mock.MagicMock()
+    mock_leaderboard.head.return_value = mock_head
+    return mock_leaderboard
+
 
 class TestModelsSelectionUnitTests:
     """Unit tests for component logic."""
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_regression(self, mock_predictor_class, mock_read_csv):
@@ -23,14 +43,8 @@ class TestModelsSelectionUnitTests:
         mock_predictor.fit.return_value = mock_predictor
         mock_predictor_class.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1", "RandomForest_BAG_L1"],
-                "score_val": [0.5, 0.6, 0.7, 0.8],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
+        # Mock leaderboard so .head(top_n)["model"].values.tolist() returns expected list
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -89,6 +103,7 @@ class TestModelsSelectionUnitTests:
         assert result.eval_metric == "r2"
         assert result.predictor_path == str(Path(workspace_path) / "autogluon_predictor")
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_binary_classification(self, mock_predictor_class, mock_read_csv):
@@ -100,14 +115,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "accuracy"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"],
-                "score_val": [0.95, 0.92, 0.90],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 0]})
@@ -148,6 +156,7 @@ class TestModelsSelectionUnitTests:
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"]
         assert result.eval_metric == "accuracy"
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_multiclass_classification(self, mock_predictor_class, mock_read_csv):
@@ -159,14 +168,9 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "accuracy"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1", "RandomForest_BAG_L1"],
-                "score_val": [0.88, 0.85, 0.82, 0.80],
-            }
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(
+            ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"]
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 2]})
@@ -207,6 +211,7 @@ class TestModelsSelectionUnitTests:
         assert len(result.top_models) == 3
         assert result.top_models == ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"]
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_different_top_n(self, mock_predictor_class, mock_read_csv):
@@ -218,20 +223,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame with 5 models
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": [
-                    "LightGBM_BAG_L1",
-                    "NeuralNetFastAI_BAG_L1",
-                    "CatBoost_BAG_L1",
-                    "RandomForest_BAG_L1",
-                    "XGBoost_BAG_L1",
-                ],
-                "score_val": [0.5, 0.6, 0.7, 0.8, 0.9],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(["LightGBM_BAG_L1"])
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -263,6 +255,7 @@ class TestModelsSelectionUnitTests:
         assert len(result.top_models) == 1
         assert result.top_models == ["LightGBM_BAG_L1"]
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_file_not_found_train_data(self, mock_predictor_class, mock_read_csv):
@@ -289,6 +282,7 @@ class TestModelsSelectionUnitTests:
                 workspace_path=workspace_path,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_file_not_found_test_data(self, mock_predictor_class, mock_read_csv):
@@ -318,6 +312,7 @@ class TestModelsSelectionUnitTests:
                 workspace_path=workspace_path,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_fit_failure(self, mock_predictor_class, mock_read_csv):
@@ -353,6 +348,7 @@ class TestModelsSelectionUnitTests:
                 workspace_path=workspace_path,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_leaderboard_failure(self, mock_predictor_class, mock_read_csv):
@@ -389,6 +385,7 @@ class TestModelsSelectionUnitTests:
                 workspace_path=workspace_path,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
@@ -400,14 +397,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"],
-                "score_val": [0.5, 0.6],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -444,6 +434,7 @@ class TestModelsSelectionUnitTests:
         assert mock_predictor.fit.call_count == 1
         assert mock_predictor.leaderboard.call_count == 1
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_sets_metadata_correctly(self, mock_predictor_class, mock_read_csv):
@@ -455,14 +446,9 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"],
-                "score_val": [0.5, 0.6, 0.7],
-            }
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(
+            ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"]
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
@@ -499,6 +485,7 @@ class TestModelsSelectionUnitTests:
         assert result.eval_metric == "r2"
         assert result.predictor_path == str(Path(workspace_path) / "autogluon_predictor")
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_returns_correct_named_tuple(self, mock_predictor_class, mock_read_csv):
@@ -510,14 +497,7 @@ class TestModelsSelectionUnitTests:
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"],
-                "score_val": [0.5, 0.6],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
+        mock_predictor.leaderboard.return_value = _make_leaderboard_mock(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
         # Mock DataFrame for datasets
         mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})

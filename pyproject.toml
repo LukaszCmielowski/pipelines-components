@@ -32,7 +32,6 @@ test = [
     "pyyaml",
     "semver",
     "pip",
-    "kfp-kubernetes"
 ]
 # Local development (extends test with additional tools)
 dev = [

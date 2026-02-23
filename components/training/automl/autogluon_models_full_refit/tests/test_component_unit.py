@@ -15,10 +15,25 @@ PIPELINE_NAME = "test-pipeline-run-123"
 RUN_ID = "run-456"
 SAMPLE_ROW = '[{"feature1": 1, "target": 1.1}]'
 
+# Mock pandas and autogluon so unit tests run without installing them (patches resolve these modules)
+_MOCK_PANDAS = mock.MagicMock()
+_MOCK_AUTOGLUON = mock.MagicMock()
+_MOCK_AUTOGLUON.tabular = mock.MagicMock()
+_MOCK_AUTOGLUON.core = mock.MagicMock()
+_MOCK_AUTOGLUON.core.metrics = mock.MagicMock()
+_AUTOGLUON_PANDAS_MODULES = {
+    "pandas": _MOCK_PANDAS,
+    "autogluon": _MOCK_AUTOGLUON,
+    "autogluon.tabular": _MOCK_AUTOGLUON.tabular,
+    "autogluon.core": _MOCK_AUTOGLUON.core,
+    "autogluon.core.metrics": _MOCK_AUTOGLUON.core.metrics,
+}
+
 
 class TestAutogluonModelsFullRefitUnitTests:
     """Unit tests for component logic."""
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_with_valid_model(self, mock_predictor_class, mock_read_csv):
@@ -127,6 +142,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         finally:
             shutil.rmtree(model_output_dir, ignore_errors=True)
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_handles_file_not_found_predictor(self, mock_predictor_class, mock_read_csv):
@@ -159,6 +175,7 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_artifact=mock_model_artifact,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_handles_refit_failure(self, mock_predictor_class, mock_read_csv):
@@ -198,6 +215,7 @@ class TestAutogluonModelsFullRefitUnitTests:
                 model_artifact=mock_model_artifact,
             )
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
@@ -250,6 +268,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         assert mock_predictor_clone.refit_full.call_count == 1
         assert mock_predictor.clone.call_count == 1
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("autogluon.core.metrics.confusion_matrix")
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
@@ -304,6 +323,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         finally:
             shutil.rmtree(model_output_dir, ignore_errors=True)
 
+    @mock.patch.dict("sys.modules", _AUTOGLUON_PANDAS_MODULES)
     @mock.patch("pandas.read_csv")
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_raises_on_invalid_problem_type(self, mock_predictor_class, mock_read_csv):
