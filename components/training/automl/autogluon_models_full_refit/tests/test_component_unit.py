@@ -87,10 +87,10 @@ class TestAutogluonModelsFullRefitUnitTests:
             mock_predictor_clone.evaluate.assert_called_once_with(mock_dataset_df)
             mock_predictor_clone.feature_importance.assert_called_once_with(mock_dataset_df)
 
-            # Verify clone was called with correct parameters (path is Path; includes model_name_FULL)
+            # Verify clone was called with correct parameters (path is model_name_FULL/predictor)
             mock_predictor.clone.assert_called_once()
             call_kw = mock_predictor.clone.call_args[1]
-            assert Path(call_kw["path"]) == Path(model_output_dir) / "LightGBM_BAG_L1_FULL"
+            assert Path(call_kw["path"]) == Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "predictor"
             assert call_kw["return_clone"] is True
             assert call_kw["dirs_exist_ok"] is True
 
@@ -117,8 +117,10 @@ class TestAutogluonModelsFullRefitUnitTests:
             assert json.loads(fi_path.read_text()) == feature_importance_dict
             # Regression: no confusion matrix
             assert not (metrics_dir / "confusion_matrix.json").exists()
-            # Verify notebook was written at artifact root
-            notebook_path = Path(model_output_dir) / "automl_predictor_notebook.ipynb"
+            # Verify notebook was written under model_name_FULL/notebooks/
+            notebook_path = (
+                Path(model_output_dir) / "LightGBM_BAG_L1_FULL" / "notebooks" / "automl_predictor_notebook.ipynb"
+            )
             assert notebook_path.exists()
             notebook = json.loads(notebook_path.read_text())
             assert "cells" in notebook

@@ -30,74 +30,89 @@ def autogluon_models_full_refit(
 
     This component takes a trained AutoGluon TabularPredictor, loaded from
     predictor_path, and refits a specific model, identified by model_name, on
-    the complete training dataset. The refitting process retrains the model
-    architecture on the full data, typically improving performance compared to
-    models trained on sampled data.
+    the full training data. By default AutoGluon refit_full uses the
+    predictor's training and validation data; the full_dataset is used for
+    evaluation and for writing metrics. The refitted model is saved with the
+    suffix "_FULL" appended to model_name.
 
-    After refitting, the component creates a cleaned clone of the predictor
-    containing only the original model and its refitted version (with "_FULL"
-    suffix). The refitted model is set as the best model and the predictor
-    is optimized to save space by removing unnecessary models and files.
+    The component clones the predictor to model_artifact.path / model_name_FULL
+    / predictor, keeps only the specified model and its refitted version,
+    sets the refitted model as best, and saves space by removing other models.
     Evaluation metrics, feature importance, and (for classification) confusion
     matrix are written under model_artifact.path / model_name_FULL / metrics.
+    A Jupyter notebook (automl_predictor_notebook.ipynb) is written under
+    model_artifact.path / model_name_FULL / notebooks for inference and
+    exploration; pipeline_name, run_id, and sample_row are used to fill in
+    run context and example input (the label column is stripped from sample_row
+    in the notebook). Artifact metadata includes display_name, context
+    (data_config, task_type, label_column, model_config, location, metrics),
+    and context.location.notebook. Supported problem types are regression,
+    binary, and multiclass; any other type raises ValueError.
 
     This component is typically used in a two-stage training pipeline where
     models are first trained on sampled data for exploration, then the best
     candidates are refitted on the full dataset for optimal performance.
 
     Args:
-        model_name: The name of the model to refit. This should match a model
-            name in the predictor. The refitted model will be saved with the
-            suffix "_FULL" appended to this name.
-        full_dataset: A Dataset artifact containing the complete training
-            dataset in CSV format. This dataset will be used to retrain the
-            specified model. The dataset should match the format and schema
-            of the data used during initial model training.
-        predictor_path: Path (string) to a trained AutoGluon TabularPredictor
-            that includes the model specified by model_name. The predictor
-            should have been trained previously, potentially on a sampled
-            subset of the data.
-        model_artifact: Output Model artifact where the refitted predictor
-            will be saved. The artifact will contain a cleaned predictor with
-            only the original model and its refitted "_FULL" version. Metrics
-            are written under model_artifact.path / model_name_FULL / metrics.
-            The metadata will include the model_name with "_FULL" suffix.
-        sampling_config: Configuration dictionary for the data sampling.
-        split_config: Configuration dictionary for the data splitting.
-        model_config: Configuration dictionary for the model training.
-        pipeline_name: Name of the pipeline run.
-        run_id: ID of the pipeline run.
-        sample_row: A JSON-serialized string representing a sample row from the test set
-        to be inserted as an example in the output notebook.
+        model_name: The name of the model to refit. Must match a model name
+            in the predictor. The refitted model is saved with the suffix
+            "_FULL" appended to this name.
+        full_dataset: Dataset artifact (CSV) with the complete training data.
+            Used for evaluation and for writing metrics; the dataset format
+            should match the data used during initial training.
+        predictor_path: Path to a trained AutoGluon TabularPredictor that
+            includes the model specified by model_name.
+        sampling_config: Configuration dictionary for data sampling (stored
+            in artifact metadata).
+        split_config: Configuration dictionary for data splitting (stored
+            in artifact metadata).
+        model_config: Configuration dictionary for model training (stored
+            in artifact metadata).
+        pipeline_name: Name of the pipeline run. The last hyphen-separated
+            segment is stripped for use in the generated notebook.
+        run_id: ID of the pipeline run (used in the generated notebook).
+        sample_row: JSON string of a list of row objects (e.g.
+            '[{"feature1": 1, "target": 0}]'). Used as example input in the
+            generated notebook; the label column is removed from each row.
+        model_artifact: Output Model artifact. The refitted predictor is
+            saved under model_artifact.path / model_name_FULL / predictor;
+            metrics under model_artifact.path / model_name_FULL / metrics;
+            notebook under model_artifact.path / model_name_FULL / notebooks.
 
     Returns:
-        The refitted model is saved to the model_artifact output.
+        NamedTuple with field model_name: the refitted model name (model_name
+        with "_FULL" suffix). The refitted predictor and artifacts are also
+        written to model_artifact.
 
     Raises:
         FileNotFoundError: If the predictor path or full_dataset path
             cannot be found.
-        ValueError: If the predictor cannot be loaded, the model_name is not
-            found in the predictor, or the refitting process fails.
+        ValueError: If the predictor cannot be loaded, model_name is not
+            found in the predictor, refit fails, or problem_type is not
+            regression, binary, or multiclass.
         KeyError: If required model files are missing from the predictor.
 
     Example:
         from kfp import dsl
         from components.training.automl.autogluon_models_full_refit import (
-            autogluon_models_full_refit
+            autogluon_models_full_refit,
         )
 
         @dsl.pipeline(name="model-refit-pipeline")
-        def refit_pipeline(train_data, predictor_path):
-            "Refit the best model on full dataset."
+        def refit_pipeline(train_data, predictor_path, pipeline_name, run_id):
             refitted = autogluon_models_full_refit(
                 model_name="LightGBM_BAG_L1",
                 full_dataset=train_data,
                 predictor_path=predictor_path,
-                sampling_config=sampling_config,
-                split_config=split_config,
-                model_config=model_config,
+                sampling_config={},
+                split_config={},
+                model_config={},
+                pipeline_name=pipeline_name,
+                run_id=run_id,
+                sample_row='[{"feature1": 1, "target": 1.0}]',
+                model_artifact=dsl.Output(type="Model"),
             )
-            return refitted
+            return refitted.model_name
 
     """
     import json
@@ -113,7 +128,7 @@ def autogluon_models_full_refit(
 
     # save refitted model to output artifact
     model_name_full = model_name + "_FULL"
-    path = Path(model_artifact.path) / model_name_full
+    output_path = Path(model_artifact.path) / model_name_full
 
     # set the name of the model artifact and its metadata
     model_artifact.metadata["display_name"] = model_name_full
@@ -133,7 +148,7 @@ def autogluon_models_full_refit(
     }
 
     # clone the predictor to the output artifact path and delete unnecessary models
-    predictor_clone = predictor.clone(path=path, return_clone=True, dirs_exist_ok=True)
+    predictor_clone = predictor.clone(path=output_path / "predictor", return_clone=True, dirs_exist_ok=True)
     predictor_clone.delete_models(models_to_keep=[model_name])
 
     # by default, autogluon refit on traing + validation data
@@ -147,12 +162,12 @@ def autogluon_models_full_refit(
     feature_importance = predictor_clone.feature_importance(full_dataset_df)
 
     # save evaluation results to output artifact
-    os.makedirs(str(path / "metrics"), exist_ok=True)
-    with (path / "metrics" / "metrics.json").open("w") as f:
+    os.makedirs(str(output_path / "metrics"), exist_ok=True)
+    with (output_path / "metrics" / "metrics.json").open("w") as f:
         json.dump(eval_results, f)
 
     # save feature importance to output artifact
-    with (path / "metrics" / "feature_importance.json").open("w") as f:
+    with (output_path / "metrics" / "feature_importance.json").open("w") as f:
         json.dump(feature_importance.to_dict(), f)
 
     # generate confusion matrix for classification problem types
@@ -164,7 +179,7 @@ def autogluon_models_full_refit(
             prediction=full_dataset_df[predictor.label],
             output_format="pandas_dataframe",
         )
-        with (path / "metrics" / "confusion_matrix.json").open("w") as f:
+        with (output_path / "metrics" / "confusion_matrix.json").open("w") as f:
             json.dump(confusion_matrix_res.to_dict(), f)
 
     # Notebook generation
@@ -390,7 +405,7 @@ def autogluon_models_full_refit(
                 "source": [
                     "from autogluon.tabular import TabularPredictor\n",
                     "\n",
-                    "predictor = TabularPredictor.load(best_model_path)",
+                    'predictor = TabularPredictor.load(os.path.join(best_model_path, "predictor"))',
                 ],
             },
             {
@@ -710,7 +725,7 @@ def autogluon_models_full_refit(
                 "source": [
                     "from autogluon.tabular import TabularPredictor\n",
                     "\n",
-                    "predictor = TabularPredictor.load(best_model_path)",
+                    'predictor = TabularPredictor.load(os.path.join(best_model_path, "predictor"))',
                 ],
             },
             {
@@ -803,7 +818,7 @@ def autogluon_models_full_refit(
     pipeline_name = retrieve_pipeline_name(pipeline_name)
 
     RUN_ID_INDEX = 6
-    PIPELINE_NAME_INDEX = 10
+    PIPELINE_NAME_INDEX = 6
     MODEL_NAME_INDEX = 10
     notebook["cells"][RUN_ID_INDEX]["source"][1] = notebook["cells"][RUN_ID_INDEX]["source"][1].replace(
         "<RUN_ID>", run_id
@@ -826,12 +841,12 @@ def autogluon_models_full_refit(
     notebook["cells"][sample_row_idx]["source"][2] = notebook["cells"][sample_row_idx]["source"][2].replace(
         "<SAMPLE_ROW>", str(sample_row_formatted)
     )
-    path = Path(model_artifact.path)
-    path.mkdir(parents=True, exist_ok=True)
-    with (path / "automl_predictor_notebook.ipynb").open("w", encoding="utf-8") as f:
+    notebook_path = output_path / "notebooks"
+    notebook_path.mkdir(parents=True, exist_ok=True)
+    with (notebook_path / "automl_predictor_notebook.ipynb").open("w", encoding="utf-8") as f:
         json.dump(notebook, f)
 
-    model_artifact.metadata["context"]["location"]["notebook"] = "automl_predictor_notebook.ipynb"
+    model_artifact.metadata["context"]["location"]["notebook"] = "notebooks/automl_predictor_notebook.ipynb"
 
     return NamedTuple("outputs", model_name=str)(model_name=model_name_full)
 
