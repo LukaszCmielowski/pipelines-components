@@ -24,7 +24,7 @@ def automl_data_loader(
         bucket_name: Name of the S3 bucket containing the file.
         target_column: Name of the column containing labels/target values for stratified sampling.
         full_dataset: Output dataset artifact where the sampled data will be saved.
-        sampling_method: Type of sampling strategy. Options: "first_n_rows" (default) or "stratified".
+        sampling_method: Type of sampling strategy. Options: "first_n_rows" (default), "stratified", or "random".
 
     Returns:
         NamedTuple: Contains a sample configuration dictionary.
@@ -76,15 +76,17 @@ def automl_data_loader(
 
         Reads the file from S3 in streaming mode and processes it in chunks using pandas,
         accumulating data until reaching the maximum size limit (1GB by default).
-        Supports different sampling strategies: first_n_rows or stratified.
+        Supports different sampling strategies: first_n_rows, stratified, or random.
         For stratified sampling, sampling is performed incrementally during batch reading.
+        For random sampling, all batches are iterated; each batch is merged with accumulated data,
+        then randomly subsampled to fit within the size limit when total exceeds it.
 
         Args:
             s3_client: Boto3 S3 client instance.
             bucket_name: Name of the S3 bucket.
             file_key: Key/path of the file in S3.
             max_size_bytes: Maximum size of data to read in bytes (default: 1GB).
-            sampling_method: Type of sampling strategy ("first_n_rows" or "stratified").
+            sampling_method: Type of sampling strategy ("first_n_rows", "stratified", or "random").
             target_column: Name of the target column for stratified sampling (required if sampling_method="stratified").
 
         Returns:
@@ -180,6 +182,38 @@ def automl_data_loader(
                     raise ValueError(f"Error reading CSV from S3: {str(e)}")
                 # Return what we have so far
                 return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
+
+        elif sampling_method == "random":
+            # Iterate over all batches; merge each with accumulated data, then randomly subsample if over limit
+            subsampled_data = None
+
+            try:
+                for chunk_df in pd.read_csv(text_stream, chunksize=pandas_chunk_size):
+                    if subsampled_data is not None:
+                        data = pd.concat([subsampled_data, chunk_df], ignore_index=True)
+                    else:
+                        data = chunk_df
+
+                    combined_memory = data.memory_usage(deep=True).sum()
+
+                    if combined_memory <= max_size_bytes:
+                        subsampled_data = data
+                    else:
+                        sampling_frac = max_size_bytes / combined_memory
+                        subsampled_data = (
+                            data.sample(frac=min(sampling_frac, 1.0), random_state=42).reset_index(drop=True)
+                        )
+
+                if subsampled_data is None:
+                    result_df = pd.DataFrame()
+                else:
+                    result_df = subsampled_data
+                return result_df
+
+            except Exception as e:
+                if subsampled_data is None or subsampled_data.empty:
+                    raise ValueError(f"Error reading CSV from S3: {str(e)}")
+                return subsampled_data
 
         else:
             # For "first_n_rows" sampling, use the original approach
