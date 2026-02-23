@@ -171,9 +171,7 @@ def automl_data_loader(
                     subsampled_data = data
                 else:
                     sampling_frac = max_size_bytes / combined_memory
-                    subsampled_data = data.sample(
-                        frac=min(sampling_frac, 1.0), random_state=42
-                    ).reset_index(drop=True)
+                    subsampled_data = data.sample(frac=min(sampling_frac, 1.0), random_state=42).reset_index(drop=True)
 
             return subsampled_data if subsampled_data is not None else pd.DataFrame()
 
@@ -198,9 +196,7 @@ def automl_data_loader(
         text_stream = io.TextIOWrapper(response["Body"], encoding="utf-8")
 
         if sampling_method == "stratified":
-            return _sample_stratified(
-                text_stream, PANDAS_CHUNK_SIZE, max_size_bytes, target_column
-            )
+            return _sample_stratified(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes, target_column)
         if sampling_method == "random":
             return _sample_random(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
         return _sample_first_n_rows(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
