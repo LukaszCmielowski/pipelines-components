@@ -19,7 +19,7 @@ _AUTOGLUON_PANDAS_MODULES = {
 
 
 def _make_leaderboard_mock(top_model_names):
-    """Build a mock leaderboard so .head(n)[\"model\"].values.tolist() returns top_model_names."""
+    """Build a mock leaderboard so .head(n)['model'].values.tolist() returns top_model_names."""
     mock_head = mock.MagicMock()
     mock_head.__getitem__.return_value.values.tolist.return_value = top_model_names
     mock_leaderboard = mock.MagicMock()
