@@ -13,5 +13,5 @@ class TestAutomlDataLoaderLocalRunner:
         """Test component execution with LocalRunner."""
         # TODO: Implement local runner test with real S3 or mock.
         # Component signature: file_key, bucket_name, full_dataset,
-        # sampling_method ("first_n_rows" | "stratified"), target_column (required if stratified).
+        # sampling_method ("first_n_rows" | "stratified"), label_column (required if stratified).
         assert automl_data_loader is not None

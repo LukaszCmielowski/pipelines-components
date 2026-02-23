@@ -76,8 +76,8 @@ class TestAutomlDataLoaderUnitTests:
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
-    def test_component_stratified_sampling_with_target_column(self, mock_boto_client, tmp_path):
-        """Test component with sampling_method='stratified' and target_column."""
+    def test_component_stratified_sampling_with_label_column(self, mock_boto_client, tmp_path):
+        """Test component with sampling_method='stratified' and label_column."""
         pd = pytest.importorskip("pandas")
         # CSV with target column; multiple classes so stratified logic runs
         csv_content = "feature1,feature2,target\n1,2,A\n2,3,A\n3,4,A\n4,5,B\n5,6,B\n6,7,B\n7,8,C\n8,9,C\n9,10,C\n"
@@ -95,7 +95,7 @@ class TestAutomlDataLoaderUnitTests:
             bucket_name="my-bucket",
             full_dataset=full_dataset,
             sampling_method="stratified",
-            target_column="target",
+            label_column="target",
         )
 
         assert hasattr(result, "sample_config")
@@ -109,8 +109,8 @@ class TestAutomlDataLoaderUnitTests:
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
-    def test_component_stratified_requires_target_column(self, mock_boto_client, tmp_path):
-        """Test that sampling_method='stratified' without target_column raises ValueError."""
+    def test_component_stratified_requires_label_column(self, mock_boto_client, tmp_path):
+        """Test that sampling_method='stratified' without label_column raises ValueError."""
         pytest.importorskip("pandas")
         mock_s3 = mock.MagicMock()
         mock_boto_client.return_value = mock_s3
@@ -118,20 +118,20 @@ class TestAutomlDataLoaderUnitTests:
         full_dataset = mock.MagicMock()
         full_dataset.path = str(tmp_path / "out.csv")
 
-        with pytest.raises(ValueError, match="target_column must be provided when sampling_method='stratified'"):
+        with pytest.raises(ValueError, match="label_column must be provided when sampling_method='stratified'"):
             automl_data_loader.python_func(
                 file_key="data/file.csv",
                 bucket_name="bucket",
                 full_dataset=full_dataset,
                 sampling_method="stratified",
-                target_column=None,
+                label_column=None,
             )
 
         mock_s3.get_object.assert_not_called()
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
-    def test_component_stratified_target_column_not_in_dataset(self, mock_boto_client, tmp_path):
+    def test_component_stratified_label_column_not_in_dataset(self, mock_boto_client, tmp_path):
         """Test that stratified sampling with missing target column raises ValueError."""
         pytest.importorskip("pandas")
         csv_content = "a,b,c\n1,2,3\n4,5,6\n"
@@ -150,13 +150,13 @@ class TestAutomlDataLoaderUnitTests:
                 bucket_name="bucket",
                 full_dataset=full_dataset,
                 sampling_method="stratified",
-                target_column="label",
+                label_column="label",
             )
 
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
     def test_component_stratified_drops_na_in_target(self, mock_boto_client, tmp_path):
-        """Test that stratified sampling drops rows with NA in target_column."""
+        """Test that stratified sampling drops rows with NA in label_column."""
         pd = pytest.importorskip("pandas")
         csv_content = "f1,f2,target\n1,2,A\n2,3,\n3,4,B\n4,5,B\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
@@ -173,7 +173,7 @@ class TestAutomlDataLoaderUnitTests:
             bucket_name="bucket",
             full_dataset=full_dataset,
             sampling_method="stratified",
-            target_column="target",
+            label_column="target",
         )
 
         assert hasattr(result, "sample_config")

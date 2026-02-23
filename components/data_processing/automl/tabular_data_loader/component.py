@@ -11,7 +11,7 @@ def automl_data_loader(
     bucket_name: str,
     full_dataset: dsl.Output[dsl.Dataset],
     sampling_method: Optional[str] = None,
-    target_column: Optional[str] = None,
+    label_column: Optional[str] = None,
     task_type: str = "regression",
 ):
     """Automl Data Loader component.
@@ -23,7 +23,7 @@ def automl_data_loader(
     Args:
         file_key: Location of the CSV file in the S3 bucket.
         bucket_name: Name of the S3 bucket containing the file.
-        target_column: Name of the column containing labels/target values for stratified sampling.
+        label_column: Name of the column containing labels/target values for stratified sampling.
         full_dataset: Output dataset artifact where the sampled data will be saved.
         sampling_method: Type of sampling strategy. Options: "first_n_rows", "stratified", or "random".
             If None (default), derived from task_type: "stratified" for binary/multiclass, "random" for regression.
@@ -34,16 +34,22 @@ def automl_data_loader(
         NamedTuple: Contains a sample configuration dictionary.
     """
     import io
+    import logging
     import os
 
     import boto3
     import pandas as pd
+
+    logger = logging.getLogger(__name__)
 
     if sampling_method is None:
         if task_type in ("binary", "multiclass"):
             sampling_method = "stratified"
         else:
             sampling_method = "random"
+        logger.info("Sampling method derived from task_type=%s: using %s", task_type, sampling_method)
+    else:
+        logger.info("Performing sampling: method=%s", sampling_method)
 
     # 1GB limit in bytes
     MAX_SIZE_BYTES = 1024 * 1024 * 1024
@@ -105,26 +111,26 @@ def automl_data_loader(
 
         return pd.concat(chunk_list, ignore_index=True) if chunk_list else pd.DataFrame()
 
-    def _sample_stratified(text_stream, chunk_size, max_size_bytes, target_column):
+    def _sample_stratified(text_stream, chunk_size, max_size_bytes, label_column):
         """Merge batches and subsample proportionally by target column to stay under the size limit."""
         subsampled_data = None
 
         try:
             for chunk_df in pd.read_csv(text_stream, chunksize=chunk_size):
-                chunk_df = chunk_df.dropna(subset=[target_column])
+                chunk_df = chunk_df.dropna(subset=[label_column])
                 if chunk_df.empty:
                     continue
 
-                if target_column not in chunk_df.columns:
+                if label_column not in chunk_df.columns:
                     raise ValueError(
-                        f"Target column '{target_column}' not found in the dataset. "
+                        f"Target column '{label_column}' not found in the dataset. "
                         f"Available columns: {list(chunk_df.columns)}"
                     )
 
-                stats = chunk_df[target_column].value_counts()
+                stats = chunk_df[label_column].value_counts()
                 singleton_indexes = stats[stats == 1].index.values
                 for idx in singleton_indexes:
-                    chunk_df = chunk_df[chunk_df[target_column] != idx]
+                    chunk_df = chunk_df[chunk_df[label_column] != idx]
                 if chunk_df.empty:
                     continue
 
@@ -140,7 +146,7 @@ def automl_data_loader(
                 else:
                     sampling_frac = max_size_bytes / combined_memory
                     subsampled_data = (
-                        combined_data.groupby(target_column, group_keys=False)
+                        combined_data.groupby(label_column, group_keys=False)
                         .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=42))
                         .reset_index(drop=True)
                     )
@@ -186,17 +192,17 @@ def automl_data_loader(
         file_key,
         max_size_bytes,
         sampling_method,
-        target_column,
+        label_column,
     ):
         """Load CSV from S3 in batches and return a sampled dataframe using the chosen strategy."""
-        if sampling_method == "stratified" and target_column is None:
-            raise ValueError("target_column must be provided when sampling_method='stratified'")
+        if sampling_method == "stratified" and label_column is None:
+            raise ValueError("label_column must be provided when sampling_method='stratified'")
 
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
         text_stream = io.TextIOWrapper(response["Body"], encoding="utf-8")
 
         if sampling_method == "stratified":
-            return _sample_stratified(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes, target_column)
+            return _sample_stratified(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes, label_column)
         if sampling_method == "random":
             return _sample_random(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
         return _sample_first_n_rows(text_stream, PANDAS_CHUNK_SIZE, max_size_bytes)
@@ -208,13 +214,16 @@ def automl_data_loader(
         file_key,
         max_size_bytes=MAX_SIZE_BYTES,
         sampling_method=sampling_method,
-        target_column=target_column,
+        label_column=label_column,
     )
+
+    n_samples = len(sampled_dataframe)
+    logger.info("Read %d rows from s3://%s/%s (sampling_method=%s)", n_samples, bucket_name, file_key, sampling_method)
 
     # Save the sampled dataframe to the output artifact
     sampled_dataframe.to_csv(full_dataset.path, index=False)
 
-    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": len(sampled_dataframe)})
+    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": n_samples})
 
 
 if __name__ == "__main__":
