@@ -1,6 +1,7 @@
 """Tests for the autogluon_kubeflow_registry component."""
 
 import pytest
+
 from ..component import autogluon_kubeflow_registry
 
 
