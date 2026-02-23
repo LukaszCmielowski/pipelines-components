@@ -14,13 +14,13 @@ The component is designed for flexibility and can be used in multiple pipeline s
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| ----------- | ------ | --------- | ------------- |
 | `input_data` | `str` | `None` | The data to process. |
 
 ## Outputs 📤
 
 | Name | Type | Description |
-|------|------|-------------|
+| ------ | ------ | ------------- |
 | Output | `str` | The processed data. |
 
 ## Usage Examples 🧪

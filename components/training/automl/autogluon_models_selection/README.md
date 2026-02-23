@@ -32,7 +32,7 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 
 | Name | Type | Description |
 | ------ | ------ | ------------- |
-| Output | `NamedTuple('outputs', top_models=List[str], eval_metric=str, predictor_path=str)` | NamedTuple with top_models (list of top N model names), eval_metric (metric name, e.g. accuracy or r2), and predictor_path (path to the saved TabularPredictor for downstream use such as autogluon_models_full_refit). |
+| Output | `NamedTuple('outputs', top_models=List[str], eval_metric=str, predictor_path=str, model_config=dict)` | NamedTuple with top_models (list of top N model names), eval_metric (metric name, e.g. accuracy or r2), and predictor_path (path to the saved TabularPredictor for downstream use such as autogluon_models_full_refit). |
 
 ## Metadata 🗂️
 
