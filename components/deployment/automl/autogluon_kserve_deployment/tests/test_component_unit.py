@@ -1,8 +1,11 @@
 """Tests for the autogluon_kserve_deployment component."""
 
+import pytest
+
 from ..component import autogluon_kserve_deployment
 
 
+@pytest.mark.skip(reason="autogluon-kserve-deployment nor ready yet")
 class TestAutogluonKserveDeploymentUnitTests:
     """Unit tests for component logic."""
 

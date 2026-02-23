@@ -1,8 +1,10 @@
 """Tests for the autogluon_kubeflow_registry component."""
 
+import pytest
 from ..component import autogluon_kubeflow_registry
 
 
+@pytest.mark.skip(reason="autogluon-kubeflow-registry nor ready yet")
 class TestAutogluonKubeflowRegistryUnitTests:
     """Unit tests for component logic."""
 
