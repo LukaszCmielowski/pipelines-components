@@ -6,7 +6,8 @@
 
 Loads tabular (CSV) data from S3 for AutoML processing. The component reads data in chunks (up to 1GB in memory) and supports configurable sampling strategies.
 
-The Tabular Data Loader is typically the first step in the AutoML pipeline. It streams CSV data from an S3 bucket, optionally samples it using one of the supported strategies, and writes the result to an output dataset artifact. Authentication uses AWS-style credentials provided via environment variables (e.g. from a Kubernetes secret).
+The Tabular Data Loader is typically the first step in the AutoML pipeline. It streams CSV data from an S3 bucket, optionally samples it using one of the supported strategies, and writes the result to an output dataset artifact.
+Authentication uses AWS-style credentials provided via environment variables (e.g. from a Kubernetes secret).
 
 ## Inputs 📥
 

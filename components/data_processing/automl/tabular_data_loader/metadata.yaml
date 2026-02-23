@@ -10,7 +10,7 @@ dependencies:
   #     version: ">=1.0.0"
 tags:
   - data-processing
-  - automl 
+  - automl
   # Add more relevant tags here
 lastVerified: 2026-02-23T14:30:00Z
 # links:  # Add relevant links
