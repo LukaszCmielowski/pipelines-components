@@ -61,8 +61,6 @@ packages = [
     "kfp_components.components.data_processing.yoda",
     "kfp_components.components.data_processing.yoda.yoda_data_processor",
     "kfp_components.components.deployment",
-    "kfp_components.components.deployment.automl",
-    "kfp_components.components.deployment.automl.notebook_generation",
     "kfp_components.pipelines",
     "kfp_components.pipelines.training",
     "kfp_components.pipelines.evaluation",
