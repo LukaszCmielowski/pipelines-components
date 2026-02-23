@@ -19,7 +19,7 @@ class TestAutomlDataLoaderUnitTests:
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
     def test_component_with_default_parameters_first_n_rows(self, mock_boto_client, tmp_path):
-        """Test component with default sampling_type (first_n_rows) and no target_column."""
+        """Test component with default sampling_method (first_n_rows) and no target_column."""
         pd = pytest.importorskip("pandas")
         # CSV content: small dataset
         csv_content = "a,b,c\n1,2,3\n4,5,6\n7,8,9\n"
@@ -50,7 +50,7 @@ class TestAutomlDataLoaderUnitTests:
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
     def test_component_explicit_first_n_rows(self, mock_boto_client, tmp_path):
-        """Test component with explicit sampling_type='first_n_rows'."""
+        """Test component with explicit sampling_method='first_n_rows'."""
         pd = pytest.importorskip("pandas")
         csv_content = "x,y,z\n10,20,30\n40,50,60\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
@@ -66,7 +66,7 @@ class TestAutomlDataLoaderUnitTests:
             file_key="s3/path/data.csv",
             bucket_name="bucket",
             full_dataset=full_dataset,
-            sampling_type="first_n_rows",
+            sampling_method="first_n_rows",
         )
 
         assert isinstance(result, pd.DataFrame)
@@ -76,7 +76,7 @@ class TestAutomlDataLoaderUnitTests:
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
     def test_component_stratified_sampling_with_target_column(self, mock_boto_client, tmp_path):
-        """Test component with sampling_type='stratified' and target_column."""
+        """Test component with sampling_method='stratified' and target_column."""
         pd = pytest.importorskip("pandas")
         # CSV with target column; multiple classes so stratified logic runs
         csv_content = "feature1,feature2,target\n1,2,A\n2,3,A\n3,4,A\n4,5,B\n5,6,B\n6,7,B\n7,8,C\n8,9,C\n9,10,C\n"
@@ -93,7 +93,7 @@ class TestAutomlDataLoaderUnitTests:
             file_key="data/train.csv",
             bucket_name="my-bucket",
             full_dataset=full_dataset,
-            sampling_type="stratified",
+            sampling_method="stratified",
             target_column="target",
         )
 
@@ -107,7 +107,7 @@ class TestAutomlDataLoaderUnitTests:
     @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
     @mock.patch("boto3.client")
     def test_component_stratified_requires_target_column(self, mock_boto_client, tmp_path):
-        """Test that sampling_type='stratified' without target_column raises ValueError."""
+        """Test that sampling_method='stratified' without target_column raises ValueError."""
         pytest.importorskip("pandas")
         mock_s3 = mock.MagicMock()
         mock_boto_client.return_value = mock_s3
@@ -115,12 +115,12 @@ class TestAutomlDataLoaderUnitTests:
         full_dataset = mock.MagicMock()
         full_dataset.path = str(tmp_path / "out.csv")
 
-        with pytest.raises(ValueError, match="target_column must be provided when sampling_type='stratified'"):
+        with pytest.raises(ValueError, match="target_column must be provided when sampling_method='stratified'"):
             automl_data_loader.python_func(
                 file_key="data/file.csv",
                 bucket_name="bucket",
                 full_dataset=full_dataset,
-                sampling_type="stratified",
+                sampling_method="stratified",
                 target_column=None,
             )
 
@@ -146,7 +146,7 @@ class TestAutomlDataLoaderUnitTests:
                 file_key="data/file.csv",
                 bucket_name="bucket",
                 full_dataset=full_dataset,
-                sampling_type="stratified",
+                sampling_method="stratified",
                 target_column="label",
             )
 
@@ -169,7 +169,7 @@ class TestAutomlDataLoaderUnitTests:
             file_key="data/file.csv",
             bucket_name="bucket",
             full_dataset=full_dataset,
-            sampling_type="stratified",
+            sampling_method="stratified",
             target_column="target",
         )
 

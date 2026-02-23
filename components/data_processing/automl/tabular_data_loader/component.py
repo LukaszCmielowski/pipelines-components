@@ -10,7 +10,7 @@ def automl_data_loader(
     file_key: str,
     bucket_name: str,
     full_dataset: dsl.Output[dsl.Dataset],
-    sampling_type: str = "first_n_rows",
+    sampling_method: str = "first_n_rows",
     target_column: Optional[str] = None,
 ):
     """Automl Data Loader component.
@@ -24,7 +24,7 @@ def automl_data_loader(
         bucket_name: Name of the S3 bucket containing the file.
         target_column: Name of the column containing labels/target values for stratified sampling.
         full_dataset: Output dataset artifact where the sampled data will be saved.
-        sampling_type: Type of sampling strategy. Options: "first_n_rows" (default) or "stratified".
+        sampling_method: Type of sampling strategy. Options: "first_n_rows" (default) or "stratified".
 
     Returns:
         NamedTuple: Contains a sample configuration dictionary.
@@ -69,7 +69,7 @@ def automl_data_loader(
         bucket_name,
         file_key,
         max_size_bytes=MAX_SIZE_BYTES,
-        sampling_type="first_n_rows",
+        sampling_method="first_n_rows",
         target_column=None,
     ):
         """Load CSV data from S3 in batches, sampling up to max_size_bytes.
@@ -84,16 +84,16 @@ def automl_data_loader(
             bucket_name: Name of the S3 bucket.
             file_key: Key/path of the file in S3.
             max_size_bytes: Maximum size of data to read in bytes (default: 1GB).
-            sampling_type: Type of sampling strategy ("first_n_rows" or "stratified").
-            target_column: Name of the target column for stratified sampling (required if sampling_type="stratified").
+            sampling_method: Type of sampling strategy ("first_n_rows" or "stratified").
+            target_column: Name of the target column for stratified sampling (required if sampling_method="stratified").
 
         Returns:
             pandas.DataFrame: Sampled dataframe containing up to max_size_bytes of data.
         """
         # Validate stratified sampling parameters
-        if sampling_type == "stratified":
+        if sampling_method == "stratified":
             if target_column is None:
-                raise ValueError("target_column must be provided when sampling_type='stratified'")
+                raise ValueError("target_column must be provided when sampling_method='stratified'")
 
         # Get the S3 object for streaming
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
@@ -106,7 +106,7 @@ def automl_data_loader(
         # Initialize variables for batch reading
         pandas_chunk_size = 10000  # Read 10k rows at a time
 
-        if sampling_type == "stratified":
+        if sampling_method == "stratified":
             # For stratified sampling, maintain subsampled data incrementally
             subsampled_data = None
             accumulated_size = 0
@@ -227,15 +227,14 @@ def automl_data_loader(
         s3_client,
         bucket_name,
         file_key,
-        sampling_type=sampling_type,
+        sampling_method=sampling_method,
         target_column=target_column,
     )
 
     # Save the sampled dataframe to the output artifact
     sampled_dataframe.to_csv(full_dataset.path, index=False)
 
-    sampled_dataset.to_csv(full_dataset.path, index=False)
-    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": DEFAULT_N_SAMPLES})
+    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": len(sampled_dataframe)})
 
 
 if __name__ == "__main__":
