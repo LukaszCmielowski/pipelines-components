@@ -79,12 +79,12 @@ For time-series tasks:
 
 ```python
 from kfp import dsl
-from kfp_components.components.training.automl.data_processing.train_test_split import train_test_split
+from kfp_components.components.training.automl.data_processing.tabular_train_test_split import tabular_train_test_split
 
 @dsl.pipeline(name="train-test-split-classification-pipeline")
 def my_pipeline(tabular_data):
     """Example pipeline for classification task."""
-    split_task = train_test_split(
+    split_task = tabular_train_test_split(
         tabular_data=tabular_data,
         task_type="classification",
         label_column="target",
@@ -107,7 +107,7 @@ def my_pipeline(tabular_data):
 @dsl.pipeline(name="train-test-split-regression-pipeline")
 def my_pipeline(tabular_data):
     """Example pipeline for regression task."""
-    split_task = train_test_split(
+    split_task = tabular_train_test_split(
         tabular_data=tabular_data,
         task_type="regression",
         label_column="price",
@@ -129,7 +129,7 @@ def my_pipeline(tabular_data):
 @dsl.pipeline(name="train-test-split-timeseries-pipeline")
 def my_pipeline(tabular_data):
     """Example pipeline for time-series task."""
-    split_task = train_test_split(
+    split_task = tabular_train_test_split(
         tabular_data=tabular_data,
         task_type="time_series",
         label_column="value",

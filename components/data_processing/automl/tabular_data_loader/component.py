@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
 )
 def automl_data_loader(
     file_key: str,
@@ -27,9 +27,7 @@ def automl_data_loader(
         sampling_type: Type of sampling strategy. Options: "first_n_rows" (default) or "stratified".
 
     Returns:
-        pandas.DataFrame: A sampled pandas DataFrame containing up to 1GB of data.
-                         For "first_n_rows": returns first N rows up to 1GB limit.
-                         For "stratified": returns stratified sample preserving target column distribution.
+        NamedTuple: Contains a sample configuration dictionary.
     """
     import io
     import os
@@ -236,7 +234,8 @@ def automl_data_loader(
     # Save the sampled dataframe to the output artifact
     sampled_dataframe.to_csv(full_dataset.path, index=False)
 
-    return sampled_dataframe
+    sampled_dataset.to_csv(full_dataset.path, index=False)
+    return NamedTuple("outputs", sample_config=dict)(sample_config={"n_samples": DEFAULT_N_SAMPLES})
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ class TestLeaderboardEvaluationUnitTests:
 
             mock_model = mock.MagicMock()
             mock_model.path = model_dir
-            mock_model.metadata = {"model_name": "Model1"}
+            mock_model.metadata = {"display_name": "Model1"}
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name
@@ -92,7 +92,7 @@ class TestLeaderboardEvaluationUnitTests:
             for i, path in enumerate(model_dirs):
                 m = mock.MagicMock()
                 m.path = path
-                m.metadata = {"model_name": f"Model{i + 1}"}
+                m.metadata = {"display_name": f"Model{i + 1}"}
                 mock_models.append(m)
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
@@ -145,7 +145,7 @@ class TestLeaderboardEvaluationUnitTests:
             for i, path in enumerate(model_dirs):
                 m = mock.MagicMock()
                 m.path = path
-                m.metadata = {"model_name": f"Model{i + 1}"}
+                m.metadata = {"display_name": f"Model{i + 1}"}
                 mock_models.append(m)
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
@@ -184,7 +184,7 @@ class TestLeaderboardEvaluationUnitTests:
 
             mock_model = mock.MagicMock()
             mock_model.path = model_dir
-            mock_model.metadata = {"model_name": "Model1"}
+            mock_model.metadata = {"display_name": "Model1"}
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as tmp_file:
                 tmp_path = tmp_file.name

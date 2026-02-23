@@ -73,9 +73,11 @@ class TestModelsSelectionUnitTests:
         # Verify fit was called with correct parameters
         mock_predictor.fit.assert_called_once_with(
             train_data=mock_train_df,
-            num_stack_levels=3,
+            num_stack_levels=1,
             num_bag_folds=2,
             use_bag_holdout=True,
+            time_limit=3600,
+            presets="medium_quality",
         )
 
         # Verify leaderboard was called with test data

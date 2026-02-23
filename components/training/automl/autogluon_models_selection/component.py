@@ -4,7 +4,7 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
     packages_to_install=[
         "autogluon.tabular==1.5.0",
         "catboost==1.2.8",
@@ -21,7 +21,7 @@ def models_selection(
     train_data: dsl.Input[dsl.Dataset],
     test_data: dsl.Input[dsl.Dataset],
     workspace_path: str,
-) -> NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str):
+) -> NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str, model_config=dict):
     """Build multiple AutoGluon models and select top performers.
 
     This component trains multiple machine learning models using AutoGluon's
@@ -72,6 +72,8 @@ def models_selection(
             - predictor_path (str): The path to the saved TabularPredictor
               (workspace_path / autogluon_predictor), for use by downstream
               components such as autogluon_models_full_refit.
+            - model_config (dict): The configuration dictionary for the model.
+              It includes the preset used for the model training, the evaluation metric used, and the time limit for the model training.
 
     Raises:
         FileNotFoundError: If the train_data or test_data
@@ -99,12 +101,17 @@ def models_selection(
             )
             # result.top_models, result.eval_metric, result.predictor_path
             return result
-    """
+    """  # noqa: E501
     from pathlib import Path
 
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
+    # Set constants
+    DEFAULT_PRESET = "medium_quality"
+    DEFAULT_TIME_LIMIT = 60 * 60  # 60 * 60 = 3600 seconds = 1 hour
+
+    # Read the data
     train_data_df = pd.read_csv(train_data.path)
     test_data_df = pd.read_csv(test_data.path)
 
@@ -122,13 +129,20 @@ def models_selection(
         num_stack_levels=1,  # TODO: discuss optimal value
         num_bag_folds=2,
         use_bag_holdout=True,
+        time_limit=DEFAULT_TIME_LIMIT,
+        presets=DEFAULT_PRESET,
     )
 
     leaderboard = predictor.leaderboard(test_data_df)
     top_n_models = leaderboard.head(top_n)["model"].values.tolist()
 
-    outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str)
-    return outputs(top_models=top_n_models, eval_metric=str(predictor.eval_metric), predictor_path=str(predictor_path))
+    outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str, model_config=dict)
+    return outputs(
+        top_models=top_n_models,
+        eval_metric=str(predictor.eval_metric),
+        predictor_path=str(predictor_path),
+        model_config={"preset": DEFAULT_PRESET, "eval_metric": eval_metric, "time_limit": DEFAULT_TIME_LIMIT},
+    )
 
 
 if __name__ == "__main__":

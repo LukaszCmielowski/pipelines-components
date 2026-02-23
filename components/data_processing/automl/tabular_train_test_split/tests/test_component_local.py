@@ -1,6 +1,6 @@
-"""Local runner tests for the train_test_split component."""
+"""Local runner tests for the tabular_train_test_split component."""
 
-from ..component import train_test_split
+from ..component import tabular_train_test_split
 
 
 class TestTrainTestSplitLocalRunner:
@@ -11,7 +11,7 @@ class TestTrainTestSplitLocalRunner:
         # TODO: Implement local runner tests for your component
 
         # Example test structure:
-        result = train_test_split(input_param="test_value")
+        result = tabular_train_test_split(input_param="test_value")
 
         # Add assertions about expected outputs if needed
         assert result is not None
