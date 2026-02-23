@@ -13,7 +13,7 @@ def automl_data_loader(
     sampling_method: Optional[str] = None,
     label_column: Optional[str] = None,
     task_type: str = "regression",
-):
+) -> NamedTuple("outputs", sample_config=dict):
     """Automl Data Loader component.
 
     Loads tabular (CSV) data from S3 in batches, sampling up to 1GB of data.
