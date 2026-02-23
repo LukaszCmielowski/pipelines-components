@@ -148,7 +148,7 @@ def autogluon_tabular_training_pipeline(
             top_n=3,
         )
     """
-    tabular_loader_task = automl_data_loader(bucket_name=train_data_bucket_name, file_key=train_data_file_key)
+    tabular_loader_task = automl_data_loader(bucket_name=train_data_bucket_name, file_key=train_data_file_key, label_column=label_column, task_type=task_type)
 
     use_secret_as_env(
         tabular_loader_task,
