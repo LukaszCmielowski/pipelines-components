@@ -11,7 +11,7 @@ dependencies:
 tags:
   - data-processing
   # Add more relevant tags here
-lastVerified: 2026-01-22T10:26:27Z
+lastVerified: 2026-02-23T14:26:27Z
 # links:  # Add relevant links
 #   documentation: https://your-docs-url.com
 #   issue_tracker: https://github.com/kubeflow/pipelines-components/issues
