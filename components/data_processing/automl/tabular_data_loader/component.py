@@ -42,6 +42,10 @@ def automl_data_loader(
 
     logger = logging.getLogger(__name__)
 
+    MAX_SIZE_BYTES = 1024 * 1024 * 1024  # 1GB limit in bytes
+    PANDAS_CHUNK_SIZE = 10000  # Rows per batch for streaming read
+    DEFAULT_RANDOM_STATE = 42
+
     if sampling_method is None:
         if task_type in ("binary", "multiclass"):
             sampling_method = "stratified"
@@ -50,9 +54,6 @@ def automl_data_loader(
         logger.info("Sampling method derived from task_type=%s: using %s", task_type, sampling_method)
     else:
         logger.info("Performing sampling: method=%s", sampling_method)
-
-    # 1GB limit in bytes
-    MAX_SIZE_BYTES = 1024 * 1024 * 1024
 
     def get_s3_client():
         """Create and return an S3 client using credentials from environment variables."""
@@ -79,8 +80,6 @@ def automl_data_loader(
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
-
-    PANDAS_CHUNK_SIZE = 10000  # Rows per batch for streaming read
 
     def _sample_first_n_rows(text_stream, chunk_size, max_size_bytes):
         """Take rows from the start of the stream until the size limit is reached."""
@@ -147,18 +146,18 @@ def automl_data_loader(
                     sampling_frac = max_size_bytes / combined_memory
                     subsampled_data = (
                         combined_data.groupby(label_column, group_keys=False)
-                        .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=42))
+                        .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=DEFAULT_RANDOM_STATE))
                         .reset_index(drop=True)
                     )
 
             if subsampled_data is None:
                 return pd.DataFrame()
-            return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
+            return subsampled_data.sample(frac=1, random_state=DEFAULT_RANDOM_STATE).reset_index(drop=True)
 
         except Exception as e:
             if subsampled_data is None or subsampled_data.empty:
                 raise ValueError(f"Error reading CSV from S3: {str(e)}")
-            return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
+            return subsampled_data.sample(frac=1, random_state=DEFAULT_RANDOM_STATE).reset_index(drop=True)
 
     def _sample_random(text_stream, chunk_size, max_size_bytes):
         """Iterate all batches, merge with accumulated data, randomly subsample when over the limit."""
@@ -177,7 +176,9 @@ def automl_data_loader(
                     subsampled_data = data
                 else:
                     sampling_frac = max_size_bytes / combined_memory
-                    subsampled_data = data.sample(frac=min(sampling_frac, 1.0), random_state=42).reset_index(drop=True)
+                    subsampled_data = data.sample(
+                        frac=min(sampling_frac, 1.0), random_state=DEFAULT_RANDOM_STATE
+                    ).reset_index(drop=True)
 
             return subsampled_data if subsampled_data is not None else pd.DataFrame()
 
