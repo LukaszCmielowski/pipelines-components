@@ -79,10 +79,7 @@ class TestAutomlDataLoaderUnitTests:
         """Test component with sampling_type='stratified' and target_column."""
         pd = pytest.importorskip("pandas")
         # CSV with target column; multiple classes so stratified logic runs
-        csv_content = (
-            "feature1,feature2,target\n"
-            "1,2,A\n2,3,A\n3,4,A\n4,5,B\n5,6,B\n6,7,B\n7,8,C\n8,9,C\n9,10,C\n"
-        )
+        csv_content = "feature1,feature2,target\n1,2,A\n2,3,A\n3,4,A\n4,5,B\n5,6,B\n6,7,B\n7,8,C\n8,9,C\n9,10,C\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
 
         mock_s3 = mock.MagicMock()
@@ -158,10 +155,7 @@ class TestAutomlDataLoaderUnitTests:
     def test_component_stratified_drops_na_in_target(self, mock_boto_client, tmp_path):
         """Test that stratified sampling drops rows with NA in target_column."""
         pd = pytest.importorskip("pandas")
-        csv_content = (
-            "f1,f2,target\n"
-            "1,2,A\n2,3,\n3,4,B\n4,5,B\n"
-        )
+        csv_content = "f1,f2,target\n1,2,A\n2,3,\n3,4,B\n4,5,B\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
 
         mock_s3 = mock.MagicMock()

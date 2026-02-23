@@ -95,9 +95,7 @@ def automl_data_loader(
         # Validate stratified sampling parameters
         if sampling_type == "stratified":
             if target_column is None:
-                raise ValueError(
-                    "target_column must be provided when sampling_type='stratified'"
-                )
+                raise ValueError("target_column must be provided when sampling_type='stratified'")
 
         # Get the S3 object for streaming
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
@@ -142,9 +140,7 @@ def automl_data_loader(
 
                     # Join previous subsampled batch with new one
                     if subsampled_data is not None:
-                        combined_data = pd.concat(
-                            [subsampled_data, chunk_df], ignore_index=True
-                        )
+                        combined_data = pd.concat([subsampled_data, chunk_df], ignore_index=True)
                     else:
                         combined_data = chunk_df
 
@@ -164,11 +160,7 @@ def automl_data_loader(
                         # This preserves the class distribution while reducing size
                         subsampled_data = (
                             combined_data.groupby(target_column, group_keys=False)
-                            .apply(
-                                lambda x: x.sample(
-                                    frac=min(sampling_frac, 1.0), random_state=42
-                                )
-                            )
+                            .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=42))
                             .reset_index(drop=True)
                         )
 
@@ -182,18 +174,14 @@ def automl_data_loader(
                     return pd.DataFrame()
 
                 # Shuffle to mix classes
-                result_df = subsampled_data.sample(frac=1, random_state=42).reset_index(
-                    drop=True
-                )
+                result_df = subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
                 return result_df
 
             except Exception as e:
                 if subsampled_data is None or subsampled_data.empty:
                     raise ValueError(f"Error reading CSV from S3: {str(e)}")
                 # Return what we have so far
-                return subsampled_data.sample(frac=1, random_state=42).reset_index(
-                    drop=True
-                )
+                return subsampled_data.sample(frac=1, random_state=42).reset_index(drop=True)
 
         else:
             # For "first_n_rows" sampling, use the original approach
@@ -209,9 +197,7 @@ def automl_data_loader(
                         # Take only a portion of this chunk to stay within limit
                         remaining_bytes = max_size_bytes - accumulated_size
                         # Estimate rows to take based on average memory per row
-                        bytes_per_row = (
-                            chunk_memory / len(chunk_df) if len(chunk_df) > 0 else 0
-                        )
+                        bytes_per_row = chunk_memory / len(chunk_df) if len(chunk_df) > 0 else 0
                         if bytes_per_row > 0:
                             rows_to_take = max(1, int(remaining_bytes / bytes_per_row))
                             chunk_df = chunk_df.head(rows_to_take)
