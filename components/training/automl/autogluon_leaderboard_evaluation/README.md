@@ -6,13 +6,9 @@
 
 Evaluate multiple AutoGluon models and generate a leaderboard.
 
-This component aggregates evaluation results from a list of Model artifacts and generates an HTML-formatted leaderboard
-ranking the models by their performance metrics. Each model artifact is expected to contain pre-computed metrics at
-`model.path / model.metadata["display_name"] / metrics / metrics.json` (e.g. as produced by the autogluon_models_full_refit
-component). The component reads these metrics and compiles them into a sorted leaderboard table.
-
-The leaderboard is sorted by the specified evaluation metric in descending order, making it easy to identify the
-best-performing models. The output is written as HTML that can be used for reporting and model selection decisions.
+This component aggregates evaluation results from a list of Model artifacts (reading pre-computed metrics from JSON) and
+generates an HTML-formatted leaderboard ranking the models by their performance metrics. Each model artifact is expected
+to contain metrics at model.path / model.metadata["display_name"] / metrics / metrics.json.
 
 ## Inputs 📥
 

@@ -57,12 +57,16 @@ def autogluon_models_full_refit(
         model_name: The name of the model to refit. Should match a model name in the predictor. The refitted model will be saved with the suffix "_FULL" appended to this name.
         full_dataset: A Dataset artifact containing the complete training dataset in CSV format. Used to retrain the specified model. The dataset should match the format and schema of the data used during initial model training.
         predictor_path: Path (string) to a trained AutoGluon TabularPredictor that includes the model specified by model_name. The predictor should have been trained previously, potentially on a sampled subset of the data.
+        sampling_config: Configuration dictionary for data sampling (stored in artifact metadata).
+        split_config: Configuration dictionary for data splitting (stored in artifact metadata).
+        model_config: Configuration dictionary for model training (stored in artifact metadata).
+        pipeline_name: Name of the pipeline run. The last hyphen-separated segment is stripped for use in the generated notebook.
+        run_id: ID of the pipeline run (used in the generated notebook).
+        sample_row: JSON string of a list of row objects (e.g. '[{"feature1": 1, "target": 0}]'). Used as example input in the generated notebook; the label column is removed from each row.
         model_artifact: Output Model artifact where the refitted predictor will be saved. The artifact will contain a cleaned predictor with only the original model and its refitted "_FULL" version. Metrics are written under model_artifact.path / model_name_FULL / metrics. The metadata will include the model_name with "_FULL" suffix.
 
     Returns:
-        NamedTuple with field model_name: the refitted model name (model_name
-        with "_FULL" suffix). The refitted predictor and artifacts are also
-        written to model_artifact.
+        NamedTuple with field model_name: the refitted model name (model_name with "_FULL" suffix). The refitted predictor and artifacts are also written to model_artifact.
 
     Raises:
         FileNotFoundError: If the predictor path or full_dataset path

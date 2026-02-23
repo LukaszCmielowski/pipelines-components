@@ -4,15 +4,21 @@
 
 ## Overview 🧾
 
-Loads a tabular CSV dataset from an S3-compatible bucket using AWS credentials.
+Downloads a dataset from S3, samples 50% of the rows, and saves the sample to the output artifact.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
 | ----------- | ------ | --------- | ------------- |
-| `file_key` | `str` | `None` | Path to the CSV file in the S3 bucket. |
-| `bucket_name` | `str` | `None` | Name of the S3 bucket. |
-| `full_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output artifact for the downloaded dataset. |
+| `file_key` | `str` | `None` | The S3 object key (path) for the dataset file. |
+| `bucket_name` | `str` | `None` | The S3 bucket containing the dataset file. |
+| `full_dataset` | `dsl.Output[dsl.Dataset]` | `None` | Output artifact where the sampled dataset (CSV) will be written. |
+
+## Outputs 📤
+
+| Name | Type | Description |
+| ------ | ------ | ------------- |
+| Output | `NamedTuple('outputs', sample_config=dict)` | Contains a sample configuration dictionary. |
 
 ## Metadata 🗂️
 
