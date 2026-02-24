@@ -45,7 +45,8 @@ def compile_and_get_yaml(func: Any, output_path: str) -> dict[str, Any]:
         output_path: Path to write the compiled YAML.
 
     Returns:
-        Parsed YAML dict.
+        Parsed YAML dict. If the compiler writes multiple YAML documents (---),
+        only the first document is returned so base-image extraction works.
 
     Raises:
         Exception: If compilation fails.
@@ -54,7 +55,10 @@ def compile_and_get_yaml(func: Any, output_path: str) -> dict[str, Any]:
     compiler_class = getattr(compiler_mod, "Compiler")
     compiler_class().compile(func, output_path)
     with open(output_path) as f:
-        return yaml.safe_load(f)
+        docs = list(yaml.safe_load_all(f))
+    if not docs:
+        return {}
+    return docs[0] if isinstance(docs[0], dict) else {}
 
 
 def find_decorated_functions_runtime(module: Any, decorator_type: str) -> list[tuple[str, Any]]:

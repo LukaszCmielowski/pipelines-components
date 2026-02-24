@@ -6,12 +6,12 @@ from kfp import dsl
 @dsl.component(
     base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
 )
-def tabular_train_test_split(  # noqa: D417
+def tabular_train_test_split(
     dataset: dsl.Input[dsl.Dataset],
     sampled_train_dataset: dsl.Output[dsl.Dataset],
     sampled_test_dataset: dsl.Output[dsl.Dataset],
     test_size: float = 0.3,
-) -> NamedTuple("outputs", sample_row=str, split_config=dict):
+) -> NamedTuple("outputs", sample_row=str, split_config=dict):  # noqa: D417, E501
     """Splits a tabular dataset into train and test sets and writes them to output artifacts.
 
     Args:

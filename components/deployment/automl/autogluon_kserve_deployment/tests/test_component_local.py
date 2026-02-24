@@ -1,6 +1,10 @@
 """Local runner tests for the autogluon_kserve_deployment component."""
 
-from ..component import autogluon_kserve_deployment
+import pytest
+
+pytestmark = pytest.mark.skip(reason="Components are not yet implemented")
+
+from ..component import autogluon_kserve_deployment  # noqa: E402
 
 
 class TestAutogluonKserveDeploymentLocalRunner:

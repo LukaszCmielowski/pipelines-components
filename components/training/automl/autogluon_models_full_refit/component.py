@@ -25,7 +25,7 @@ def autogluon_models_full_refit(
     run_id: str,
     sample_row: str,
     model_artifact: dsl.Output[dsl.Model],
-) -> NamedTuple("outputs", model_name=str):
+) -> NamedTuple("outputs", model_name=str):  # noqa: E501
     """Refit a specific AutoGluon model on the full training dataset.
 
     This component takes a trained AutoGluon TabularPredictor, loaded from
@@ -54,42 +54,23 @@ def autogluon_models_full_refit(
     candidates are refitted on the full dataset for optimal performance.
 
     Args:
-        model_name: The name of the model to refit. Must match a model name
-            in the predictor. The refitted model is saved with the suffix
-            "_FULL" appended to this name.
-        full_dataset: Dataset artifact (CSV) with the complete training data.
-            Used for evaluation and for writing metrics; the dataset format
-            should match the data used during initial training.
-        predictor_path: Path to a trained AutoGluon TabularPredictor that
-            includes the model specified by model_name.
-        sampling_config: Configuration dictionary for data sampling (stored
-            in artifact metadata).
-        split_config: Configuration dictionary for data splitting (stored
-            in artifact metadata).
-        model_config: Configuration dictionary for model training (stored
-            in artifact metadata).
-        pipeline_name: Name of the pipeline run. The last hyphen-separated
-            segment is stripped for use in the generated notebook.
+        model_name: Name of the model to refit (must match a model in the predictor); refitted model is saved with "_FULL" suffix.
+        full_dataset: Dataset artifact (CSV) with complete training data for evaluation and metrics; format should match initial training data.
+        predictor_path: Path to a trained AutoGluon TabularPredictor that includes the model specified by model_name.
+        sampling_config: Configuration dictionary for data sampling (stored in artifact metadata).
+        split_config: Configuration dictionary for data splitting (stored in artifact metadata).
+        model_config: Configuration dictionary for model training (stored in artifact metadata).
+        pipeline_name: Name of the pipeline run; last hyphen-separated segment is stripped for use in the generated notebook.
         run_id: ID of the pipeline run (used in the generated notebook).
-        sample_row: JSON string of a list of row objects (e.g.
-            '[{"feature1": 1, "target": 0}]'). Used as example input in the
-            generated notebook; the label column is removed from each row.
-        model_artifact: Output Model artifact. The refitted predictor is
-            saved under model_artifact.path / model_name_FULL / predictor;
-            metrics under model_artifact.path / model_name_FULL / metrics;
-            notebook under model_artifact.path / model_name_FULL / notebooks.
+        sample_row: JSON string of a list of row objects (e.g. '[{"feature1": 1, "target": 0}]'); used as example input in the notebook; label column removed.
+        model_artifact: Output Model artifact; refitted predictor under model_artifact.path / model_name_FULL / predictor; metrics and notebook under same base path.
 
     Returns:
-        NamedTuple with field model_name: the refitted model name (model_name
-        with "_FULL" suffix). The refitted predictor and artifacts are also
-        written to model_artifact.
+        NamedTuple with model_name: refitted model name (model_name with "_FULL" suffix); predictor and artifacts written to model_artifact.
 
     Raises:
-        FileNotFoundError: If the predictor path or full_dataset path
-            cannot be found.
-        ValueError: If the predictor cannot be loaded, model_name is not
-            found in the predictor, refit fails, or problem_type is not
-            regression, binary, or multiclass.
+        FileNotFoundError: If the predictor path or full_dataset path cannot be found.
+        ValueError: If predictor cannot be loaded, model_name not in predictor, refit fails, or problem_type not regression/binary/multiclass.
         KeyError: If required model files are missing from the predictor.
 
     Example:
@@ -114,7 +95,7 @@ def autogluon_models_full_refit(
             )
             return refitted.model_name
 
-    """
+    """  # noqa: E501
     import json
     import os
     from pathlib import Path

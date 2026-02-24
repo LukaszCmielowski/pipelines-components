@@ -2,13 +2,30 @@
 
 import json
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
-from ..component import autogluon_models_full_refit
+# Inject mock modules so @mock.patch("pandas...") and @mock.patch("autogluon...") resolve without importing real packages  # noqa: E501
+if "pandas" not in sys.modules:
+    sys.modules["pandas"] = mock.MagicMock()
+if "autogluon" not in sys.modules:
+    ag = mock.MagicMock()
+    ag.__path__ = []
+    ag.__spec__ = None
+    sys.modules["autogluon"] = ag
+for sub in ("autogluon.tabular", "autogluon.core", "autogluon.core.metrics"):
+    if sub not in sys.modules:
+        m = mock.MagicMock()
+        m.__spec__ = None
+        sys.modules[sub] = m
+if "autogluon" in sys.modules and not hasattr(sys.modules["autogluon"], "__path__"):
+    sys.modules["autogluon"].__path__ = []
+
+from ..component import autogluon_models_full_refit  # noqa: E402
 
 # Default args for pipeline_name, run_id, sample_row (required by component signature)
 PIPELINE_NAME = "test-pipeline-run-123"
@@ -257,8 +274,6 @@ class TestAutogluonModelsFullRefitUnitTests:
         self, mock_predictor_class, mock_read_csv, mock_confusion_matrix
     ):
         """Test that confusion matrix is written when problem_type is binary or multiclass."""
-        import pandas as pd
-
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -266,10 +281,10 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor_clone.evaluate.return_value = {"accuracy": 0.95}
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
         mock_predictor.problem_type = "binary"
-        mock_predictor_clone.predict.return_value = pd.Series([0, 1, 0])
+        mock_predictor_clone.predict.return_value = mock.MagicMock()  # predictions for confusion_matrix input
         mock_predictor.label = "target"
 
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 0]})
+        mock_dataset_df = mock.MagicMock()
         mock_read_csv.return_value = mock_dataset_df
         confusion_matrix_dict = {"0": {"0": 2, "1": 0}, "1": {"0": 1, "1": 0}}
         mock_confusion_matrix.return_value = mock.MagicMock(to_dict=lambda: confusion_matrix_dict)
@@ -308,8 +323,6 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_raises_on_invalid_problem_type(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when problem_type is not regression/binary/multiclass."""
-        import pandas as pd
-
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -319,7 +332,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor.problem_type = "unknown"
         mock_predictor.label = "target"
 
-        mock_read_csv.return_value = pd.DataFrame({"feature1": [1], "target": [1.0]})
+        mock_read_csv.return_value = mock.MagicMock()
         mock_full_dataset = mock.MagicMock()
         mock_full_dataset.path = "/tmp/full_dataset.csv"
         mock_model_artifact = mock.MagicMock()

@@ -1,11 +1,37 @@
 """Tests for the autogluon_models_selection component."""
 
+import sys
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
+# Inject mock modules so @mock.patch("pandas...") and @mock.patch("autogluon...") resolve without importing real packages  # noqa: E501
+if "pandas" not in sys.modules:
+    sys.modules["pandas"] = mock.MagicMock()
+if "autogluon" not in sys.modules:
+    ag = mock.MagicMock()
+    ag.__path__ = []
+    ag.__spec__ = None
+    sys.modules["autogluon"] = ag
+    m = mock.MagicMock()
+    m.__spec__ = None
+    sys.modules["autogluon.tabular"] = m
+
 from ..component import models_selection
+
+
+def _make_mock_leaderboard(all_model_names):
+    """Build a mock leaderboard so .head(n)['model'].values.tolist() returns first n of all_model_names."""
+    mock_leaderboard = mock.MagicMock()
+
+    def head_side_effect(n):
+        head_mock = mock.MagicMock()
+        head_mock.__getitem__.return_value.values.tolist.return_value = all_model_names[:n]
+        return head_mock
+
+    mock_leaderboard.head.side_effect = head_side_effect
+    return mock_leaderboard
 
 
 class TestModelsSelectionUnitTests:
@@ -15,26 +41,18 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_regression(self, mock_predictor_class, mock_read_csv):
         """Test models selection with regression problem type."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
         mock_predictor_class.return_value = mock_predictor
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1", "RandomForest_BAG_L1"],
-                "score_val": [0.5, 0.6, 0.7, 0.8],
-            }
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(
+            ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1", "RandomForest_BAG_L1"]
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         # Create mock artifacts
@@ -93,25 +111,16 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_binary_classification(self, mock_predictor_class, mock_read_csv):
         """Test models selection with binary classification problem type."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "accuracy"
         mock_predictor.fit.return_value = mock_predictor
-
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"],
-                "score_val": [0.95, 0.92, 0.90],
-            }
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(
+            ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"]
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 0]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [1, 0]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor
@@ -152,25 +161,21 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_multiclass_classification(self, mock_predictor_class, mock_read_csv):
         """Test models selection with multiclass classification problem type."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "accuracy"
         mock_predictor.fit.return_value = mock_predictor
-
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1", "RandomForest_BAG_L1"],
-                "score_val": [0.88, 0.85, 0.82, 0.80],
-            }
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(
+            [
+                "LightGBM_BAG_L1",
+                "NeuralNetFastAI_BAG_L1",
+                "CatBoost_BAG_L1",
+                "RandomForest_BAG_L1",
+            ]  # head(3) -> first 3
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 2]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [1, 2]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor
@@ -184,7 +189,7 @@ class TestModelsSelectionUnitTests:
 
         workspace_path = "/tmp/model"
 
-        # Call the component function
+        # Call the component function (top_n=3)
         result = models_selection.python_func(
             label_column="target",
             task_type="multiclass",
@@ -211,31 +216,30 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_with_different_top_n(self, mock_predictor_class, mock_read_csv):
         """Test models selection with different top_n values."""
-        import pandas as pd
+        # Setup mocks - leaderboard returns 1 or 3 models depending on head(n)
+        all_models = [
+            "LightGBM_BAG_L1",
+            "NeuralNetFastAI_BAG_L1",
+            "CatBoost_BAG_L1",
+            "RandomForest_BAG_L1",
+            "XGBoost_BAG_L1",
+        ]
+        mock_leaderboard = mock.MagicMock()
 
-        # Setup mocks
+        def head_side_effect(n):
+            head_mock = mock.MagicMock()
+            head_mock.__getitem__.return_value.values.tolist.return_value = all_models[:n]
+            return head_mock
+
+        mock_leaderboard.head.side_effect = head_side_effect
+
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
-
-        # Mock leaderboard DataFrame with 5 models
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": [
-                    "LightGBM_BAG_L1",
-                    "NeuralNetFastAI_BAG_L1",
-                    "CatBoost_BAG_L1",
-                    "RandomForest_BAG_L1",
-                    "XGBoost_BAG_L1",
-                ],
-                "score_val": [0.5, 0.6, 0.7, 0.8, 0.9],
-            }
-        )
         mock_predictor.leaderboard.return_value = mock_leaderboard
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor
@@ -322,16 +326,13 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_fit_failure(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when model fitting fails."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.fit.side_effect = ValueError("Target column not found in dataset")
         mock_predictor_class.return_value = mock_predictor
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "wrong_column": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_train_data = mock.MagicMock()
@@ -357,17 +358,14 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_handles_leaderboard_failure(self, mock_predictor_class, mock_read_csv):
         """Test that errors are raised when leaderboard generation fails."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.fit.return_value = mock_predictor
         mock_predictor.leaderboard.side_effect = ValueError("Test data schema mismatch")
         mock_predictor_class.return_value = mock_predictor
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_train_data = mock.MagicMock()
@@ -393,25 +391,14 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
         """Test that all required operations are called in correct order."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"],
-                "score_val": [0.5, 0.6],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
-
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor
@@ -448,25 +435,16 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_sets_metadata_correctly(self, mock_predictor_class, mock_read_csv):
         """Test that return value (top_models, eval_metric, predictor_path) is correct."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
-
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"],
-                "score_val": [0.5, 0.6, 0.7],
-            }
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(
+            ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1", "CatBoost_BAG_L1"]
         )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
 
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor
@@ -503,25 +481,14 @@ class TestModelsSelectionUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_models_selection_returns_correct_named_tuple(self, mock_predictor_class, mock_read_csv):
         """Test that the function returns a NamedTuple with correct fields."""
-        import pandas as pd
-
         # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor.eval_metric = "r2"
         mock_predictor.fit.return_value = mock_predictor
+        mock_predictor.leaderboard.return_value = _make_mock_leaderboard(["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"])
 
-        # Mock leaderboard DataFrame
-        mock_leaderboard = pd.DataFrame(
-            {
-                "model": ["LightGBM_BAG_L1", "NeuralNetFastAI_BAG_L1"],
-                "score_val": [0.5, 0.6],
-            }
-        )
-        mock_predictor.leaderboard.return_value = mock_leaderboard
-
-        # Mock DataFrame for datasets
-        mock_train_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
-        mock_test_df = pd.DataFrame({"feature1": [4, 5], "target": [4.4, 5.5]})
+        mock_train_df = mock.MagicMock()
+        mock_test_df = mock.MagicMock()
         mock_read_csv.side_effect = [mock_train_df, mock_test_df]
 
         mock_predictor_class.return_value = mock_predictor

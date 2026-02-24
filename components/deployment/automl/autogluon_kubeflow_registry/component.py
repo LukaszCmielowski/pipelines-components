@@ -5,12 +5,7 @@ from kfp import dsl
     base_image="python:3.11",
     # packages_to_install=["numpy", "pandas"],  # Add your dependencies here
 )
-def autogluon_kubeflow_registry(
-    # Add your component parameters here
-    input_param: str,
-    # Add your output artifacts here
-    # output_artifact: dsl.Output[dsl.Artifact]
-) -> str:  # Specify your return type
+def autogluon_kubeflow_registry(input_param: str) -> str:
     """Autogluon Kubeflow Registry component.
 
     TODO: Add a detailed description of what this component does.

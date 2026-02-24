@@ -7,9 +7,7 @@ from kfp import dsl
     base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",  # noqa: E501
 )
 def leaderboard_evaluation(
-    models: List[dsl.Model],
-    eval_metric: str,
-    html_artifact: dsl.Output[dsl.HTML],
+    models: List[dsl.Model], eval_metric: str, html_artifact: dsl.Output[dsl.HTML]
 ) -> NamedTuple("outputs", best_model=str):
     """Evaluate multiple AutoGluon models and generate a leaderboard.
 
@@ -20,21 +18,13 @@ def leaderboard_evaluation(
     model.path / model.metadata["display_name"] / metrics / metrics.json.
 
     Args:
-        models: A list of Model artifacts. Each should have metadata containing
-            a "display_name" field and metrics file at
-            model.path / model_name / metrics / metrics.json.
-        eval_metric: The name of the evaluation metric to use for ranking.
-            Must match a key in the metrics JSON (e.g., "accuracy" for
-            classification, "root_mean_squared_error" for regression).
-            The leaderboard is sorted by this metric in descending order.
-        html_artifact: Output artifact where the HTML-formatted leaderboard
-            will be written. The leaderboard contains model names and their
-            evaluation metrics.
+        models: List of Model artifacts with metadata "display_name" and metrics at model.path / model_name / metrics / metrics.json.
+        eval_metric: Evaluation metric name for ranking (e.g. "accuracy", "root_mean_squared_error"); leaderboard sorted by this metric descending.
+        html_artifact: Output artifact where the HTML-formatted leaderboard (model names and metrics) will be written.
 
     Raises:
         FileNotFoundError: If any model metrics path cannot be found.
-        KeyError: If model metadata does not contain "display_name" or the
-            metrics JSON does not contain the eval_metric key.
+        KeyError: If model metadata does not contain "display_name" or the metrics JSON does not contain the eval_metric key.
 
     Example:
         from kfp import dsl
@@ -49,7 +39,7 @@ def leaderboard_evaluation(
                 eval_metric="root_mean_squared_error",
             )
             return leaderboard
-    """
+    """  # noqa: E501
     import json
     from pathlib import Path
 
