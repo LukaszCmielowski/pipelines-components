@@ -106,7 +106,7 @@ def automl_data_loader(
                     break
         except Exception as e:
             if not chunk_list:
-                raise ValueError(f"Error reading CSV from S3: {str(e)}")
+                raise ValueError(f"Error reading CSV from S3: {str(e)}") from e
 
         return pd.concat(chunk_list, ignore_index=True) if chunk_list else pd.DataFrame()
 
@@ -119,7 +119,6 @@ def automl_data_loader(
                 chunk_df = chunk_df.dropna(subset=[label_column])
                 if chunk_df.empty:
                     continue
-
                 if label_column not in chunk_df.columns:
                     raise ValueError(
                         f"Target column '{label_column}' not found in the dataset. "
@@ -143,14 +142,14 @@ def automl_data_loader(
                         .reset_index(drop=True)
                     )
 
-            if subsampled_data is None:
-                return pd.DataFrame()
-            return subsampled_data.sample(frac=1, random_state=DEFAULT_RANDOM_STATE).reset_index(drop=True)
-
         except Exception as e:
+            logger.debug("Error reading CSV and stratified sampling: %s", e, exc_info=True)
             if subsampled_data is None or subsampled_data.empty:
-                raise ValueError(f"Error reading CSV from S3: {str(e)}")
-            return subsampled_data.sample(frac=1, random_state=DEFAULT_RANDOM_STATE).reset_index(drop=True)
+                raise ValueError(f"Error reading CSV from S3: {str(e)}") from e
+
+        if subsampled_data is None:
+            return pd.DataFrame()
+        return subsampled_data.sample(frac=1, random_state=DEFAULT_RANDOM_STATE).reset_index(drop=True)
 
     def _sample_random(text_stream, chunk_size, max_size_bytes):
         """Iterate all batches, merge with accumulated data, randomly subsample when over the limit."""
@@ -177,7 +176,7 @@ def automl_data_loader(
 
         except Exception as e:
             if subsampled_data is None or subsampled_data.empty:
-                raise ValueError(f"Error reading CSV from S3: {str(e)}")
+                raise ValueError(f"Error reading CSV from S3: {str(e)}") from e
             return subsampled_data
 
     def load_data_in_batches(
