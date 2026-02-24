@@ -54,7 +54,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
   # For example, from project root:
-  python -m scripts.validate_metadata --dir components/data_processing/sample_component
+  python -m scripts.validate_metadata --dir components/data_processing/default/sample_component
         """,
     )
 

@@ -36,21 +36,21 @@ Validate a single component (directory or `component.py`):
 
 ```bash
 uv run scripts/validate_base_images/validate_base_images.py \
-  --component components/training/sample_model_trainer
+  --component components/training/default/sample_model_trainer
 ```
 
 Validate a single pipeline (directory or `pipeline.py`):
 
 ```bash
 uv run scripts/validate_base_images/validate_base_images.py \
-  --pipeline pipelines/training/simple_training
+  --pipeline pipelines/training/default/simple_training
 ```
 
 Validate multiple targets (repeat the flags):
 
 ```bash
 uv run scripts/validate_base_images/validate_base_images.py \
-  --component components/training/sample_model_trainer \
-  --component components/evaluation/some_component \
-  --pipeline pipelines/training/simple_training
+  --component components/training/default/sample_model_trainer \
+  --component components/evaluation/default/some_component \
+  --pipeline pipelines/training/default/simple_training
 ```

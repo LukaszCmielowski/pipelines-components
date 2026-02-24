@@ -29,6 +29,7 @@ test = [
     "pytest-timeout",
     "docstring-parser",
     "jinja2",
+    "packaging",
     "pyyaml",
     "semver",
     "pip",
@@ -59,7 +60,8 @@ packages = [
     "kfp_components.components.data_processing.automl",
     "kfp_components.components.data_processing.automl.tabular_data_loader",
     "kfp_components.components.data_processing.automl.tabular_train_test_split",
-    "kfp_components.components.data_processing.yoda_data_processor",
+    "kfp_components.components.data_processing.default",
+    "kfp_components.components.data_processing.default.yoda_data_processor",
     "kfp_components.components.deployment",
     "kfp_components.pipelines",
     "kfp_components.pipelines.training",
@@ -87,6 +89,7 @@ exclude = [
     "__pycache__",
     "node_modules",
     "**/_generated/",
+    "**/test_data/**",  # Test fixtures may have intentional styles (quote types, etc.)
 ]
 
 [tool.ruff.lint]
@@ -97,6 +100,7 @@ ignore = [
     "D104",  # Missing docstring in public package
     "D415",  # First line should end with punctuation (not needed for simple module names)
 ]
+
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

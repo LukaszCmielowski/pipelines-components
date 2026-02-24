@@ -9,9 +9,9 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
-# Patterns for matching asset paths
-COMPONENT_PATTERN = re.compile(r"^components/([^/]+)/([^/]+)/")
-PIPELINE_PATTERN = re.compile(r"^pipelines/([^/]+)/([^/]+)/")
+# Patterns for matching asset paths (category/group/name)
+COMPONENT_PATTERN = re.compile(r"^components/([^/]+)/([^/]+)/([^/]+)/")
+PIPELINE_PATTERN = re.compile(r"^pipelines/([^/]+)/([^/]+)/([^/]+)/")
 
 
 @dataclass
@@ -71,9 +71,15 @@ class GitClient:
         """Fetch the base branch if it's a remote reference.
 
         Args:
-            base_ref: Git reference (e.g., 'origin/main').
+            base_ref: Git reference (e.g., 'origin/main', 'origin/release-1.11').
         """
         if not base_ref.startswith("origin/"):
+            return
+
+        # origin/HEAD is a symbolic reference that exists after cloning and
+        # points to the default branch. It cannot be fetched like a regular
+        # branch since "HEAD" is not a valid branch name on the remote.
+        if base_ref == "origin/HEAD":
             return
 
         base_branch = base_ref.removeprefix("origin/")
@@ -197,9 +203,9 @@ class ChangeDetector:
 
         for file_path in files:
             if match := COMPONENT_PATTERN.match(file_path):
-                components.add(f"components/{match.group(1)}/{match.group(2)}")
+                components.add(f"components/{match.group(1)}/{match.group(2)}/{match.group(3)}")
             elif match := PIPELINE_PATTERN.match(file_path):
-                pipelines.add(f"pipelines/{match.group(1)}/{match.group(2)}")
+                pipelines.add(f"pipelines/{match.group(1)}/{match.group(2)}/{match.group(3)}")
 
         return sorted(components), sorted(pipelines)
 
@@ -314,8 +320,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-ref",
-        default="origin/main",
-        help="Base git reference to compare against (default: origin/main)",
+        default="origin/HEAD",
+        help="Base git reference to compare against (default: origin/HEAD)",
     )
     parser.add_argument(
         "--head-ref",

@@ -65,8 +65,8 @@ class TestScanRepo:
             days_ago: The number of days ago to set the lastVerified timestamp to.
             subdir: The subdirectory to create the metadata file in (components or pipelines).
         """
-        # Create proper directory structure: subdir/category/name/metadata.yaml
-        comp_dir = tmpdir / subdir / "test_category" / name
+        # Create proper directory structure: subdir/category/group/name/metadata.yaml
+        comp_dir = tmpdir / subdir / "test_category" / "default" / name
         comp_dir.mkdir(parents=True)
         date = (datetime.now(timezone.utc) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
         (comp_dir / "metadata.yaml").write_text(yaml.dump({"name": name, "lastVerified": date}))
@@ -92,7 +92,7 @@ class TestScanRepo:
         """Test handles missing field."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            comp_dir = tmp / "components" / "test_category" / "invalid"
+            comp_dir = tmp / "components" / "test_category" / "default" / "invalid"
             comp_dir.mkdir(parents=True)
             (comp_dir / "metadata.yaml").write_text(yaml.dump({"name": "no-date"}))
 

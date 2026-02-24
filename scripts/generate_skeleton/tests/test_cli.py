@@ -25,8 +25,8 @@ class TestCLI:
         """Test error when required arguments are missing."""
         test_cases = [
             ["generate_skeleton.py"],  # No arguments
-            ["generate_skeleton.py", "--type=component"],  # Missing category and name
-            ["generate_skeleton.py", "--category=data_processing"],  # Missing type and name
+            ["generate_skeleton.py", "--type=component"],  # Missing category, group and name
+            ["generate_skeleton.py", "--category=data_processing"],  # Missing type, group and name
         ]
 
         for args in test_cases:
@@ -48,6 +48,7 @@ class TestCLI:
                     "generate_skeleton.py",
                     "--type=component",
                     "--category=data_processing",
+                    "--group=default",
                     "--name=invalid-name-with-hyphens",
                 ]
 
@@ -71,6 +72,7 @@ class TestCLI:
                     "generate_skeleton.py",
                     "--type=component",
                     "--category=data_processing",
+                    "--group=default",
                     "--name=my_processor",
                     "--no-tests",
                     "--tests-only",
@@ -92,7 +94,13 @@ class TestCLI:
             os.chdir(temp_dir)
 
             try:
-                args = ["generate_skeleton.py", "--type=component", "--category=data_processing", "--name=my_processor"]
+                args = [
+                    "generate_skeleton.py",
+                    "--type=component",
+                    "--category=data_processing",
+                    "--group=default",
+                    "--name=my_processor",
+                ]
 
                 # Mock the working directory change to stay in temp_dir
                 def mock_chdir(_path):
@@ -104,7 +112,7 @@ class TestCLI:
                         main()
 
                 # Check that files were created
-                component_dir = Path("components/data_processing/my_processor")
+                component_dir = Path("components/data_processing/default/my_processor")
                 assert component_dir.exists()
                 assert (component_dir / "component.py").exists()
                 assert (component_dir / "tests").exists()
@@ -124,6 +132,7 @@ class TestCLI:
                     "generate_skeleton.py",
                     "--type=pipeline",
                     "--category=training",
+                    "--group=default",
                     "--name=my_pipeline",
                     "--no-tests",
                 ]
@@ -138,7 +147,7 @@ class TestCLI:
                         main()
 
                 # Check that files were created
-                pipeline_dir = Path("pipelines/training/my_pipeline")
+                pipeline_dir = Path("pipelines/training/default/my_pipeline")
                 assert pipeline_dir.exists()
                 assert (pipeline_dir / "pipeline.py").exists()
                 assert not (pipeline_dir / "tests").exists()
@@ -159,13 +168,14 @@ class TestCLI:
                 # (to avoid the working directory change in main())
                 from ..generate_skeleton import create_skeleton
 
-                create_skeleton("component", "data_processing", "my_processor", create_tests=False)
+                create_skeleton("component", "data_processing", "default", "my_processor", create_tests=False)
 
                 # Now test the tests-only CLI functionality
                 args = [
                     "generate_skeleton.py",
                     "--type=component",
                     "--category=data_processing",
+                    "--group=default",
                     "--name=my_processor",
                     "--tests-only",
                 ]
@@ -179,7 +189,7 @@ class TestCLI:
                         main()
 
                 # Check that tests were created
-                component_dir = Path("components/data_processing/my_processor")
+                component_dir = Path("components/data_processing/default/my_processor")
                 assert component_dir.exists()
                 assert (component_dir / "tests").exists()
                 assert (component_dir / "tests" / "test_component_unit.py").exists()

@@ -13,12 +13,12 @@ import pytest
 TEST_DATA_DIR = Path(__file__).parent.parent.parent.parent / "test_data"
 
 
-# Test fixtures: list of (type, path) tuples
+# Test fixtures: list of (type, path) tuples (category/group/name)
 TEST_FIXTURES = [
-    ("component", "components/basic/simple_component"),
-    ("component", "components/basic/optional_params"),
-    ("component", "components/advanced/multiline_overview"),
-    ("pipeline", "pipelines/basic/simple_pipeline"),
+    ("component", "components/basic/default/simple_component"),
+    ("component", "components/basic/default/optional_params"),
+    ("component", "components/advanced/default/multiline_overview"),
+    ("pipeline", "pipelines/basic/default/simple_pipeline"),
 ]
 
 
@@ -63,9 +63,9 @@ def test_category_index_check_mode():
     # Run generator in check mode on one component in each category
     # Each should succeed (exit 0) if golden files are in sync
     test_cases = [
-        ("component", TEST_DATA_DIR / "components/basic/simple_component"),
-        ("component", TEST_DATA_DIR / "components/advanced/multiline_overview"),
-        ("pipeline", TEST_DATA_DIR / "pipelines/basic/simple_pipeline"),
+        ("component", TEST_DATA_DIR / "components/basic/default/simple_component"),
+        ("component", TEST_DATA_DIR / "components/advanced/default/multiline_overview"),
+        ("pipeline", TEST_DATA_DIR / "pipelines/basic/default/simple_pipeline"),
     ]
 
     for asset_type, target_dir in test_cases:

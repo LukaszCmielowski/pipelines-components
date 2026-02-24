@@ -30,11 +30,17 @@ jobs:
 
 ## Inputs
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| `base-ref` | Base git reference to compare against | `origin/main` |
-| `head-ref` | Head git reference | `HEAD` |
-| `filter` | Grep pattern to filter changed components, pipelines, and files | _(empty)_ |
+| Input      | Description                                                     | Default   |
+|------------|-----------------------------------------------------------------|-----------|
+| `base-ref` | Base git reference to compare against                           | Dynamic   |
+| `head-ref` | Head git reference                                              | `HEAD`    |
+| `filter`   | Grep pattern to filter changed components, pipelines, and files | _(empty)_ |
+
+### Default behavior details
+
+- `base-ref` (Dynamic):
+  - For pull requests: `origin/{PR base}`
+  - For other events: `origin/{default branch}`
 
 ## Outputs
 
@@ -43,14 +49,14 @@ jobs:
 | `has-changes`              | Boolean - any changes?        | `"true"`                                           |
 | `has-changed-components`   | Boolean - components changed? | `"true"`                                           |
 | `has-changed-pipelines`    | Boolean - pipelines changed?  | `"false"`                                          |
-| `changed-components`       | Space-separated list          | `"components/training/trainer"`                    |
-| `changed-components-json`  | JSON array for matrix         | `["components/training/trainer"]`                  |
+| `changed-components`       | Space-separated list          | `"components/training/default/trainer"`                    |
+| `changed-components-json`  | JSON array for matrix         | `["components/training/default/trainer"]`                  |
 | `changed-components-count` | Count                         | `"1"`                                              |
-| `changed-pipelines`        | Space-separated list          | `"pipelines/training/pipeline"`                    |
-| `changed-pipelines-json`   | JSON array for matrix         | `["pipelines/training/pipeline"]`                  |
+| `changed-pipelines`        | Space-separated list          | `"pipelines/training/default/pipeline"`                    |
+| `changed-pipelines-json`   | JSON array for matrix         | `["pipelines/training/default/pipeline"]`                  |
 | `changed-pipelines-count`  | Count                         | `"1"`                                              |
-| `all-changed-files`        | All changed files             | `"components/training/trainer/component.yaml ..."` |
-| `filtered-changed-files`   | Changed files matching filter | `"components/training/trainer/component.yaml"`     |
+| `all-changed-files`        | All changed files             | `"components/training/default/trainer/component.yaml ..."` |
+| `filtered-changed-files`   | Changed files matching filter | `"components/training/default/trainer/component.yaml"`     |
 
 ## Common Patterns
 
@@ -131,13 +137,13 @@ Detect changes only in specific file types:
 
 ```bash
 # Test the detection script directly
-python3 .github/scripts/detect_changed_assets/detect.py --base-ref origin/main --head-ref HEAD
+uv run python .github/scripts/detect_changed_assets/detect.py --base-ref origin/HEAD --head-ref HEAD
 
 # With pattern filter
-python3 .github/scripts/detect_changed_assets/detect.py --base-ref origin/main --filter '\.py$'
+uv run python .github/scripts/detect_changed_assets/detect.py --base-ref origin/HEAD --filter '\.py$'
 
 # Show help
-python3 .github/scripts/detect_changed_assets/detect.py --help
+uv run python .github/scripts/detect_changed_assets/detect.py --help
 
 # Or run the full test suite
 .github/actions/detect-changed-assets/test.sh
@@ -149,7 +155,7 @@ python3 .github/scripts/detect_changed_assets/detect.py --help
 2. Finds merge base between base and head refs
 3. Gets changed files via `git diff`
 4. Parses paths to identify components/pipelines:
-   - `components/<category>/<name>/` → `components/<category>/<name>`
-   - `pipelines/<category>/<name>/` → `pipelines/<category>/<name>`
+   - `components/<category>/<group>/<name>/` → `components/<category>/<group>/<name>`
+   - `pipelines/<category>/<group>/<name>/` → `pipelines/<category>/<group>/<name>`
 5. Deduplicates (multiple files in same component = one entry)
 6. Outputs in multiple formats
