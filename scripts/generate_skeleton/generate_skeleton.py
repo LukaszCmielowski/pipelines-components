@@ -6,9 +6,9 @@ CONTRIBUTING.md guide. It generates all required files with proper templates.
 
 Usage:
     python scripts/generate_skeleton/generate_skeleton.py --type=component \\
-        --category=data_processing --name=my_processor
+        --category=data_processing --group=default --name=my_processor
     python scripts/generate_skeleton/generate_skeleton.py --type=pipeline \\
-        --category=ml_workflows --name=my_training_pipeline
+        --category=ml_workflows --group=default --name=my_training_pipeline
 """
 
 import argparse
@@ -95,6 +95,34 @@ def validate_category(category: str) -> None:
         raise ValueError("Category can only contain letters, numbers, and underscores")
 
 
+def validate_group(group: str) -> None:
+    """Validate group name for security.
+
+    Args:
+        group: The group to validate
+
+    Raises:
+        ValueError: If the group is invalid
+    """
+    if not group:
+        raise ValueError("Group cannot be empty")
+
+    # Check for directory traversal attempts
+    if "/" in group or "\\" in group:
+        raise ValueError("Group cannot contain path separators (/, \\)")
+
+    if "." in group:
+        raise ValueError("Group cannot contain dots (.)")
+
+    # Enforce snake_case (no uppercase letters, allow underscores)
+    if group != group.lower():
+        raise ValueError("Group must be lowercase (snake_case)")
+
+    # Allow letters, numbers, and underscores
+    if not group.replace("_", "").isalnum() or not group[0].isalpha():
+        raise ValueError("Group can only contain letters, numbers, and underscores")
+
+
 def get_existing_categories(skeleton_type: str) -> list[str]:
     """Get list of existing categories for the given skeleton type.
 
@@ -111,12 +139,13 @@ def get_existing_categories(skeleton_type: str) -> list[str]:
     return [item.name for item in base_dir.iterdir() if item.is_dir() and not item.name.startswith((".", "_"))]
 
 
-def generate_core_files(skeleton_type: str, category: str, name: str) -> dict[str, str]:
+def generate_core_files(skeleton_type: str, category: str, group: str, name: str) -> dict[str, str]:
     """Generate core files for skeleton based on type.
 
     Args:
         skeleton_type: Type of skeleton ('component' or 'pipeline')
         category: Category name
+        group: Group name
         name: Skeleton name
 
     Returns:
@@ -129,6 +158,7 @@ def generate_core_files(skeleton_type: str, category: str, name: str) -> dict[st
     context = {
         "skeleton_type": skeleton_type,
         "category": category,
+        "group": group,
         "name": name,
         "current_date": current_date,
         "module_name": "component" if skeleton_type == "component" else "pipeline",
@@ -192,20 +222,21 @@ def generate_test_files(skeleton_type: str, name: str) -> dict[str, str]:
     return files
 
 
-def create_skeleton(skeleton_type: str, category: str, name: str, create_tests: bool = True):
+def create_skeleton(skeleton_type: str, category: str, group: str, name: str, create_tests: bool = True):
     """Create skeleton files for a component or pipeline.
 
     Args:
         skeleton_type: Type of skeleton ('component' or 'pipeline')
         category: Category name (e.g., 'data_processing', 'training')
+        group: Group name (e.g., 'default', 'samples')
         name: Skeleton name (e.g., 'my_processor')
         create_tests: Whether to create test files (default: True)
 
     Returns:
         Path to created directory
     """
-    # Create directory structure
-    skeleton_dir = Path(f"{skeleton_type}s/{category}/{name}")
+    # Create directory structure (category/group/name)
+    skeleton_dir = Path(f"{skeleton_type}s/{category}/{group}/{name}")
     skeleton_dir.mkdir(parents=True, exist_ok=True)
 
     tests_dir = skeleton_dir / "tests"
@@ -213,7 +244,7 @@ def create_skeleton(skeleton_type: str, category: str, name: str, create_tests: 
         tests_dir.mkdir(exist_ok=True)
 
     # Generate and write core files
-    core_files = generate_core_files(skeleton_type, category, name)
+    core_files = generate_core_files(skeleton_type, category, group, name)
     for filename, content in core_files.items():
         (skeleton_dir / filename).write_text(content)
 
@@ -226,12 +257,13 @@ def create_skeleton(skeleton_type: str, category: str, name: str, create_tests: 
     return skeleton_dir
 
 
-def create_tests_only(skeleton_type: str, category: str, name: str):
+def create_tests_only(skeleton_type: str, category: str, group: str, name: str):
     """Create test files for an existing skeleton.
 
     Args:
         skeleton_type: Type of skeleton ('component' or 'pipeline')
         category: Category name (e.g., 'data_processing', 'training')
+        group: Group name (e.g., 'default', 'samples')
         name: Skeleton name (e.g., 'my_processor')
 
     Returns:
@@ -240,22 +272,23 @@ def create_tests_only(skeleton_type: str, category: str, name: str):
     Raises:
         ValueError: If the skeleton directory or required files don't exist
     """
-    skeleton_dir = Path(f"{skeleton_type}s/{category}/{name}")
+    skeleton_dir = Path(f"{skeleton_type}s/{category}/{group}/{name}")
     main_file = skeleton_dir / f"{skeleton_type}.py"
 
     # Check if skeleton directory exists
     if not skeleton_dir.exists():
         raise ValueError(
             f"""
-Error: {skeleton_type.title()} '{name}' does not exist in category '{category}'.
+Error: {skeleton_type.title()} '{name}' does not exist in category '{category}' / group '{group}'.
 
 Expected directory: {skeleton_dir}
 
 To create this {skeleton_type} first, run:
-  python scripts/generate_skeleton/generate_skeleton.py --type={skeleton_type} --category={category} --name={name}
+  python scripts/generate_skeleton/generate_skeleton.py --type={skeleton_type}
+    --category={category} --group={group} --name={name}
 
 Or use the Makefile:
-  make {skeleton_type} CATEGORY={category} NAME={name}
+  make {skeleton_type} CATEGORY={category} GROUP={group} NAME={name}
 """.strip()
         )
 
@@ -268,10 +301,11 @@ Error: {skeleton_type.title()} '{name}' directory exists but missing main file.
 Expected file: {main_file}
 
 The {skeleton_type} directory exists but appears incomplete. Please recreate it:
-  python scripts/generate_skeleton/generate_skeleton.py --type={skeleton_type} --category={category} --name={name}
+  python scripts/generate_skeleton/generate_skeleton.py --type={skeleton_type}
+    --category={category} --group={group} --name={name}
 
 Or use the Makefile:
-  make {skeleton_type} CATEGORY={category} NAME={name}
+  make {skeleton_type} CATEGORY={category} GROUP={group} NAME={name}
 """.strip()
         )
 
@@ -298,9 +332,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --type=component --category=data_processing --name=my_processor
-  %(prog)s --type=pipeline --category=ml_workflows --name=training_pipeline
-  %(prog)s --type=component --category=training --name=bert_trainer
+  %(prog)s --type=component --category=data_processing --group=default --name=my_processor
+  %(prog)s --type=pipeline --category=ml_workflows --group=default --name=training_pipeline
+  %(prog)s --type=component --category=training --group=default --name=bert_trainer
         """,
     )
 
@@ -310,6 +344,12 @@ Examples:
         "--category",
         required=True,
         help="Category for the component/pipeline (e.g., 'data_processing', 'training', 'ml_workflows')",
+    )
+
+    parser.add_argument(
+        "--group",
+        required=True,
+        help="Group (subgroup) for the component/pipeline (e.g., 'default', 'samples')",
     )
 
     parser.add_argument(
@@ -328,6 +368,7 @@ Examples:
     try:
         validate_name(args.name)
         validate_category(args.category)
+        validate_group(args.group)
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -338,8 +379,8 @@ Examples:
         if existing_categories and args.category not in existing_categories:
             print(f"Error: Category '{args.category}' does not exist for {args.type}s.")
             print(f"Existing categories: {', '.join(existing_categories)}")
-            print("\nTo create the category directory, you can:")
-            print(f"  mkdir -p {args.type}s/{args.category}")
+            print("\nTo create the category and group directories, you can:")
+            print(f"  mkdir -p {args.type}s/{args.category}/{args.group}")
             print(f"\nOr choose from existing categories: {', '.join(existing_categories)}")
             sys.exit(1)
 
@@ -351,7 +392,7 @@ Examples:
     try:
         if args.tests_only:
             # Create tests for existing skeleton
-            created_dir = create_tests_only(args.type, args.category, args.name)
+            created_dir = create_tests_only(args.type, args.category, args.group, args.name)
             print(f"✅ Test files created successfully at: {created_dir}")
             print(f"""
 Next steps:
@@ -360,14 +401,14 @@ Next steps:
             """)
         else:
             # Check if directory already exists for new skeleton
-            target_dir = Path(f"{args.type}s/{args.category}/{args.name}")
+            target_dir = Path(f"{args.type}s/{args.category}/{args.group}/{args.name}")
             if target_dir.exists():
                 print(f"Error: Directory '{target_dir}' already exists.")
                 sys.exit(1)
 
             # Create new skeleton
             create_tests = not args.no_tests
-            created_dir = create_skeleton(args.type, args.category, args.name, create_tests)
+            created_dir = create_skeleton(args.type, args.category, args.group, args.name, create_tests)
             print(f"✅ {args.type.title()} skeleton created successfully at: {created_dir}")
 
             next_steps = f"""
@@ -377,14 +418,18 @@ Next steps:
 3. Update {created_dir}/metadata.yaml with correct dependencies and tags"""
 
             if create_tests:
-                readme_cmd = f"make readme TYPE={args.type} CATEGORY={args.category} NAME={args.name}"
+                readme_cmd = (
+                    f"make readme TYPE={args.type} CATEGORY={args.category} GROUP={args.group} NAME={args.name}"
+                )
                 next_steps += f"""
 4. Write comprehensive tests in {created_dir}/tests/
 5. Update {created_dir}/README.md with actual documentation or run: {readme_cmd}
 6. Run tests: pytest {created_dir}/tests/ -v"""
             else:
-                readme_cmd = f"make readme TYPE={args.type} CATEGORY={args.category} NAME={args.name}"
-                tests_cmd = f"make tests TYPE={args.type} CATEGORY={args.category} NAME={args.name}"
+                readme_cmd = (
+                    f"make readme TYPE={args.type} CATEGORY={args.category} GROUP={args.group} NAME={args.name}"
+                )
+                tests_cmd = f"make tests TYPE={args.type} CATEGORY={args.category} GROUP={args.group} NAME={args.name}"
                 next_steps += f"""
 4. Update {created_dir}/README.md with actual documentation or run: {readme_cmd}
 5. Add tests later with: {tests_cmd}"""

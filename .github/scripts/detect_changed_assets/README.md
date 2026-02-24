@@ -42,12 +42,12 @@ Core detection logic for the `detect-changed-assets` composite action.
 
 ```bash
 # Matches these patterns:
-components/<category>/<name>/
-pipelines/<category>/<name>/
+components/<category>/<group>/<name>/
+pipelines/<category>/<group>/<name>/
 
 # Example:
-# Changed file: components/training/my_trainer/component.py
-# Output: components/training/my_trainer
+# Changed file: components/training/default/my_trainer/component.py
+# Output: components/training/default/my_trainer
 ```
 
 ## Outputs
@@ -74,13 +74,13 @@ When run standalone, outputs are written to temp files and displayed in terminal
 ```bash
 # Create test change
 git checkout -b test
-echo "test" >> components/dev/demo/component.py
+echo "test" >> components/dev/default/demo/component.py
 git add . && git commit -m "test"
 
 # Run script
 .github/scripts/detect-changed-assets/detect.sh
 
-# Should output: ✓ Component: components/dev/demo
+# Should output: ✓ Component: components/dev/default/demo
 
 # Cleanup
 git checkout - && git branch -D test

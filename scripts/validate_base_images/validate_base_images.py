@@ -108,6 +108,7 @@ def _create_result(asset: dict[str, Any], asset_type: str) -> dict[str, Any]:
     """Create an initial result dict for an asset."""
     return {
         "category": asset["category"],
+        "group": asset["group"],
         "name": asset["name"],
         "type": asset_type,
         "path": str(asset["path"]),
@@ -132,7 +133,7 @@ def process_asset(
         config = get_config()
 
     result = _create_result(asset, asset_type)
-    module_name = f"{asset['category']}_{asset['name']}_{asset_type}"
+    module_name = f"{asset['category']}_{asset['group']}_{asset['name']}_{asset_type}"
 
     try:
         module = load_module_from_path(asset["module_path"], module_name)
@@ -204,7 +205,7 @@ def _process_assets(
     print("-" * 70)
 
     for asset in assets:
-        print(f"  Processing: {asset['category']}/{asset['name']}")
+        print(f"  Processing: {asset['category']}/{asset['group']}/{asset['name']}")
         result = process_asset(asset, asset_type, temp_dir, config)
         results.append(result)
         base_images.update(result["base_images"])
@@ -224,6 +225,7 @@ def _collect_violations(all_results: list[dict[str, Any]]) -> list[dict[str, Any
                     {
                         "path": result["path"],
                         "category": result["category"],
+                        "group": result["group"],
                         "name": result["name"],
                         "type": result["type"],
                         "image": image,
@@ -252,7 +254,7 @@ def _print_violations(violations: list[dict[str, Any]], config: ValidationConfig
     print()
 
     for violation in violations:
-        print(f"  {violation['type'].title()}: {violation['category']}/{violation['name']}")
+        print(f"  {violation['type'].title()}: {violation['category']}/{violation['group']}/{violation['name']}")
         print(f"    Path: {violation['path']}")
         print(f"    Invalid image: {violation['image']}")
         print()
@@ -299,8 +301,8 @@ def _print_final_status(
 ) -> int:
     if total_assets == 0:
         print("No components or pipelines were discovered.")
-        print("Components should be at: components/<category>/<name>/component.py")
-        print("Pipelines should be at: pipelines/<category>/<name>/pipeline.py")
+        print("Components should be at: components/<category>/<group>/<name>/component.py")
+        print("Pipelines should be at: pipelines/<category>/<group>/<name>/pipeline.py")
         return 0
 
     if violations:
@@ -372,9 +374,10 @@ Examples:
   %(prog)s
 
   # Validate specific assets only
-  %(prog)s --component components/training/sample_model_trainer
-  %(prog)s --pipeline pipelines/training/simple_training
-  %(prog)s --component components/training/sample_model_trainer --pipeline pipelines/training/simple_training
+  %(prog)s --component components/training/default/sample_model_trainer
+  %(prog)s --pipeline pipelines/training/default/simple_training
+  %(prog)s --component components/training/default/sample_model_trainer \\
+      --pipeline pipelines/training/default/simple_training
         """,
     )
 
@@ -385,7 +388,7 @@ Examples:
         metavar="PATH",
         help=(
             "Validate a specific component. Accepts either a directory like "
-            "'components/<category>/<name>' or a direct '.../component.py' path. Repeatable."
+            "'components/<category>/<group>/<name>' or a direct '.../component.py' path. Repeatable."
         ),
     )
     parser.add_argument(
@@ -395,7 +398,7 @@ Examples:
         metavar="PATH",
         help=(
             "Validate a specific pipeline. Accepts either a directory like "
-            "'pipelines/<category>/<name>' or a direct '.../pipeline.py' path. Repeatable."
+            "'pipelines/<category>/<group>/<name>' or a direct '.../pipeline.py' path. Repeatable."
         ),
     )
     parser.add_argument(

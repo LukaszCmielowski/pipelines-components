@@ -49,14 +49,14 @@ jobs:
 | `has-changes`              | Boolean - any changes?        | `"true"`                                           |
 | `has-changed-components`   | Boolean - components changed? | `"true"`                                           |
 | `has-changed-pipelines`    | Boolean - pipelines changed?  | `"false"`                                          |
-| `changed-components`       | Space-separated list          | `"components/training/trainer"`                    |
-| `changed-components-json`  | JSON array for matrix         | `["components/training/trainer"]`                  |
+| `changed-components`       | Space-separated list          | `"components/training/default/trainer"`                    |
+| `changed-components-json`  | JSON array for matrix         | `["components/training/default/trainer"]`                  |
 | `changed-components-count` | Count                         | `"1"`                                              |
-| `changed-pipelines`        | Space-separated list          | `"pipelines/training/pipeline"`                    |
-| `changed-pipelines-json`   | JSON array for matrix         | `["pipelines/training/pipeline"]`                  |
+| `changed-pipelines`        | Space-separated list          | `"pipelines/training/default/pipeline"`                    |
+| `changed-pipelines-json`   | JSON array for matrix         | `["pipelines/training/default/pipeline"]`                  |
 | `changed-pipelines-count`  | Count                         | `"1"`                                              |
-| `all-changed-files`        | All changed files             | `"components/training/trainer/component.yaml ..."` |
-| `filtered-changed-files`   | Changed files matching filter | `"components/training/trainer/component.yaml"`     |
+| `all-changed-files`        | All changed files             | `"components/training/default/trainer/component.yaml ..."` |
+| `filtered-changed-files`   | Changed files matching filter | `"components/training/default/trainer/component.yaml"`     |
 
 ## Common Patterns
 
@@ -155,7 +155,7 @@ uv run python .github/scripts/detect_changed_assets/detect.py --help
 2. Finds merge base between base and head refs
 3. Gets changed files via `git diff`
 4. Parses paths to identify components/pipelines:
-   - `components/<category>/<name>/` → `components/<category>/<name>`
-   - `pipelines/<category>/<name>/` → `pipelines/<category>/<name>`
+   - `components/<category>/<group>/<name>/` → `components/<category>/<group>/<name>`
+   - `pipelines/<category>/<group>/<name>/` → `pipelines/<category>/<group>/<name>`
 5. Deduplicates (multiple files in same component = one entry)
 6. Outputs in multiple formats

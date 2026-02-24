@@ -22,7 +22,7 @@ class TestGenerateCoreFiles:
 
     def test_generate_component_files(self):
         """Test generating core files for a component."""
-        files = generate_core_files("component", "data_processing", "my_processor")
+        files = generate_core_files("component", "data_processing", "default", "my_processor")
 
         # Check all expected files are generated
         expected_files = ["__init__.py", "component.py", "metadata.yaml", "OWNERS"]
@@ -36,7 +36,7 @@ class TestGenerateCoreFiles:
 
     def test_generate_pipeline_files(self):
         """Test generating core files for a pipeline."""
-        files = generate_core_files("pipeline", "training", "my_pipeline")
+        files = generate_core_files("pipeline", "training", "default", "my_pipeline")
 
         # Check all expected files are generated
         expected_files = ["__init__.py", "pipeline.py", "metadata.yaml", "OWNERS"]
@@ -93,7 +93,9 @@ class TestCreateSkeleton:
 
             try:
                 # Create skeleton
-                result_dir = create_skeleton("component", "data_processing", "my_processor", create_tests=True)
+                result_dir = create_skeleton(
+                    "component", "data_processing", "default", "my_processor", create_tests=True
+                )
 
                 # Check directory structure
                 assert result_dir.exists()
@@ -123,7 +125,7 @@ class TestCreateSkeleton:
 
             try:
                 # Create skeleton
-                result_dir = create_skeleton("pipeline", "training", "my_pipeline", create_tests=False)
+                result_dir = create_skeleton("pipeline", "training", "default", "my_pipeline", create_tests=False)
 
                 # Check directory structure
                 assert result_dir.exists()
@@ -154,10 +156,10 @@ class TestCreateTestsOnly:
 
             try:
                 # First create skeleton without tests
-                create_skeleton("component", "data_processing", "my_processor", create_tests=False)
+                create_skeleton("component", "data_processing", "default", "my_processor", create_tests=False)
 
                 # Now create tests
-                tests_dir = create_tests_only("component", "data_processing", "my_processor")
+                tests_dir = create_tests_only("component", "data_processing", "default", "my_processor")
 
                 # Check tests were created
                 assert tests_dir.exists()
@@ -180,7 +182,7 @@ class TestCreateTestsOnly:
             try:
                 # Try to create tests for non-existent component
                 with pytest.raises(ValueError) as exc_info:
-                    create_tests_only("component", "data_processing", "nonexistent")
+                    create_tests_only("component", "data_processing", "default", "nonexistent")
 
                 assert "does not exist" in str(exc_info.value)
 
@@ -198,12 +200,12 @@ class TestCreateTestsOnly:
 
             try:
                 # Create directory structure but not the main file
-                skeleton_dir = Path("components/data_processing/my_processor")
+                skeleton_dir = Path("components/data_processing/default/my_processor")
                 skeleton_dir.mkdir(parents=True)
 
                 # Try to create tests
                 with pytest.raises(ValueError) as exc_info:
-                    create_tests_only("component", "data_processing", "my_processor")
+                    create_tests_only("component", "data_processing", "default", "my_processor")
 
                 assert "missing main file" in str(exc_info.value)
 
@@ -303,14 +305,14 @@ class TestHelperFunctions:
 
     def test_snake_case_to_title_conversion(self):
         """Test that names are properly converted from snake_case to Title Case."""
-        files = generate_core_files("component", "data_processing", "my_data_processor")
+        files = generate_core_files("component", "data_processing", "default", "my_data_processor")
 
         # Check that function name remains snake_case
         assert "def my_data_processor(" in files["component.py"]
 
     def test_category_with_underscores(self):
         """Test handling categories with underscores."""
-        files = generate_core_files("component", "data_processing", "my_processor")
+        files = generate_core_files("component", "data_processing", "default", "my_processor")
 
         # Check that category underscores are converted to hyphens in tags
         assert "- data-processing" in files["metadata.yaml"]

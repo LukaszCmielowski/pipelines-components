@@ -42,20 +42,25 @@ class CategoryIndexGenerator:
     def _find_items_in_category(self) -> List[Path]:
         """Find all component/pipeline directories within the category.
 
+        Expects structure: category_dir/<group>/<name>/ with component.py or pipeline.py.
+
         Returns:
             List of paths to component/pipeline directories.
         """
         items = []
 
-        # Look for subdirectories containing component.py or pipeline.py
+        # Look for category_dir/group/name/ containing component.py or pipeline.py
         target_file = "component.py" if self.is_component else "pipeline.py"
 
-        for subdir in self.category_dir.iterdir():
-            if subdir.is_dir() and not subdir.name.startswith("__"):
-                target_path = subdir / target_file
-                metadata_path = subdir / "metadata.yaml"
-                if target_path.exists() and metadata_path.exists():
-                    items.append(subdir)
+        for group_dir in self.category_dir.iterdir():
+            if not group_dir.is_dir() or group_dir.name.startswith("__"):
+                continue
+            for subdir in group_dir.iterdir():
+                if subdir.is_dir() and not subdir.name.startswith("__"):
+                    target_path = subdir / target_file
+                    metadata_path = subdir / "metadata.yaml"
+                    if target_path.exists() and metadata_path.exists():
+                        items.append(subdir)
 
         return items
 
@@ -117,8 +122,8 @@ class CategoryIndexGenerator:
             overview = function_metadata.get("overview")
             overview = overview.split("\n")[0].strip()
 
-            # Create relative link to the item's README
-            link = f"./{item_dir.name}/README.md"
+            # Create relative link to the item's README (category_dir/group/name -> ./group/name/README.md)
+            link = f"./{item_dir.parent.name}/{item_dir.name}/README.md"
 
             return {
                 "name": formatted_name,

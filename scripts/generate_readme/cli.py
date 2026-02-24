@@ -93,13 +93,13 @@ Modes:
 
 Examples:
   # Check if READMEs are in sync (default, no changes made):
-  python -m scripts.generate_readme --component components/some_category/my_component
+  python -m scripts.generate_readme --component components/some_category/some_group/my_component
 
   # Fix out-of-sync READMEs:
-  python -m scripts.generate_readme --component components/some_category/my_component --fix
+  python -m scripts.generate_readme --component components/some_category/some_group/my_component --fix
 
   # Check pipeline README:
-  python -m scripts.generate_readme --pipeline pipelines/some_category/my_pipeline
+  python -m scripts.generate_readme --pipeline pipelines/some_category/some_group/my_pipeline
 
   # Or with uv:
   uv run -m scripts.generate_readme --component components/some_category/my_component --fix

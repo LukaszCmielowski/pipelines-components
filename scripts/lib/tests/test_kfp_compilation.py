@@ -12,7 +12,7 @@ class TestFindDecoratedFunctions:
 
     def test_find_component_functions(self):
         """Test finding @dsl.component decorated functions."""
-        module_path = str(RESOURCES_DIR / "components/training/custom_image_component/component.py")
+        module_path = str(RESOURCES_DIR / "components/training/default/custom_image_component/component.py")
         module = load_module_from_path(module_path, "test_find_component")
 
         functions = find_decorated_functions_runtime(module, "component")
@@ -23,7 +23,7 @@ class TestFindDecoratedFunctions:
 
     def test_find_pipeline_functions(self):
         """Test finding @dsl.pipeline decorated functions."""
-        module_path = str(RESOURCES_DIR / "pipelines/training/multi_image_pipeline/pipeline.py")
+        module_path = str(RESOURCES_DIR / "pipelines/training/default/multi_image_pipeline/pipeline.py")
         module = load_module_from_path(module_path, "test_find_pipeline")
 
         functions = find_decorated_functions_runtime(module, "pipeline")
@@ -33,7 +33,7 @@ class TestFindDecoratedFunctions:
 
     def test_find_functools_partial_wrapped_component(self):
         """Test finding components decorated via functools.partial wrapper."""
-        module_path = str(RESOURCES_DIR / "components/edge_cases/functools_partial_image/component.py")
+        module_path = str(RESOURCES_DIR / "components/edge_cases/default/functools_partial_image/component.py")
         module = load_module_from_path(module_path, "test_functools_partial")
 
         functions = find_decorated_functions_runtime(module, "component")
@@ -55,7 +55,7 @@ class TestFindDecoratedFunctions:
 
     def test_skips_private_attributes(self):
         """Test that private attributes (starting with _) are skipped."""
-        module_path = str(RESOURCES_DIR / "components/training/custom_image_component/component.py")
+        module_path = str(RESOURCES_DIR / "components/training/default/custom_image_component/component.py")
         module = load_module_from_path(module_path, "test_private")
 
         functions = find_decorated_functions_runtime(module, "component")

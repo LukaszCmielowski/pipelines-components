@@ -31,7 +31,7 @@ Agents typically interact with this repository in three modes. Use the mode to d
 
 ## Quickstart (all agents)
 
-- **Reuse-first**: search `components/<category>/` and `pipelines/<category>/` for similar functionality; prefer
+- **Reuse-first**: search `components/<category>/<group>/` and `pipelines/<category>/<group>/` for similar functionality; prefer
   extending/composing instead of duplicating.
 - **Create scaffolding**: use the Make targets in `Makefile`:
   - `make component CATEGORY=<cat> NAME=<name> [NO_TESTS]`
@@ -53,20 +53,20 @@ Goal: add or update an asset under `components/` or `pipelines/` that is reusabl
 
 Before adding anything new:
 
-- Search under `components/<category>/` and `pipelines/<category>/` for similar functionality.
+- Search under `components/<category>/<group>/` and `pipelines/<category>/<group>/` for similar functionality.
 - Prefer extending or composing existing assets instead of duplicating.
 
 Good places to look:
 
-- `components/` and `pipelines/` category directories for similar patterns and reusable building blocks (example:
-  `components/data_processing/yoda_data_processor`)
+- `components/` and `pipelines/` category/group directories for similar patterns and reusable building blocks (example:
+  `components/data_processing/default/yoda_data_processor`)
 - `scripts/generate_skeleton/` (canonical templates)
 - `scripts/generate_readme/` (README generation expectations)
 
 #### Establish the target location and naming
 
-- Components live under `components/<category>/<component_name>/`.
-- Pipelines live under `pipelines/<category>/<pipeline_name>/`.
+- Components live under `components/<category>/<group>/<component_name>/`.
+- Pipelines live under `pipelines/<category>/<group>/<pipeline_name>/`.
 - Use `snake_case` directory names (per `CONTRIBUTING.md`).
 
 ### Required files
@@ -95,20 +95,20 @@ Process (expected for agents):
 Use this prompt pattern:
 
 "Search `components/` for similar functionality and reuse if possible. If a new component is needed, create it under
-`components/<category>/<name>/` using `make component CATEGORY=<cat> NAME=<name> [NO_TESTS]`, then implement
+`components/<category>/<group>/<name>/` using `make component CATEGORY=<cat> GROUP=<group> NAME=<name> [NO_TESTS]`, then implement
 `component.py` following repository lint rules (including import guard). Create `metadata.yaml` that conforms to
 the metadata schema defined in [`CONTRIBUTING.md`](docs/CONTRIBUTING.md#metadatayaml-schema) (required field order, fresh `lastVerified`). Generate/validate
 `README.md` using `make readme TYPE=component CATEGORY=<cat> NAME=<name>`. Add unit tests using `.python_func()` and a
 LocalRunner test using `setup_and_teardown_subprocess_runner` (you can generate tests via
 `make tests TYPE=component CATEGORY=<cat> NAME=<name>`). Reference an existing component like
-`components/data_processing/yoda_data_processor/` for patterns."
+`components/data_processing/default/yoda_data_processor/` for patterns."
 
 #### Add a new pipeline (reuse-first, compliant)
 
 Use this prompt pattern:
 
 "Search `pipelines/` for similar functionality and reuse if possible. If a new pipeline is needed, create it under
-`pipelines/<category>/<name>/` using `make pipeline CATEGORY=<cat> NAME=<name> [NO_TESTS]`, then implement
+`pipelines/<category>/<group>/<name>/` using `make pipeline CATEGORY=<cat> GROUP=<group> NAME=<name> [NO_TESTS]`, then implement
 `pipeline.py` following repository lint rules (including import guard). Create `metadata.yaml` that conforms to the
 metadata schema defined in [`CONTRIBUTING.md`](docs/CONTRIBUTING.md#metadatayaml-schema) (required field order, fresh
 `lastVerified`). Generate/validate `README.md` using `make readme TYPE=pipeline CATEGORY=<cat> NAME=<name>`. Add tests
@@ -127,7 +127,7 @@ Goal: compose pipelines using components/pipelines from this repository without 
 Recommended references:
 
 - [`README.md`](README.md) (repository overview / usage entry point)
-- Component and pipeline READMEs under `components/<category>/` and `pipelines/<category>/`
+- Component and pipeline READMEs under `components/<category>/<group>/` and `pipelines/<category>/<group>/`
 - Kubeflow Pipelines docs (usage and authoring concepts): `https://www.kubeflow.org/docs/components/pipelines/`
 
 ## Mode 3: Maintaining/contributing to the repository (scripts, tests, CI)

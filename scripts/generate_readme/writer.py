@@ -48,7 +48,8 @@ class ReadmeWriter:
             self.source_file = pipeline_dir / "pipeline.py"
             self.function_type = "pipeline"
 
-        self.category_dir = self.source_dir.parent
+        # Category index is at category level (parent of group): components/<category>/README.md
+        self.category_dir = self.source_dir.parent.parent
         self.category_index_file = self.category_dir / "README.md"
 
         self.parser = MetadataParser(self.source_file, self.function_type)

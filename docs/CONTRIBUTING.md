@@ -124,9 +124,9 @@ We welcome contributions of production-ready ML components and re-usable pipelin
 
 ## Component Structure
 
-Components must be organized by category under `components/<category>/`.
+Components must be organized by category and group under `components/<category>/<group>/`.
 
-Pipelines must be organized by category under `pipelines/<category>/`.
+Pipelines must be organized by category and group under `pipelines/<category>/<group>/`.
 
 ## Naming Conventions
 
@@ -139,7 +139,7 @@ Pipelines must be organized by category under `pipelines/<category>/`.
 Every component must include these files in its directory:
 
 ```text
-components/<category>/<component_name>/
+components/<category>/<group>/<component_name>/
 ├── __init__.py            # Exposes the component function for imports
 ├── component.py           # Main implementation
 ├── metadata.yaml          # Complete specification (see schema below)
@@ -155,7 +155,7 @@ components/<category>/<component_name>/
 Similarly, every pipeline must include these files:
 
 ```text
-pipelines/<category>/<pipeline_name>/
+pipelines/<category>/<group>/<pipeline_name>/
 ├── __init__.py            # Exposes the pipeline function for imports
 ├── pipeline.py            # Main implementation
 ├── metadata.yaml          # Complete specification (see schema below)
@@ -275,40 +275,40 @@ For rapid development, this repository provides convenient make commands that au
 
 The following make targets simplify the development workflow:
 
-| Command                                                | Description                                       |
-|--------------------------------------------------------|---------------------------------------------------|
-| `make component CATEGORY=<cat> NAME=<name> [NO_TESTS]` | Create a new component skeleton                   |
-| `make pipeline CATEGORY=<cat> NAME=<name> [NO_TESTS]`  | Create a new pipeline skeleton                    |
-| `make tests TYPE=<type> CATEGORY=<cat> NAME=<name>`    | Add tests to existing component/pipeline          |
-| `make readme TYPE=<type> CATEGORY=<cat> NAME=<name>`   | Generate/update README from code                  |
-| `make format`                                          | Auto-fix code formatting and linting issues       |
-| `make lint`                                            | Check code quality (formatting, linting, imports) |
+| Command | Description |
+| --- | --- |
+| `make component CATEGORY=<cat> GROUP=<group> NAME=<name> [NO_TESTS]` | Create a new component skeleton |
+| `make pipeline CATEGORY=<cat> GROUP=<group> NAME=<name> [NO_TESTS]` | Create a new pipeline skeleton |
+| `make tests TYPE=<type> CATEGORY=<cat> GROUP=<group> NAME=<name>` | Add tests to existing component/pipeline |
+| `make readme TYPE=<type> CATEGORY=<cat> GROUP=<group> NAME=<name>` | Generate/update README from code |
+| `make format` | Auto-fix code formatting and linting issues |
+| `make lint` | Check code quality (formatting, linting, imports) |
 
 </details>
 
 **Create a component with tests (recommended):**
 
 ```bash
-make component CATEGORY=data_processing NAME=my_data_processor
+make component CATEGORY=data_processing GROUP=default NAME=my_data_processor
 ```
 
 **Create a pipeline with tests:**
 
 ```bash
-make pipeline CATEGORY=training NAME=my_training_pipeline
+make pipeline CATEGORY=training GROUP=default NAME=my_training_pipeline
 ```
 
 **Create without tests (for rapid prototyping):**
 
 ```bash
-make component CATEGORY=data_processing NAME=my_prototype NO_TESTS
-make pipeline CATEGORY=training NAME=my_prototype NO_TESTS
+make component CATEGORY=data_processing GROUP=default NAME=my_prototype NO_TESTS
+make pipeline CATEGORY=training GROUP=default NAME=my_prototype NO_TESTS
 ```
 
 This generates the complete directory structure:
 
 ```text
-components/data_processing/my_data_processor/
+components/data_processing/default/my_data_processor/
 ├── __init__.py            # Import configuration
 ├── component.py           # Implementation template with TODOs
 ├── metadata.yaml          # Pre-configured metadata
@@ -377,8 +377,8 @@ Edit the generated `component.py` or `pipeline.py` file to replace TODO placehol
 ### 4. Add Tests (if created without tests initially)
 
 ```bash
-make tests TYPE=component CATEGORY=data_processing NAME=my_data_processor
-make tests TYPE=pipeline CATEGORY=training NAME=my_training_pipeline
+make tests TYPE=component CATEGORY=data_processing GROUP=default NAME=my_data_processor
+make tests TYPE=pipeline CATEGORY=training GROUP=default NAME=my_training_pipeline
 ```
 
 ### 5. Document Your Component
@@ -388,8 +388,8 @@ make tests TYPE=pipeline CATEGORY=training NAME=my_training_pipeline
 After implementing your logic, generate comprehensive README documentation using the existing [README generation utility](../scripts/generate_readme/README.md):
 
 ```bash
-make readme TYPE=component CATEGORY=data_processing NAME=my_data_processor
-make readme TYPE=pipeline CATEGORY=training NAME=my_training_pipeline
+make readme TYPE=component CATEGORY=data_processing GROUP=default NAME=my_data_processor
+make readme TYPE=pipeline CATEGORY=training GROUP=default NAME=my_training_pipeline
 ```
 
 This automatically:
@@ -421,8 +421,8 @@ make lint
 
 ```bash
 # Run your component/pipeline tests
-pytest components/data_processing/my_data_processor/tests/ -v
-pytest pipelines/training/my_training_pipeline/tests/ -v
+pytest components/data_processing/default/my_data_processor/tests/ -v
+pytest pipelines/training/default/my_training_pipeline/tests/ -v
 
 # Or run all tests
 pytest
@@ -451,20 +451,20 @@ Here's a complete example creating a data processing component:
 git checkout -b component/csv-cleaner upstream/main
 
 # 2. Create component skeleton
-make component CATEGORY=data_processing NAME=csv_cleaner
+make component CATEGORY=data_processing GROUP=default NAME=csv_cleaner
 
-# 3. Edit components/data_processing/csv_cleaner/component.py
+# 3. Edit components/data_processing/default/csv_cleaner/component.py
 # (Implement your logic, replace TODOs)
 
 # 4. Generate documentation
-make readme TYPE=component CATEGORY=data_processing NAME=csv_cleaner
+make readme TYPE=component CATEGORY=data_processing GROUP=default NAME=csv_cleaner
 
 # 5. Format and validate
 make format
 make lint
 
 # 6. Run tests
-pytest components/data_processing/csv_cleaner/tests/ -v
+pytest components/data_processing/default/csv_cleaner/tests/ -v
 
 # 7. Final validation
 pre-commit run
@@ -561,7 +561,7 @@ uv run python -m scripts.compile_check.compile_check
 
 # Limit to one directory (can be repeated)
 uv run python -m scripts.compile_check.compile_check \
-  --path components/training/my_component
+  --path components/training/default/my_component
 ```
 
 The script exits non-zero if any dependency metadata is malformed or if compilation fails, matching
@@ -607,7 +607,7 @@ This section explains how to write comprehensive tests for your components, usin
 Create a `tests/` directory in your component folder with the following structure:
 
 ```text
-components/<category>/<component_name>/tests/
+components/<category>/<group>/<component_name>/tests/
 ├── __init__.py
 ├── test_component_unit.py      # Unit tests with mocking
 └── test_component_local.py     # LocalRunner integration tests
@@ -705,7 +705,7 @@ The repository provides test infrastructure through a global `conftest.py` file 
 
 **Pytest Configuration** (`pyproject.toml`):
 
-- **Test Discovery**: Configured to find tests in `components/*/tests` and `pipelines/*/tests` directories
+- **Test Discovery**: Configured to find tests in `components/*/*/tests` and `pipelines/*/*/tests` directories
 - **Import Mode**: Uses `--import-mode=importlib` for better import handling
 - **Automatic Detection**: Automatically discovers component and pipeline tests without manual configuration
 
@@ -774,7 +774,7 @@ If your component uses a custom image, test the container build:
 
 ```bash
 # Build your component image
-docker build -t my-component:test components/<category>/my-component/
+docker build -t my-component:test components/<category>/<group>/my-component/
 
 # Test the container runs correctly
 docker run --rm my-component:test echo "Hello, world!"
@@ -855,7 +855,7 @@ strategy:
         context: docs/examples
       # Add your new image:
       - name: my-training-image
-        context: components/training/my_component
+        context: components/training/default/my_component
 ```
 
 **Matrix fields:**
@@ -920,7 +920,7 @@ Before submitting a PR, test your image locally:
 
 ```bash
 # Build the image
-docker build -t my-component:test -f components/training/my_component/Containerfile components/training/my_component
+docker build -t my-component:test -f components/training/default/my_component/Containerfile components/training/default/my_component
 
 # Test it
 docker run --rm my-component:test python -c "import pandas; print(pandas.__version__)"
@@ -933,7 +933,7 @@ docker run --rm my-component:test python -c "import pandas; print(pandas.__versi
 
 ```bash
 # Build the image
-podman build -t my-component:test -f components/training/my_component/Containerfile components/training/my_component
+podman build -t my-component:test -f components/training/default/my_component/Containerfile components/training/default/my_component
 
 # Test it
 podman run --rm my-component:test python -c "import pandas; print(pandas.__version__)"

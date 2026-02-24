@@ -385,7 +385,7 @@ class TestValidateCompilation:
         different_cwd = tmp_path
         monkeypatch.chdir(different_cwd)
 
-        asset_dir = Path("components/training/my_component")
+        asset_dir = Path("components/training/default/my_component")
         roots = [repo_root / "components"]
 
         result = vc._matches_requested_roots(asset_dir, roots)

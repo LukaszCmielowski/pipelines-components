@@ -9,9 +9,9 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
-# Patterns for matching asset paths
-COMPONENT_PATTERN = re.compile(r"^components/([^/]+)/([^/]+)/")
-PIPELINE_PATTERN = re.compile(r"^pipelines/([^/]+)/([^/]+)/")
+# Patterns for matching asset paths (category/group/name)
+COMPONENT_PATTERN = re.compile(r"^components/([^/]+)/([^/]+)/([^/]+)/")
+PIPELINE_PATTERN = re.compile(r"^pipelines/([^/]+)/([^/]+)/([^/]+)/")
 
 
 @dataclass
@@ -203,9 +203,9 @@ class ChangeDetector:
 
         for file_path in files:
             if match := COMPONENT_PATTERN.match(file_path):
-                components.add(f"components/{match.group(1)}/{match.group(2)}")
+                components.add(f"components/{match.group(1)}/{match.group(2)}/{match.group(3)}")
             elif match := PIPELINE_PATTERN.match(file_path):
-                pipelines.add(f"pipelines/{match.group(1)}/{match.group(2)}")
+                pipelines.add(f"pipelines/{match.group(1)}/{match.group(2)}/{match.group(3)}")
 
         return sorted(components), sorted(pipelines)
 

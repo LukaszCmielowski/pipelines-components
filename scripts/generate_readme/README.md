@@ -9,21 +9,21 @@ Run from the project root directory:
 
 ```bash
 # Generate README for a component
-python -m scripts.generate_readme --component components/some_category/my_component
+python -m scripts.generate_readme --component components/some_category/some_group/my_component
 
 # Generate README for a pipeline
-python -m scripts.generate_readme --pipeline pipelines/some_category/my_pipeline
+python -m scripts.generate_readme --pipeline pipelines/some_category/some_group/my_pipeline
 
 # Check if READMEs are in sync (default, exits 1 if diffs found)
-python -m scripts.generate_readme --component components/some_category/my_component
+python -m scripts.generate_readme --component components/some_category/some_group/my_component
 
 # Fix out-of-sync READMEs
 python -m scripts.generate_readme \
-  --component components/some_category/my_component \
+  --component components/some_category/some_group/my_component \
   --fix
 
 # Or with uv
-uv run -m scripts.generate_readme --component components/some_category/my_component
+uv run -m scripts.generate_readme --component components/some_category/some_group/my_component
 ```
 
 ## Features

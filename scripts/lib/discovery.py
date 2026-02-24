@@ -53,12 +53,14 @@ def normalize_targets(raw_paths: Sequence[str]) -> list[Path]:
 def discover_assets(base_dir: Path, asset_type: str) -> list[dict[str, Any]]:
     """Discover all components or pipelines in a directory.
 
+    Expects structure: base_dir/<category>/<group>/<name>/{component,pipeline}.py
+
     Args:
         base_dir: Base directory to search (components/ or pipelines/)
         asset_type: Either 'component' or 'pipeline'
 
     Returns:
-        List of dicts with 'path', 'category', 'name', and 'module_path' keys
+        List of dicts with 'path', 'category', 'group', 'name', and 'module_path' keys
     """
     assets = []
     filename = f"{asset_type}.py"
@@ -70,20 +72,25 @@ def discover_assets(base_dir: Path, asset_type: str) -> list[dict[str, Any]]:
         if not category_dir.is_dir() or category_dir.name.startswith(("_", ".")):
             continue
 
-        for asset_dir in category_dir.iterdir():
-            if not asset_dir.is_dir() or asset_dir.name.startswith(("_", ".")):
+        for group_dir in category_dir.iterdir():
+            if not group_dir.is_dir() or group_dir.name.startswith(("_", ".")):
                 continue
 
-            asset_file = asset_dir / filename
-            if asset_file.exists():
-                assets.append(
-                    {
-                        "path": asset_file,
-                        "category": category_dir.name,
-                        "name": asset_dir.name,
-                        "module_path": str(asset_file),
-                    }
-                )
+            for asset_dir in group_dir.iterdir():
+                if not asset_dir.is_dir() or asset_dir.name.startswith(("_", ".")):
+                    continue
+
+                asset_file = asset_dir / filename
+                if asset_file.exists():
+                    assets.append(
+                        {
+                            "path": asset_file,
+                            "category": category_dir.name,
+                            "group": group_dir.name,
+                            "name": asset_dir.name,
+                            "module_path": str(asset_file),
+                        }
+                    )
 
     return assets
 
@@ -91,12 +98,14 @@ def discover_assets(base_dir: Path, asset_type: str) -> list[dict[str, Any]]:
 def find_assets_with_metadata(asset_type: str, base_path: Path | None = None) -> list[str]:
     """Find all asset directories that have metadata.yaml.
 
+    Expects structure: asset_type/<category>/<group>/<name>/metadata.yaml
+
     Args:
         asset_type: Either 'components' or 'pipelines'
         base_path: Optional base path, defaults to current directory
 
     Returns:
-        List of asset paths like 'components/training/my_component'
+        List of asset paths like 'components/training/default/my_component'
     """
     assets = []
     if base_path is None:
@@ -110,12 +119,16 @@ def find_assets_with_metadata(asset_type: str, base_path: Path | None = None) ->
         if not category.is_dir() or category.name.startswith((".", "_")):
             continue
 
-        for asset in category.iterdir():
-            if not asset.is_dir() or asset.name.startswith((".", "_")):
+        for group in category.iterdir():
+            if not group.is_dir() or group.name.startswith((".", "_")):
                 continue
 
-            if (asset / "metadata.yaml").exists():
-                assets.append(f"{asset_type}/{category.name}/{asset.name}")
+            for asset in group.iterdir():
+                if not asset.is_dir() or asset.name.startswith((".", "_")):
+                    continue
+
+                if (asset / "metadata.yaml").exists():
+                    assets.append(f"{asset_type}/{category.name}/{group.name}/{asset.name}")
 
     return assets
 
@@ -222,10 +235,16 @@ def _build_asset_dict_from_repo_path(
     if resolved.name != expected_filename:
         raise ValueError(f"Expected {expected_filename} under {asset_root}: {asset_file}")
     rel = resolved.relative_to(root)
-    if len(rel.parts) < 3:
-        raise ValueError(f"Path must be {asset_root}/<category>/<name>/{expected_filename}: {asset_file}")
-    category, name = rel.parts[0], rel.parts[1]
-    return {"path": asset_file, "category": category, "name": name, "module_path": str(asset_file)}
+    if len(rel.parts) < 4:
+        raise ValueError(f"Path must be {asset_root}/<category>/<group>/<name>/{expected_filename}: {asset_file}")
+    category, group, name = rel.parts[0], rel.parts[1], rel.parts[2]
+    return {
+        "path": asset_file,
+        "category": category,
+        "group": group,
+        "name": name,
+        "module_path": str(asset_file),
+    }
 
 
 def build_component_asset(repo_root: Path, component_file: Path) -> dict[str, Any]:
