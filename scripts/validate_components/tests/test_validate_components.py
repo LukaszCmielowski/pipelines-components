@@ -49,11 +49,12 @@ def setup_mock_kfp(monkeypatch: MonkeyPatch, fake_repo: Path, compile_func: Call
 
 
 def write_component_asset(tmp_path: Path, source_file: Path) -> Path:
-    """Create a component asset directory structure with the given source file."""
-    component_dir = tmp_path / "components" / "training" / "my_component"
+    """Create a component asset directory structure (category/group/name) with the given source file."""
+    component_dir = tmp_path / "components" / "training" / "default" / "my_component"
     component_dir.mkdir(parents=True)
     (tmp_path / "components" / "__init__.py").touch()
     (tmp_path / "components" / "training" / "__init__.py").touch()
+    (tmp_path / "components" / "training" / "default" / "__init__.py").touch()
     (component_dir / "__init__.py").touch()
     (component_dir / "metadata.yaml").touch()
 
@@ -63,11 +64,12 @@ def write_component_asset(tmp_path: Path, source_file: Path) -> Path:
 
 
 def write_pipeline_asset(tmp_path: Path, source_file: Path) -> Path:
-    """Create a pipeline asset directory structure with the given source file."""
-    pipeline_dir = tmp_path / "pipelines" / "training" / "my_pipeline"
+    """Create a pipeline asset directory structure (category/group/name) with the given source file."""
+    pipeline_dir = tmp_path / "pipelines" / "training" / "default" / "my_pipeline"
     pipeline_dir.mkdir(parents=True)
     (tmp_path / "pipelines" / "__init__.py").touch()
     (tmp_path / "pipelines" / "training" / "__init__.py").touch()
+    (tmp_path / "pipelines" / "training" / "default" / "__init__.py").touch()
     (pipeline_dir / "__init__.py").touch()
     (pipeline_dir / "metadata.yaml").touch()
 
