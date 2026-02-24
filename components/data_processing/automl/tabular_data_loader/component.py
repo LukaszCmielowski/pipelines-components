@@ -60,7 +60,7 @@ def automl_data_loader(
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         endpoint_url = os.environ.get("AWS_S3_ENDPOINT")
-        # region_name = os.environ.get("AWS_DEFAULT_REGION")
+        region_name = os.environ.get("AWS_DEFAULT_REGION")
 
         if (access_key and not secret_key) or (secret_key and not access_key):
             raise ValueError(
@@ -76,7 +76,7 @@ def automl_data_loader(
         return boto3.client(
             "s3",
             endpoint_url=endpoint_url,
-            # region_name=region_name,
+            region_name=region_name,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
@@ -125,13 +125,6 @@ def automl_data_loader(
                         f"Target column '{label_column}' not found in the dataset. "
                         f"Available columns: {list(chunk_df.columns)}"
                     )
-
-                stats = chunk_df[label_column].value_counts()
-                singleton_indexes = stats[stats == 1].index.values
-                for idx in singleton_indexes:
-                    chunk_df = chunk_df[chunk_df[label_column] != idx]
-                if chunk_df.empty:
-                    continue
 
                 combined_data = (
                     pd.concat([subsampled_data, chunk_df], ignore_index=True)

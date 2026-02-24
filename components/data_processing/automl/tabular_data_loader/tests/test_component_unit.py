@@ -69,7 +69,7 @@ class TestAutomlDataLoaderUnitTests:
         csv_content = "x,y,z\n10,20,30\n40,50,60\n"
         body_stream = io.BytesIO(csv_content.encode("utf-8"))
 
-        with _mock_boto3_module(get_object_return={"Body": body_stream}) as mock_s3:
+        with _mock_boto3_module(get_object_return={"Body": body_stream}) as _:
             full_dataset = mock.MagicMock()
             full_dataset.path = str(tmp_path / "out.csv")
 
