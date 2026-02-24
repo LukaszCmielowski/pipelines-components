@@ -168,9 +168,9 @@ def automl_data_loader(
                     subsampled_data = data
                 else:
                     sampling_frac = max_size_bytes / combined_memory
-                    subsampled_data = data.sample(
-                        frac=sampling_frac, random_state=DEFAULT_RANDOM_STATE
-                    ).reset_index(drop=True)
+                    subsampled_data = data.sample(frac=sampling_frac, random_state=DEFAULT_RANDOM_STATE).reset_index(
+                        drop=True
+                    )
 
             return subsampled_data if subsampled_data is not None else pd.DataFrame()
 
