@@ -25,6 +25,7 @@ def documents_rag_optimization_pipeline(
     input_data_bucket_name: str,
     input_data_key: str,
     llama_stack_secret_name: str,
+    openai_secret_name: str,
     embeddings_models: Optional[List] = None,
     generation_models: Optional[List] = None,
     optimization_metric: str = "faithfulness",
@@ -55,6 +56,9 @@ def documents_rag_optimization_pipeline(
         input_data_key: Object key (path) of the input documents in the input data bucket.
         llama_stack_secret_name: Name of the Kubernetes secret for llama-stack API connection.
             The secret must define: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL.
+        openai_secret_name: Name of the Kubernetes secret containig connection info for externally reachable models (w/o Llama-stack server).
+            The secret must define: OPENAI_API_KEY, OPENAI_BASE_URL.
+            Providing this secret is synonymous with running the experiment using an in-memory vector store (ChromaDB).
         embeddings_models: Optional list of embedding model identifiers to use in the search space.
         generation_models: Optional list of foundation/generation model identifiers to use in the
             search space.
@@ -108,6 +112,31 @@ def documents_rag_optimization_pipeline(
         vector_database_id=vector_database_id or "ls_milvus",
         optimization_settings={"metric": optimization_metric},
     )
+
+    if llama_stack_secret_name:
+        use_secret_as_env(
+            mps_task,
+            llama_stack_secret_name,
+            {
+                "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+                "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+            },
+        )
+        use_secret_as_env(
+            hpo_task,
+            llama_stack_secret_name,
+            {
+                "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+                "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+            },
+        )
+    elif openai_secret_name:
+        use_secret_as_env(
+            mps_task, openai_secret_name, {"OPENAI_BASE_URL": "OPENAI_BASE_URL", "OPENAI_API_KEY": "OPENAI_API_KEY"}
+        )
+        use_secret_as_env(
+            hpo_task, openai_secret_name, {"OPENAI_BASE_URL": "OPENAI_BASE_URL", "OPENAI_API_KEY": "OPENAI_API_KEY"}
+        )
 
     leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])
 
