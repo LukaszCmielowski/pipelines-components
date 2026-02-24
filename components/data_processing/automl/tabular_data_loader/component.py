@@ -138,7 +138,7 @@ def automl_data_loader(
                     sampling_frac = max_size_bytes / combined_memory
                     subsampled_data = (
                         combined_data.groupby(label_column, group_keys=False)
-                        .apply(lambda x: x.sample(frac=min(sampling_frac, 1.0), random_state=DEFAULT_RANDOM_STATE))
+                        .apply(lambda x: x.sample(frac=sampling_frac, random_state=DEFAULT_RANDOM_STATE))
                         .reset_index(drop=True)
                     )
 
@@ -169,7 +169,7 @@ def automl_data_loader(
                 else:
                     sampling_frac = max_size_bytes / combined_memory
                     subsampled_data = data.sample(
-                        frac=min(sampling_frac, 1.0), random_state=DEFAULT_RANDOM_STATE
+                        frac=sampling_frac, random_state=DEFAULT_RANDOM_STATE
                     ).reset_index(drop=True)
 
             return subsampled_data if subsampled_data is not None else pd.DataFrame()
