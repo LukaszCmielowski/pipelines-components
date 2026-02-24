@@ -10,8 +10,9 @@ dependencies:
   #     version: ">=1.0.0"
 tags:
   - data-processing
+  - automl
   # Add more relevant tags here
-lastVerified: 2026-01-22T10:26:27Z
+lastVerified: 2026-02-23T14:30:00Z
 # links:  # Add relevant links
 #   documentation: https://your-docs-url.com
 #   issue_tracker: https://github.com/kubeflow/pipelines-components/issues

@@ -1,6 +1,31 @@
-"""Tests for the tabular_data_loader component."""
+"""Tests for the tabular_data_loader component.
+
+boto3 is mocked via sys.modules so the real boto3 package is not required.
+pandas is used for CSV handling and assertions; tests skip if pandas is not installed (pytest.importorskip).
+"""
+
+import io
+import sys
+from contextlib import contextmanager
+from unittest import mock
+
+import pytest
 
 from ..component import automl_data_loader
+
+
+@contextmanager
+def _mock_boto3_module(get_object_return=None, get_object_side_effect=None):
+    """Inject a fake boto3 module so the component does not require boto3 to be installed."""
+    mock_boto3 = mock.MagicMock()
+    mock_s3 = mock.MagicMock()
+    if get_object_side_effect is not None:
+        mock_s3.get_object.side_effect = get_object_side_effect
+    else:
+        mock_s3.get_object.return_value = get_object_return or {"Body": io.BytesIO(b"")}
+    mock_boto3.client.return_value = mock_s3
+    with mock.patch.dict(sys.modules, {"boto3": mock_boto3}):
+        yield mock_s3
 
 
 class TestAutomlDataLoaderUnitTests:
@@ -11,17 +36,229 @@ class TestAutomlDataLoaderUnitTests:
         assert callable(automl_data_loader)
         assert hasattr(automl_data_loader, "python_func")
 
-    def test_component_with_default_parameters(self):
-        """Test component with valid input parameters."""
-        # TODO: Implement unit tests for your component
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_with_default_parameters(self, tmp_path):
+        """Test component with default sampling_method=None (resolved from task_type=regression -> random)."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "a,b,c\n1,2,3\n4,5,6\n7,8,9\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
 
-        # Example test structure:
-        result = automl_data_loader.python_func(input_param="test_value")
-        assert isinstance(result, str)
-        assert "test_value" in result
+        with _mock_boto3_module(get_object_return={"Body": body_stream}) as mock_s3:
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "output.csv")
 
-    # TODO: Add more comprehensive unit tests
-    # @mock.patch("external_library.some_function")
-    # def test_component_with_mocked_dependencies(self, mock_function):
-    #     """Test component behavior with mocked external calls."""
-    #     pass
+            result = automl_data_loader.python_func(
+                file_key="data/file.csv",
+                bucket_name="my-bucket",
+                full_dataset=full_dataset,
+            )
+
+            assert result is not None
+            assert hasattr(result, "sample_config")
+            assert result.sample_config["n_samples"] == 3
+            mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/file.csv")
+        assert (tmp_path / "output.csv").exists()
+        saved = pd.read_csv(full_dataset.path)
+        assert list(saved.columns) == ["a", "b", "c"]
+        assert len(saved) == 3
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_explicit_first_n_rows(self, tmp_path):
+        """Test component with explicit sampling_method='first_n_rows'."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "x,y,z\n10,20,30\n40,50,60\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}) as _:
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "out.csv")
+
+            result = automl_data_loader.python_func(
+                file_key="s3/path/data.csv",
+                bucket_name="bucket",
+                full_dataset=full_dataset,
+                sampling_method="first_n_rows",
+            )
+
+            assert hasattr(result, "sample_config")
+            assert result.sample_config["n_samples"] == 2
+        saved = pd.read_csv(full_dataset.path)
+        assert list(saved.columns) == ["x", "y", "z"]
+        assert len(saved) == 2
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_stratified_sampling_with_label_column(self, tmp_path):
+        """Test component with sampling_method='stratified' and label_column."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "feature1,feature2,target\n1,2,A\n2,3,A\n3,4,A\n4,5,B\n5,6,B\n6,7,B\n7,8,C\n8,9,C\n9,10,C\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}) as mock_s3:
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "stratified_out.csv")
+
+            result = automl_data_loader.python_func(
+                file_key="data/train.csv",
+                bucket_name="my-bucket",
+                full_dataset=full_dataset,
+                sampling_method="stratified",
+                label_column="target",
+            )
+
+            assert hasattr(result, "sample_config")
+            assert result.sample_config["n_samples"] == 9
+            mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/train.csv")
+        assert (tmp_path / "stratified_out.csv").exists()
+        saved = pd.read_csv(full_dataset.path)
+        assert "target" in saved.columns
+        assert set(saved["target"].unique()) == {"A", "B", "C"}
+        assert len(saved) == 9
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_stratified_requires_label_column(self, tmp_path):
+        """Test that sampling_method='stratified' without label_column raises ValueError."""
+        pytest.importorskip("pandas")
+
+        with _mock_boto3_module() as mock_s3:
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "out.csv")
+
+            with pytest.raises(ValueError, match="label_column must be provided when sampling_method='stratified'"):
+                automl_data_loader.python_func(
+                    file_key="data/file.csv",
+                    bucket_name="bucket",
+                    full_dataset=full_dataset,
+                    sampling_method="stratified",
+                    label_column=None,
+                )
+
+            mock_s3.get_object.assert_not_called()
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_stratified_label_column_not_in_dataset(self, tmp_path):
+        """Test that stratified sampling with missing target column raises ValueError."""
+        pytest.importorskip("pandas")
+        csv_content = "a,b,c\n1,2,3\n4,5,6\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}):
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "out.csv")
+
+            with pytest.raises(ValueError, match=r"Target column 'label' not found|Error reading CSV from S3"):
+                automl_data_loader.python_func(
+                    file_key="data/file.csv",
+                    bucket_name="bucket",
+                    full_dataset=full_dataset,
+                    sampling_method="stratified",
+                    label_column="label",
+                )
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_stratified_drops_na_in_target(self, tmp_path):
+        """Test that stratified sampling drops rows with NA in label_column."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "f1,f2,target\n1,2,A\n2,3,\n3,4,B\n4,5,B\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}):
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "out.csv")
+
+            result = automl_data_loader.python_func(
+                file_key="data/file.csv",
+                bucket_name="bucket",
+                full_dataset=full_dataset,
+                sampling_method="stratified",
+                label_column="target",
+            )
+
+            assert hasattr(result, "sample_config")
+            assert result.sample_config["n_samples"] >= 2
+        saved = pd.read_csv(full_dataset.path)
+        assert saved["target"].notna().all()
+        assert len(saved) >= 2
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_random_sampling_basic(self, tmp_path):
+        """Test component with sampling_method='random' writes valid CSV and returns sample_config."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "a,b,c\n1,2,3\n4,5,6\n7,8,9\n10,11,12\n"
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}) as mock_s3:
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "random_out.csv")
+
+            result = automl_data_loader.python_func(
+                file_key="data/file.csv",
+                bucket_name="my-bucket",
+                full_dataset=full_dataset,
+                sampling_method="random",
+            )
+
+            assert result.sample_config["n_samples"] == 4
+            mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/file.csv")
+        assert (tmp_path / "random_out.csv").exists()
+        saved = pd.read_csv(full_dataset.path)
+        assert list(saved.columns) == ["a", "b", "c"]
+        assert len(saved) == 4
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_random_sampling_deterministic(self, tmp_path):
+        """Test that random sampling with fixed random_state is reproducible."""
+        pd = pytest.importorskip("pandas")
+        csv_content = "x,y\n1,2\n3,4\n5,6\n7,8\n9,10\n"
+
+        def get_object(**kwargs):
+            return {"Body": io.BytesIO(csv_content.encode("utf-8"))}
+
+        with _mock_boto3_module(get_object_side_effect=get_object):
+            full_dataset1 = mock.MagicMock()
+            full_dataset1.path = str(tmp_path / "out1.csv")
+            full_dataset2 = mock.MagicMock()
+            full_dataset2.path = str(tmp_path / "out2.csv")
+
+            result1 = automl_data_loader.python_func(
+                file_key="data/file.csv",
+                bucket_name="bucket",
+                full_dataset=full_dataset1,
+                sampling_method="random",
+            )
+            result2 = automl_data_loader.python_func(
+                file_key="data/file.csv",
+                bucket_name="bucket",
+                full_dataset=full_dataset2,
+                sampling_method="random",
+            )
+
+        assert result1.sample_config["n_samples"] == result2.sample_config["n_samples"] == 5
+        df1 = pd.read_csv(full_dataset1.path)
+        df2 = pd.read_csv(full_dataset2.path)
+        pd.testing.assert_frame_equal(df1, df2)
+
+    @mock.patch.dict("os.environ", {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"})
+    def test_component_random_sampling_multiple_chunks(self, tmp_path):
+        """Test random sampling with CSV large enough to trigger multiple chunks (>10k rows)."""
+        pd = pytest.importorskip("pandas")
+        header = "col1,col2\n"
+        rows = "\n".join(f"{i},{i * 2}" for i in range(15000))
+        csv_content = header + rows
+        body_stream = io.BytesIO(csv_content.encode("utf-8"))
+
+        with _mock_boto3_module(get_object_return={"Body": body_stream}):
+            full_dataset = mock.MagicMock()
+            full_dataset.path = str(tmp_path / "random_multi.csv")
+
+            result = automl_data_loader.python_func(
+                file_key="data/large.csv",
+                bucket_name="bucket",
+                full_dataset=full_dataset,
+                sampling_method="random",
+            )
+
+            assert result.sample_config["n_samples"] == 15000
+        assert (tmp_path / "random_multi.csv").exists()
+        saved = pd.read_csv(full_dataset.path)
+        assert list(saved.columns) == ["col1", "col2"]
+        assert len(saved) == 15000
