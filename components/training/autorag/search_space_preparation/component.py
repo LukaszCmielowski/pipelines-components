@@ -15,6 +15,10 @@ from kfp import dsl
 def search_space_preparation(
     test_data: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Input[dsl.Artifact],
+    chat_model_url: str,
+    chat_model_token: str,
+    embedding_model_url: str,
+    embedding_model_token: str,
     search_space_prep_report: dsl.Output[dsl.Artifact],
     # constraints: Dict = None,
     embeddings_models: Optional[List] = None,
@@ -76,6 +80,7 @@ def search_space_preparation(
     from langchain_core.documents import Document
     from openai import OpenAI
     from llama_stack_client import LlamaStackClient
+    from collections import namedtuple
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
@@ -118,21 +123,19 @@ def search_space_preparation(
     def prepare_ai4rag_search_space():
 
         if in_memory_vector_store_scenario:
-            openai_generation_models = []
-            openai_embedding_models = []
-            for fm in generation_models:
-                openai_generation_models.append(OpenAIFoundationModel(client=client, model_id=fm))
-            for em in embeddings_models:
-                openai_embedding_models.append(OpenAIEmbeddingModel(client=client, model_id=em))
+
+            generation_model = OpenAIFoundationModel(client=client.generation_model, model_id=generation_models[0])
+            embeddings_model = OpenAIEmbeddingModel(client=client.embedding_model, model_id=embeddings_models[0])
+
             return AI4RAGSearchSpace(
                 params=[
-                    Parameter("foundation_model", "C", values=openai_generation_models),
-                    Parameter("embedding_model", "C", values=openai_embedding_models),
+                    Parameter("foundation_model", "C", values=[generation_model]),
+                    Parameter("embedding_model", "C", values=[embeddings_model]),
                 ]
             )
 
         return prepare_search_space_with_llama_stack(
-            {"foundation_models": generation_models, "embedding_models": embeddings_models}, client=client
+            {"foundation_models": generation_models, "embedding_models": embeddings_models}, client=client.llama_stack
         )
 
     if not generation_models or not embeddings_models:
@@ -145,22 +148,18 @@ def search_space_preparation(
     llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
     llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
 
-    # In-memory vector store scenario (ChromaDB). The secret must provide: OPENAI_BASE_URL, OPENAI_API_KEY
-    openai_base_url = os.environ.get("OPENAI_BASE_URL", None)
-    openai_api_key = os.environ.get("OPENAI_API_KEY", None)
     in_memory_vector_store_scenario = False
 
+    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
+
     if llama_stack_client_base_url and llama_stack_client_api_key:
-        client = LlamaStackClient()
-    elif openai_base_url and openai_api_key:
-        client = OpenAI()
-        in_memory_vector_store_scenario = True
+        client = Client(llama_stack=LlamaStackClient())
     else:
-        raise KeyError(
-            "In order to initialise client instance allowing interacting with models "
-            "either of the env variable pairs have to be defined in the environment:\n"
-            "(OPENAI_BASE_URL, OPENAI_API_KEY) | (LLAMA_STACK_CLIENT_BASE_URL, LLAMA_STACK_CLIENT_API_KEY)"
+        client = Client(
+            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
+            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
         )
+        in_memory_vector_store_scenario = True
 
     search_space = prepare_ai4rag_search_space()
 

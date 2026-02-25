@@ -24,8 +24,11 @@ def documents_rag_optimization_pipeline(
     input_data_secret_name: str,
     input_data_bucket_name: str,
     input_data_key: str,
-    llama_stack_secret_name: str,
-    openai_secret_name: str,
+    chat_model_url: str,
+    chat_model_token: str,
+    embedding_model_url: str,
+    embedding_model_token: str,
+    # llama_stack_secret_name: Optional[str] = "",
     embeddings_models: Optional[List] = None,
     generation_models: Optional[List] = None,
     optimization_metric: str = "faithfulness",
@@ -83,6 +86,10 @@ def documents_rag_optimization_pipeline(
         sampled_documents_descriptor=documents_sampling_task.outputs["sampled_documents"],
     )
 
+    test_data_loader_task.set_caching_options(False)
+    documents_sampling_task.set_caching_options(False)
+    text_extraction_task.set_caching_options(False)
+
     for task, secret_name in zip(
         [test_data_loader_task, documents_sampling_task, text_extraction_task],
         [test_data_secret_name, input_data_secret_name, input_data_secret_name],
@@ -101,6 +108,10 @@ def documents_rag_optimization_pipeline(
     mps_task = search_space_preparation(
         test_data=test_data_loader_task.outputs["test_data"],
         extracted_text=text_extraction_task.outputs["extracted_text"],
+        chat_model_url=chat_model_url,
+        chat_model_token=chat_model_token,
+        embedding_model_url=embedding_model_url,
+        embedding_model_token=embedding_model_token,
         embeddings_models=embeddings_models,
         generation_models=generation_models,
     )
@@ -109,34 +120,32 @@ def documents_rag_optimization_pipeline(
         extracted_text=text_extraction_task.outputs["extracted_text"],
         test_data=test_data_loader_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
+        chat_model_url=chat_model_url,
+        chat_model_token=chat_model_token,
+        embedding_model_url=embedding_model_url,
+        embedding_model_token=embedding_model_token,
         vector_database_id=vector_database_id or "ls_milvus",
         optimization_settings={"metric": optimization_metric},
     )
 
-    if llama_stack_secret_name:
-        use_secret_as_env(
-            mps_task,
-            llama_stack_secret_name,
-            {
-                "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
-                "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
-            },
-        )
-        use_secret_as_env(
-            hpo_task,
-            llama_stack_secret_name,
-            {
-                "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
-                "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
-            },
-        )
-    elif openai_secret_name:
-        use_secret_as_env(
-            mps_task, openai_secret_name, {"OPENAI_BASE_URL": "OPENAI_BASE_URL", "OPENAI_API_KEY": "OPENAI_API_KEY"}
-        )
-        use_secret_as_env(
-            hpo_task, openai_secret_name, {"OPENAI_BASE_URL": "OPENAI_BASE_URL", "OPENAI_API_KEY": "OPENAI_API_KEY"}
-        )
+    # with dsl.If(llama_stack_secret_name != ""):  # disregard llama-stack for the time being
+    #     if llama_stack_secret_name:
+    #         use_secret_as_env(
+    #             mps_task,
+    #             llama_stack_secret_name,
+    #             {
+    #                 "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+    #                 "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+    #             },
+    #         )
+    #         use_secret_as_env(
+    #             hpo_task,
+    #             llama_stack_secret_name,
+    #             {
+    #                 "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+    #                 "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+    #             },
+    #         )
 
     leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])
 

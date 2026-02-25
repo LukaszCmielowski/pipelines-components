@@ -17,6 +17,10 @@ def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
+    chat_model_url: str,
+    chat_model_token: str,
+    embedding_model_url: str,
+    embedding_model_token: str,
     rag_patterns: dsl.Output[dsl.Artifact],
     autorag_run_artifact: dsl.Output[dsl.Artifact],
     vector_database_id: Optional[str] = None,
@@ -86,6 +90,7 @@ def rag_templates_optimization(
     from langchain_core.documents import Document
     from llama_stack_client import LlamaStackClient
     from openai import OpenAI
+    from collections import namedtuple
 
     MAX_NUMBER_OF_RAG_PATTERNS = 8
     METRIC = "faithfulness"
@@ -135,22 +140,18 @@ def rag_templates_optimization(
     llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
     llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
 
-    # In-memory vector store scenario (ChromaDB). The secret must provide: OPENAI_BASE_URL, OPENAI_API_KEY
-    openai_base_url = os.environ.get("OPENAI_BASE_URL", None)
-    openai_api_key = os.environ.get("OPENAI_API_KEY", None)
     in_memory_vector_store_scenario = False
 
+    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
+
     if llama_stack_client_base_url and llama_stack_client_api_key:
-        client = LlamaStackClient()
-    elif openai_base_url and openai_api_key:
-        client = OpenAI()
-        in_memory_vector_store_scenario = True
+        client = Client(llama_stack=LlamaStackClient())
     else:
-        raise KeyError(
-            "In order to initialise client instance allowing interacting with models "
-            "either of the env variable pairs have to be defined in the environment:\n"
-            "(OPENAI_BASE_URL, OPENAI_API_KEY) | (LLAMA_STACK_CLIENT_BASE_URL, LLAMA_STACK_CLIENT_API_KEY)"
+        client = Client(
+            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
+            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
         )
+        in_memory_vector_store_scenario = True
 
     optimization_settings = optimization_settings if optimization_settings else {}
     if not (optimization_metric := optimization_settings.get("metric", None)):
@@ -169,38 +170,40 @@ def rag_templates_optimization(
     params = []
     if in_memory_vector_store_scenario:
         for param, values in search_space.items():
-            if param == "foundation_models":
+            if param == "foundation_model":
                 params.append(
                     Parameter(
                         "foundation_model",
                         "C",
-                        values=[OpenAIFoundationModel(client=client, model_id=fm) for fm in values],
+                        values=[OpenAIFoundationModel(client=client.generation_model, model_id=fm) for fm in values],
                     )
                 )
-            elif param == "embedding_models":
+            elif param == "embedding_model":
                 params.append(
                     Parameter(
                         "embedding_model",
                         "C",
-                        values=[OpenAIFoundationModel(client=client, model_id=em) for em in values],
+                        values=[OpenAIEmbeddingModel(client=client.embedding_model, model_id=em) for em in values],
                     )
                 )
             else:
                 params.append(Parameter(param, "C", values=values))
     else:
         for param, values in search_space.items():
-            if param == "foundation_models":
+            if param == "foundation_model":
                 params.append(
                     Parameter(
-                        "foundation_model", "C", values=[LSFoundationModel(client=client, model_id=fm) for fm in values]
+                        "foundation_model",
+                        "C",
+                        values=[LSFoundationModel(client=client.llama_stack, model_id=fm) for fm in values],
                     )
                 )
-            elif param == "embedding_models":
+            elif param == "embedding_model":
                 params.append(
                     Parameter(
                         "embedding_model",
                         "C",
-                        values=[LSEmbeddingModel(client=client, model_id=em, params=None) for em in values],
+                        values=[LSEmbeddingModel(client=client.llama_stack, model_id=em, params=None) for em in values],
                     )
                 )
             else:
@@ -208,9 +211,7 @@ def rag_templates_optimization(
     search_space = AI4RAGSearchSpace(params=params)
 
     event_handler = TmpEventHandler()
-    optimizer_settings = OptimizerSettings(  # TODO
-        max_evals=optimization_settings.get("max_number_of_rag_patterns", MAX_NUMBER_OF_RAG_PATTERNS)
-    )
+    optimizer_settings = OptimizerSettings(max_evals=optimization_settings.get("max_number_of_rag_patterns", 3))  # TODO
 
     benchmark_data = pd.read_json(Path(test_data))
 
@@ -221,7 +222,7 @@ def rag_templates_optimization(
         vector_database_id = "ls_milvus"
 
     rag_exp = AI4RAGExperiment(
-        client=None if in_memory_vector_store_scenario else client,
+        client=None if in_memory_vector_store_scenario else client.llama_stack,
         event_handler=event_handler,
         optimizer_settings=optimizer_settings,
         search_space=search_space,
