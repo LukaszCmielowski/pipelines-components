@@ -30,8 +30,6 @@ def text_extraction(
 
     import boto3
 
-    from kfp_components.components.data_processing.autorag.text_extraction.src.utils import process_document
-
     SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
     DOWNLOAD_MAX_WORKERS = 8
@@ -89,6 +87,31 @@ def text_extraction(
             logger.error("Failed to fetch %s: %s", key, e)
             raise
 
+    def process_document(file_path_str: str, output_dir_str: str) -> bool:
+        from docling.datamodel.accelerator_options import AcceleratorOptions
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+
+        try:
+            path = Path(file_path_str)
+            out_dir = Path(output_dir_str)
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = False
+            pipeline_options.do_table_structure = True
+            pipeline_options.accelerator_options = AcceleratorOptions(device="cpu", num_threads=1)
+            converter = DocumentConverter(
+                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+            )
+            result = converter.convert(path)
+            markdown_content = result.document.export_to_markdown()
+            output_file = out_dir / f"{path.name}.md"
+            output_file.write_text(markdown_content, encoding="utf-8")
+            return True
+        except Exception as e:
+            logger.error("Failed to process %s: %s", file_path_str, e)
+            return False
+
     with tempfile.TemporaryDirectory() as download_dir:
         download_path = Path(download_dir)
         download_workers = min(DOWNLOAD_MAX_WORKERS, len(documents)) if documents else 1
@@ -107,7 +130,7 @@ def text_extraction(
 
         process_workers = min(os.cpu_count() or 1, len(files_to_process)) if files_to_process else 1
         worker_fn = partial(process_document, output_dir_str=str(output_dir))
-        with ProcessPoolExecutor(max_workers=process_workers) as executor:
+        with ThreadPoolExecutor(max_workers=process_workers) as executor:
             results = list(executor.map(worker_fn, [str(f) for f in files_to_process]))
 
     processed_count = sum(1 for r in results if r)
