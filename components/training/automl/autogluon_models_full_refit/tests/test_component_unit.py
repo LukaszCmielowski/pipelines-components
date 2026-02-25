@@ -2,13 +2,30 @@
 
 import json
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
-from ..component import autogluon_models_full_refit
+# Inject mock modules so @mock.patch("pandas...") and @mock.patch("autogluon...") resolve (yoda-style).
+if "pandas" not in sys.modules:
+    sys.modules["pandas"] = mock.MagicMock()
+if "autogluon" not in sys.modules:
+    _ag = mock.MagicMock()
+    _ag.__path__ = []
+    _ag.__spec__ = None
+    sys.modules["autogluon"] = _ag
+for sub in ("autogluon.tabular", "autogluon.core", "autogluon.core.metrics"):
+    if sub not in sys.modules:
+        _m = mock.MagicMock()
+        _m.__spec__ = None
+        if sub == "autogluon.core":
+            _m.__path__ = []
+        sys.modules[sub] = _m
+
+from ..component import autogluon_models_full_refit  # noqa: E402
 
 # Default args for pipeline_name, run_id, sample_row (required by component signature)
 PIPELINE_NAME = "test-pipeline-run-123"
@@ -23,9 +40,6 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_with_valid_model(self, mock_predictor_class, mock_read_csv):
         """Test full refit with a valid model name."""
-        import pandas as pd
-
-        # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -37,8 +51,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor.problem_type = "regression"
         mock_predictor.label = "target"
 
-        # Mock DataFrame for dataset
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
+        mock_dataset_df = mock.MagicMock()
         mock_read_csv.return_value = mock_dataset_df
 
         # Create mock artifacts; use temp dir so we can verify metrics files are written
@@ -163,17 +176,13 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_handles_refit_failure(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when refit_full fails."""
-        import pandas as pd
-
-        # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
         mock_predictor_clone.refit_full.side_effect = ValueError("Model not found in predictor")
         mock_predictor_class.load.return_value = mock_predictor
 
-        # Mock DataFrame for dataset
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
+        mock_dataset_df = mock.MagicMock()
         mock_read_csv.return_value = mock_dataset_df
 
         mock_full_dataset = mock.MagicMock()
@@ -202,9 +211,6 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_verifies_all_operations_called(self, mock_predictor_class, mock_read_csv):
         """Test that all required operations are called in correct order."""
-        import pandas as pd
-
-        # Setup mocks
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -213,7 +219,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
         mock_predictor.problem_type = "regression"
 
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [1.1, 2.2, 3.3]})
+        mock_dataset_df = mock.MagicMock()
         mock_read_csv.return_value = mock_dataset_df
 
         mock_full_dataset = mock.MagicMock()
@@ -257,8 +263,6 @@ class TestAutogluonModelsFullRefitUnitTests:
         self, mock_predictor_class, mock_read_csv, mock_confusion_matrix
     ):
         """Test that confusion matrix is written when problem_type is binary or multiclass."""
-        import pandas as pd
-
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -266,10 +270,10 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor_clone.evaluate.return_value = {"accuracy": 0.95}
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"feature1": 0.1})
         mock_predictor.problem_type = "binary"
-        mock_predictor_clone.predict.return_value = pd.Series([0, 1, 0])
+        mock_predictor_clone.predict.return_value = mock.MagicMock()
         mock_predictor.label = "target"
 
-        mock_dataset_df = pd.DataFrame({"feature1": [1, 2, 3], "target": [0, 1, 0]})
+        mock_dataset_df = mock.MagicMock()
         mock_read_csv.return_value = mock_dataset_df
         confusion_matrix_dict = {"0": {"0": 2, "1": 0}, "1": {"0": 1, "1": 0}}
         mock_confusion_matrix.return_value = mock.MagicMock(to_dict=lambda: confusion_matrix_dict)
@@ -308,8 +312,6 @@ class TestAutogluonModelsFullRefitUnitTests:
     @mock.patch("autogluon.tabular.TabularPredictor")
     def test_full_refit_raises_on_invalid_problem_type(self, mock_predictor_class, mock_read_csv):
         """Test that ValueError is raised when problem_type is not regression/binary/multiclass."""
-        import pandas as pd
-
         mock_predictor = mock.MagicMock()
         mock_predictor_clone = mock.MagicMock()
         mock_predictor.clone.return_value = mock_predictor_clone
@@ -319,7 +321,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         mock_predictor.problem_type = "unknown"
         mock_predictor.label = "target"
 
-        mock_read_csv.return_value = pd.DataFrame({"feature1": [1], "target": [1.0]})
+        mock_read_csv.return_value = mock.MagicMock()
         mock_full_dataset = mock.MagicMock()
         mock_full_dataset.path = "/tmp/full_dataset.csv"
         mock_model_artifact = mock.MagicMock()
