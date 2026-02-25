@@ -30,7 +30,7 @@ def text_extraction(
 
     import boto3
 
-    from components.data_processing.autorag.text_extraction.src.utils import process_document
+    from kfp_components.components.data_processing.autorag.text_extraction.src.utils import process_document
 
     SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
@@ -59,11 +59,13 @@ def text_extraction(
 
     s3_creds = {
         k: os.environ.get(k)
-        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION"]
+        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT"]
     }
-    for k, v in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT"]:
+    for k, v in s3_creds.items():
         if v is None:
             raise ValueError(f"{k} environment variable not set. Check if kubernetes secret was configured properly.")
+
+    s3_creds["AWS_DEFAULT_REGION"] = os.environ.get("AWS_DEFAULT_REGION", "")
 
     session = boto3.session.Session(
         aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
