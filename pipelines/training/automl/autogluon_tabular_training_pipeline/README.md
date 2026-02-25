@@ -79,25 +79,36 @@ Pipeline outputs are written to the artifact store (S3-compatible storage config
 └── <run_id>/
     ├── leaderboard-evaluation/
     │   └── <task_id>/
-    │       └── html_artifact                        # HTML leaderboard (model names + metrics)
-    ├── notebook-generation/
+    │       └── html_artifact                     # HTML leaderboard (model names + metrics)
+    ├── autogluon-models-full-refit/
+    │   └── <task_id>/                           # one per top-N model
+    │       └── model_artifact/
+    │           └── <ModelName>_FULL/            # e.g. LightGBM_BAG_L1_FULL
+    │               ├── predictor/               # AutoGluon TabularPredictor files
+    │               └── metrics/
+    │                   ├── metrics.json         # model evaluation metrics (eval_metric, etc.)
+    │                   ├── feature_importance.json
+    │                   └── confusion_matrix.json  # for classification tasks only
+    ├── automl-data-loader/
     │   └── <task_id>/
-    |       └── notebook_artifact/
-    |           └── automl_predictor_notebook.ipynb  # jupyter notebook for interaction with TabularPredictor
-    └── autogluon-models-full-refit/
-        └── <task_id>/                               # one per top-N model
-            └── model_artifact/
-                └── <ModelName>_FULL/                # e.g. LightGBM_BAG_L1_FULL
-                    ├── metrics/
-                    │   ├── metrics.json             # evaluation metrics (eval_metric, etc.)
-                    │   ├── feature_importance.json
-                    │   └── confusion_matrix.json    # classification only
-                    └── [AutoGluon predictor files]  # TabularPredictor serialization
-
+    │       └── full_dataset/                    # (optional for debugging) tabular CSV used during run
+    ╰── tabular-train-test-split/
+        └── <task_id>/
+            ├── sampled_train_dataset/           # split of full dataset - used in selection stage
+            └── sampled_test_dataset/
 ```
 
-- **Leaderboard**: Single HTML file
-- **Model artifact**: Under each refit task, `model_artifact/<ModelName>_FULL` is the predictor root; load with `TabularPredictor.load(path_to_that_folder)`. The `metrics/` subfolder holds evaluation and feature-importance JSON written by the pipeline.
+- **leaderboard-evaluation**: Contains the HTML leaderboard artifact summarizing all model results.
+- **autogluon-models-full-refit**: Each top-N model refit task writes its model artifact here, under `<ModelName>_FULL`, including the saved TabularPredictor and associated metrics.
+- **automl-data-loader / tabular-train-test-split**: Store original and split datasets for pipeline traceability; useful for debugging or further processing, but not used in deployment.
+
+_Note_: There is one `autogluon-models-full-refit/<task_id>/model_artifact/<ModelName>_FULL` directory for each selected top-N model (parallel execution). Each contains an independently saved and refitted AutoGluon predictor.
+
+For loading:
+
+- Load a refitted model for deployment or notebook exploration using `TabularPredictor.load(<.../model_artifact/<ModelName>_FULL>)`
+- Model metrics and feature importances are always at `metrics/` under each model directory.
+- The leaderboard HTML is at `leaderboard-evaluation/<task_id>/html_artifact`.
 
 ## Metadata 🗂️
 
