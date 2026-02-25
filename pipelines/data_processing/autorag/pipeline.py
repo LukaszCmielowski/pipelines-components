@@ -9,13 +9,13 @@ from kfp_components.components.data_processing.autorag.text_extraction.component
     name="AutoRAG Data Processing Pipeline", description="Pipeline to load test data and documents for AutoRAG."
 )
 def data_processing_pipeline(
-    test_data_secret_name: str = "autorag-input-data-secret",
-    input_data_secret_name: str = "autorag-input-data-secret",
-    test_data_bucket_name: str = "autorag-dev-preview-dataset",
-    test_data_key: str = "benchmark.json",
-    input_data_bucket_name: str = "autorag-dev-preview-dataset",
-    sampling_config: dict = {"max_size_gigabytes": 1},
-    input_data_key: str = "documents",
+    test_data_secret_name: str,
+    input_data_secret_name: str,
+    test_data_bucket_name: str,
+    test_data_key: str,
+    input_data_bucket_name: str,
+    sampling_config: dict,
+    input_data_key: str,
 ):
     """Defines a pipeline to load and sample input data for AutoRAG.
 
