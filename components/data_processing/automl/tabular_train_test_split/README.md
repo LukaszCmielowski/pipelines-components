@@ -4,45 +4,22 @@
 
 ## Overview 🧾
 
-Splits data into train/test sets and performs sampling for AutoML workflows.
+Splits a tabular (CSV) dataset into train and test sets for AutoML workflows.
 
-The Train Test Split component is a critical step in the AutoML pipeline that prepares data for model
-training and evaluation. It splits the tabular data into training and test sets using appropriate
-sampling techniques (random, stratified, or time-series driven). Additionally, it samples a subset
-of the training data (default: 500 samples) for initial model building to reduce computational
-cost during the exploration phase.
-
-This component supports multiple task types (classification, regression, time-series) and adapts its splitting strategy accordingly. For classification tasks, it supports stratified sampling to maintain class distribution. For time-series tasks, it uses chronological splitting to preserve temporal order.
+The Train Test Split component takes a single CSV dataset and splits it into training and test sets using scikit-learn's `train_test_split`.
+For **regression** tasks the split is random; for **binary** and **multiclass** tasks the split is **stratified** by the label column by default, so that class proportions are preserved in both splits.
+The component writes the train and test CSVs to the output artifacts and returns a sample row (from the test set) and the split configuration.
 
 ## Inputs 📥
 
-| Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the full training data. |
-| `test_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset artifact containing the test data. |
-| `sampled_train_data` | `dsl.Output[dsl.Dataset]` | `None` | Output dataset with sampled training data for initial model building. |
-| `tabular_data` | `dsl.Input[dsl.Dataset]` | `None` | Input dataset artifact (raw tabular data from data-loader). |
-| `task_type` | `str` | `None` | ML task type: `"classification"`, `"regression"`, or `"time_series"`. |
-| `label_column` | `str` | `None` | Name of the label/target column. Required. |
-| `sampling_config` | `dict` | `None` | Optional sampling config; see [Sampling Configuration](#sampling-configuration). |
-| `split_config` | `dict` | `None` | Optional train/test split config; see [Split Configuration](#split-configuration). |
-
-### Sampling Configuration
-
-The `sampling_config` dictionary supports:
-
-```python
-{
-    "n_samples": 500,              # Number of samples for initial model building (default: 500)
-    "sampling_method": "random"   # Sampling method: "random", "stratified", or "truncate"
-}
-```
-
-**Sampling Methods:**
-
-- `"random"` - Random sampling for general use cases
-- `"stratified"` - Stratified sampling for classification tasks to maintain class distribution
-- `"truncate"` - Sampling last n records for time-series forecasting tasks
+| Parameter              | Type                     | Default   | Description |
+| ---------------------- | ------------------------ | -------- | ----------- |
+| `dataset`              | `dsl.Input[dsl.Dataset]` | *required* | Input CSV dataset to split. |
+| `task_type`            | `str`                    | *required* | Machine learning task type: `"binary"`, `"multiclass"`, or `"regression"`. |
+| `label_column`         | `str`                    | *required* | Name of the label/target column. |
+| `split_config`         | `dict`                   | *required* | Split configuration dictionary. Available keys: "test_size" (float), "random_state" (int), "stratify" (bool). |
+| `sampled_train_dataset` | `dsl.Output[dsl.Dataset]` | *required* | Output dataset artifact for the train split. |
+| `sampled_test_dataset` | `dsl.Output[dsl.Dataset]` | *required* | Output dataset artifact for the test split. |
 
 ### Split Configuration
 
@@ -50,132 +27,102 @@ The `split_config` dictionary supports:
 
 ```python
 {
-    "test_size": 0.2,        # Proportion of dataset for test split (default: 0.2)
-    "random_state": 42,      # Random seed for reproducibility (default: 42)
-    "stratify": True         # Enable stratified splitting for classification (default: True for classification)
+    "test_size": 0.3,       # Proportion of dataset for test split (default: 0.3)
+    "random_state": 42,     # Random seed for reproducibility (default: 42)
+    "stratify": True        # Use stratified split for binary/multiclass (default: True)
 }
 ```
 
-For time-series tasks:
-
-```python
-{
-    "n_last_rows": 100       # Number of last rows to use as test set for time-series
-}
-```
+- **Regression**: `stratify` is ignored; the split is always random.
+- **Binary / multiclass**: If `stratify` is `True` (default), the split is stratified by `label_column`; if `False`, the split is random.
 
 ## Outputs 📤
 
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `train_data` | `dsl.Dataset` | Full training dataset artifact. |
-| `test_data` | `dsl.Dataset` | Test dataset artifact. |
-| `sampled_train_data` | `dsl.Dataset` | Sampled training dataset (default: 500 samples) for initial model building. |
-| Return value | `str` | Message indicating the completion status of data splitting. |
+| Output                 | Type           | Description |
+| ---------------------- | -------------- | ----------- |
+| `sampled_train_dataset` | `dsl.Dataset`  | Training split (CSV). |
+| `sampled_test_dataset`  | `dsl.Dataset`  | Test split (CSV). |
+| Return value            | `NamedTuple`   | `sample_row`: JSON string of one row from the test set; `split_config`: dict with `test_size`. |
 
 ## Usage Examples 💡
 
-### Classification Task
+### Regression (random split)
 
 ```python
 from kfp import dsl
-from kfp_components.components.training.automl.data_processing.tabular_train_test_split import tabular_train_test_split
+from kfp_components.components.data_processing.automl.tabular_train_test_split import tabular_train_test_split
 
-@dsl.pipeline(name="train-test-split-classification-pipeline")
-def my_pipeline(tabular_data):
-    """Example pipeline for classification task."""
-    split_task = tabular_train_test_split(
-        tabular_data=tabular_data,
-        task_type="classification",
-        label_column="target",
-        sampling_config={
-            "n_samples": 500,
-            "sampling_method": "stratified"
-        },
-        split_config={
-            "test_size": 0.2,
-            "random_state": 42,
-            "stratify": True
-        }
-    )
-    return split_task
-```
-
-### Regression Task
-
-```python
 @dsl.pipeline(name="train-test-split-regression-pipeline")
-def my_pipeline(tabular_data):
-    """Example pipeline for regression task."""
+def my_pipeline(dataset):
     split_task = tabular_train_test_split(
-        tabular_data=tabular_data,
+        dataset=dataset,
         task_type="regression",
         label_column="price",
-        sampling_config={
-            "n_samples": 500,
-            "sampling_method": "random"
-        },
-        split_config={
-            "test_size": 0.2,
-            "random_state": 42
-        }
+        split_config={"test_size": 0.3, "random_state": 42},
     )
     return split_task
 ```
 
-### Time-Series Task
+### Classification (stratified split)
 
 ```python
-@dsl.pipeline(name="train-test-split-timeseries-pipeline")
-def my_pipeline(tabular_data):
-    """Example pipeline for time-series task."""
+@dsl.pipeline(name="train-test-split-classification-pipeline")
+def my_pipeline(dataset):
     split_task = tabular_train_test_split(
-        tabular_data=tabular_data,
-        task_type="time_series",
-        label_column="value",
-        sampling_config={
-            "n_samples": 500,
-            "sampling_method": "truncate"
-        },
-        split_config={
-            "n_last_rows": 100  # Last 100 rows as test set
-        }
+        dataset=dataset,
+        task_type="multiclass",
+        label_column="target",
+        split_config={"test_size": 0.2, "random_state": 42, "stratify": True},
     )
     return split_task
 ```
 
-## Sampling Strategy 🎯
+### Binary classification with custom test size
 
-The component uses different sampling strategies based on the task type:
+```python
+@dsl.pipeline(name="train-test-split-binary-pipeline")
+def my_pipeline(dataset):
+    split_task = tabular_train_test_split(
+        dataset=dataset,
+        task_type="binary",
+        label_column="label",
+        split_config={"test_size": 0.25, "random_state": 42},
+    )
+    return split_task
+```
 
-1. **Classification**: Uses stratified sampling by default to maintain class distribution in the sampled dataset
-2. **Regression**: Uses random sampling
-3. **Time-Series**: Uses truncate method to sample the last n records, preserving temporal order
+### Classification with random (non-stratified) split
 
-The sampled dataset (default: 500 samples) is used in the model-building-selection stage to reduce computational cost during initial model exploration.
+```python
+@dsl.pipeline(name="train-test-split-random-classification-pipeline")
+def my_pipeline(dataset):
+    split_task = tabular_train_test_split(
+        dataset=dataset,
+        task_type="multiclass",
+        label_column="target",
+        split_config={"test_size": 0.2, "stratify": False},
+    )
+    return split_task
+```
 
 ## Notes 📝
 
-- **Default Sample Size**: 500 samples are used for initial model building to balance exploration speed and model quality
-- **Stratified Splitting**: Automatically enabled for classification tasks to maintain class distribution
-- **Time-Series Handling**: Uses chronological splitting to preserve temporal order (no shuffling)
-- **Reproducibility**: Uses random_state parameter for reproducible splits
+- **Stratified split**: Used by default for `task_type="binary"` and `"multiclass"` when `split_config["stratify"]` is `True` (default) to preserve class distribution in train and test sets.
+- **Reproducibility**: Pass `random_state` in `split_config` (default: 42) for consistent splits.
+- **Output format**: Train and test artifacts are written as CSV files; the component appends `.csv` to the output artifact URIs.
 
 ## Metadata 🗂️
 
-- **Name**: train-test-split
+- **Name**: tabular_train_test_split
 - **Stability**: alpha
 - **Dependencies**:
-  - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
-  - External Services:
-    - Name: pandas, Version: >=2.0.0
-    - Name: scikit-learn, Version: >=1.0.0
+  - Kubeflow Pipelines >= 2.15.2
+  - pandas
+  - scikit-learn
 - **Tags**:
   - automl
   - data-processing
   - train-test-split
-  - data-sampling
 - **Last Verified**: 2025-01-27 00:00:00+00:00
 
 ## Additional Resources 📚
