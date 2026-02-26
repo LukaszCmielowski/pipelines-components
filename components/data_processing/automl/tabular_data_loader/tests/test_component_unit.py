@@ -12,8 +12,8 @@ from unittest import mock
 
 import pytest
 
-from .mocked_pandas import make_mocked_pandas_module
 from ..component import automl_data_loader
+from .mocked_pandas import make_mocked_pandas_module
 
 
 @contextmanager

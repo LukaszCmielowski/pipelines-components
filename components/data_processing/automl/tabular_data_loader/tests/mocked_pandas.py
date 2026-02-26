@@ -16,56 +16,68 @@ class MockedDataFrame:
     BYTES_PER_ROW = 100  # Used for memory_usage(deep=True).sum()
 
     def __init__(self, columns, rows):
+        """Store column names and row data."""
         self._columns = list(columns)
         self._rows = list(rows)
 
     @property
     def columns(self):
+        """Return the list of column names."""
         return self._columns
 
     @property
     def empty(self):
+        """Return True if there are no rows."""
         return len(self._rows) == 0
 
     def __len__(self):
+        """Return the number of rows."""
         return len(self._rows)
 
     def memory_usage(self, deep=True):
+        """Return a mock object whose sum() is BYTES_PER_ROW times row count."""
+
         class SumResult:
             def sum(self):
                 return len(self._df._rows) * MockedDataFrame.BYTES_PER_ROW
 
         class MemUsage:
+            """Mock memory usage object with sum() returning byte estimate."""
+
             def __init__(self, df):
+                """Store reference to the dataframe."""
                 self._df = df
 
             def sum(self):
+                """Return BYTES_PER_ROW times number of rows."""
                 return len(self._df._rows) * MockedDataFrame.BYTES_PER_ROW
 
         return MemUsage(self)
 
     def head(self, n):
+        """Return a new MockedDataFrame with the first n rows."""
         return MockedDataFrame(self._columns, self._rows[:n])
 
     def dropna(self, subset=None):
+        """Drop rows with missing values in the given columns."""
         if not subset:
             return self
         col_indices = [self._columns.index(c) for c in subset]
-        new_rows = [
-            row for row in self._rows
-            if all(row[i] != "" and row[i] is not None for i in col_indices)
-        ]
+        new_rows = [row for row in self._rows if all(row[i] != "" and row[i] is not None for i in col_indices)]
         return MockedDataFrame(self._columns, new_rows)
 
     def _col_index(self, col):
+        """Return the index of the given column name."""
         return self._columns.index(col)
 
     def _value_counts_for_column(self, col):
+        """Return MockedValueCounts for the given column."""
         idx = self._col_index(col)
         counts = Counter(row[idx] for row in self._rows)
         return MockedValueCounts(counts)
 
     def __getitem__(self, key):
+        """Return column as MockedSeries or filter rows by mask."""
         if isinstance(key, (list, tuple)):
             return self
         # Boolean "mask" style: df[df[col] != val]
@@ -79,6 +91,8 @@ class MockedDataFrame:
         return self
 
     def __ne__(self, other):
+        """Return a mask object for filtering rows by column != value."""
+
         class Mask:
             _column = None
             _value = other
@@ -87,15 +101,18 @@ class MockedDataFrame:
         return Mask
 
     def value_counts(self):
+        """Return value counts for the column (used via MockedSeries)."""
         col = getattr(self, "_value_counts_column", None)
         if col is not None:
             return self._value_counts_for_column(col)
         return MockedValueCounts({})
 
     def groupby(self, by, group_keys=False):
+        """Return a MockedGroupBy for stratified sampling."""
         return MockedGroupBy(self, by)
 
     def sample(self, frac=1.0, random_state=None):
+        """Return a new MockedDataFrame with a random sample of rows."""
         rng = random.Random(random_state)
         n = max(1, int(len(self._rows) * frac)) if frac < 1.0 else len(self._rows)
         n = min(n, len(self._rows))
@@ -104,9 +121,11 @@ class MockedDataFrame:
         return MockedDataFrame(self._columns, new_rows)
 
     def reset_index(self, drop=True):
+        """Return self (no-op for mock)."""
         return self
 
     def to_csv(self, path, index=False):
+        """Write the data to a CSV file at the given path."""
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(self._columns)
@@ -117,12 +136,16 @@ class MockedValueCounts:
     """Minimal value_counts() result: supports .index.values and comparison for singleton detection."""
 
     def __init__(self, count_dict):
+        """Store a mapping of value -> count."""
         self._counts = dict(count_dict)
 
     @property
     def index(self):
+        """Return an object with .values listing the distinct values."""
+
         class Index:
             def __init__(self, keys):
+                """Store index keys"""
                 self._keys = keys
 
             @property
@@ -132,7 +155,7 @@ class MockedValueCounts:
         return Index(list(self._counts.keys()))
 
     def __eq__(self, other):
-        # stats == 1 in component: return object whose .index.values are keys with count 1
+        """Return an object whose .index.values are keys with count equal to other."""
         matching_keys = [k for k, v in self._counts.items() if v == other]
 
         class FilteredResult:
@@ -140,6 +163,7 @@ class MockedValueCounts:
             def index(self):
                 class Idx:
                     values = matching_keys
+
                 return Idx()
 
         return FilteredResult()
@@ -149,10 +173,12 @@ class MockedGroupBy:
     """Minimal groupby().apply(fn).reset_index(drop=True) for stratified sampling."""
 
     def __init__(self, df, by):
+        """Store the dataframe and the column to group by."""
         self._df = df
         self._by = by
 
     def apply(self, fn, **kwargs):
+        """Group rows by column, apply fn to each group, and concatenate results."""
         col_idx = self._df._col_index(self._by)
         groups = {}
         for row in self._df._rows:
@@ -169,6 +195,7 @@ class MockedGroupBy:
         return MockedDataFrame(self._df._columns, result_rows)
 
     def reset_index(self, drop=True):
+        """Return stored result or self (no-op for mock)."""
         return self._result if hasattr(self, "_result") else self
 
 
@@ -191,6 +218,7 @@ def _read_csv_chunks(text_stream, chunksize):
 
 
 def _concat(dfs, ignore_index=True):
+    """Concatenate a list of MockedDataFrames into one."""
     if not dfs:
         return MockedDataFrame([], [])
     columns = dfs[0]._columns
@@ -222,23 +250,31 @@ def make_mocked_pandas_module():
     # .value_counts() and when compared with != val we store column and value so that df[mask]
     # can filter.
     class MockedSeries:
+        """Minimal series-like object for df[col] and value_counts()."""
+
         def __init__(self, df, column):
+            """Store reference to parent dataframe and column name."""
             self._df = df
             self._column = column
 
         def value_counts(self):
+            """Return value counts for this column."""
             return self._df._value_counts_for_column(self._column)
 
         def __ne__(self, other):
+            """Return a mask for filtering rows where this column != other."""
+
             class Mask:
                 _column = self._column
                 _value = other
                 _mask_series = True
+
             return Mask
 
     _original_getitem = MockedDataFrame.__getitem__
 
     def getitem(self, key):
+        """Return MockedSeries for column name, or filter by mask."""
         if isinstance(key, str) and key in self._columns:
             return MockedSeries(self, key)
         return _original_getitem(self, key)
