@@ -63,6 +63,7 @@ def leaderboard_evaluation(
         results.append({"model": model.metadata["display_name"]} | eval_results)
 
     leaderboard_df = pd.DataFrame(results).sort_values(by=eval_metric, ascending=False)
+    leaderboard_df.index = range(1, len(leaderboard_df) + 1)
     with open(html_artifact.path, "w") as f:
         f.write(leaderboard_df.to_html())
 
