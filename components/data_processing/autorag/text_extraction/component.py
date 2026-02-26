@@ -59,10 +59,7 @@ def text_extraction(
     bucket = descriptor["bucket"]
     documents = descriptor["documents"]
 
-    s3_creds = {
-        k: os.environ.get(k)
-        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT"]
-    }
+    s3_creds = {k: os.environ.get(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT"]}
     for k, v in s3_creds.items():
         if v is None:
             raise ValueError(f"{k} environment variable not set. Check if kubernetes secret was configured properly.")
@@ -72,10 +69,10 @@ def text_extraction(
     session = boto3.session.Session(
         aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
-        region_name=s3_creds.get("AWS_DEFAULT_REGION")
+        region_name=s3_creds.get("AWS_DEFAULT_REGION"),
     )
     s3_client = session.client(
-        service_name='s3',
+        service_name="s3",
         endpoint_url=s3_creds["AWS_S3_ENDPOINT"],
     )
 
@@ -121,8 +118,7 @@ def text_extraction(
         output_dir.mkdir(parents=True, exist_ok=True)
 
         files_to_process = [
-            f for f in download_path.rglob("*")
-            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+            f for f in download_path.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
         ]
 
         logger.info("Starting text extraction for %d documents.", len(files_to_process))
