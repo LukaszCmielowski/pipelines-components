@@ -13,7 +13,8 @@ data, typically improving performance compared to models trained on sampled data
 
 After refitting, the component creates a cleaned clone of the predictor containing only the original model and its
 refitted version (with `_FULL` suffix). The refitted model is set as the best model and the predictor is optimized to
-save space by removing unnecessary models and files. Evaluation metrics, feature importance, and (for classification)
+save space by removing unnecessary models and files. AutoGluon predictor files are saved under
+`model_artifact.path` / `model_name_FULL` / `predictor`. Evaluation metrics, feature importance, and (for classification)
 confusion matrix are written under `model_artifact.path` / `model_name_FULL` / `metrics`. A Jupyter notebook
 (`automl_predictor_notebook.ipynb`) is generated under `model_artifact.path` / `model_name_FULL` / `notebooks` for
 inference and exploration, using `pipeline_name`, `run_id`, and `sample_row` for run context and example input.
@@ -43,8 +44,9 @@ are `regression`, `binary`, and `multiclass`; any other type raises `ValueError`
 | --------- | ---- | ----------- |
 | `model_name` | `str` | Name of the refitted model (i.e. `model_name` with `_FULL` suffix). |
 
-The refitted predictor, metrics under `model_artifact.path` / `model_name_FULL` / `metrics`, and the notebook under
-`model_artifact.path` / `model_name_FULL` / `notebooks` / `automl_predictor_notebook.ipynb` are written to the
+The refitted AutoGluon predictor is written under `model_artifact.path` / `model_name_FULL` / `predictor`. Metrics are
+under `model_artifact.path` / `model_name_FULL` / `metrics`, and the notebook under
+`model_artifact.path` / `model_name_FULL` / `notebooks` / `automl_predictor_notebook.ipynb`. All are written to the
 `model_artifact` output. Artifact metadata includes `display_name` and `context` (e.g. `data_config`, `task_type`,
 `label_column`, `model_config`, `location`, `metrics`). The `context.metrics` dict contains `test_data` with the
 evaluation results on the test dataset.
@@ -53,20 +55,20 @@ evaluation results on the test dataset.
 
 ### Refit a single model (typical in a ParallelFor)
 
-Usually used after `models_selection`; refit each top model on the full dataset with pipeline placeholders for name and run ID:
+Usually used after `models_selection`; refit each top model with the test dataset used for evaluation. Use pipeline placeholders for name and run ID:
 
 ```python
 from kfp import dsl
 from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
 
 @dsl.pipeline(name="automl-full-refit-pipeline")
-def my_pipeline(selection_task, full_dataset, split_task):
+def my_pipeline(selection_task, split_task, loader_task):
     with dsl.ParallelFor(items=selection_task.outputs["top_models"], parallelism=2) as model_name:
         refit_task = autogluon_models_full_refit(
             model_name=model_name,
-            full_dataset=full_dataset,
+            test_dataset=split_task.outputs["sampled_test_dataset"],
             predictor_path=selection_task.outputs["predictor_path"],
-            sampling_config=selection_task.outputs["sample_config"],
+            sampling_config=loader_task.outputs["sample_config"],
             split_config=split_task.outputs["split_config"],
             model_config=selection_task.outputs["model_config"],
             pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
@@ -81,7 +83,7 @@ def my_pipeline(selection_task, full_dataset, split_task):
 ```python
 refit_task = autogluon_models_full_refit(
     model_name="LightGBM_BAG_L1",
-    full_dataset=full_dataset,
+    test_dataset=test_dataset,
     predictor_path="/workspace/autogluon_predictor",
     sampling_config={"n_samples": 10000},
     split_config={"test_size": 0.2, "random_state": 42},

@@ -127,7 +127,7 @@ Each refit task writes a Model artifact whose `metadata` is set by the autogluon
 | `task_type` | `str` | Problem type: `"regression"`, `"binary"`, or `"multiclass"`. |
 | `label_column` | `str` | Name of the target/label column. |
 | `model_config` | `dict` | Model training configuration (e.g. preset, eval_metric, time limit) from the selection stage. |
-| `location` | `dict` | Paths relative to the artifact root: `model_directory` (e.g. `"LightGBM_BAG_L1_FULL"`), `predictor` (e.g. `"LightGBM_BAG_L1_FULL/predictor.pkl"`), `notebook` (e.g. `"notebooks/automl_predictor_notebook.ipynb"`). |
+| `location` | `dict` | Paths relative to the artifact root: `model_directory` (e.g. `"LightGBM_BAG_L1_FULL"`), `predictor` (e.g. `"LightGBM_BAG_L1_FULL/predictor/predictor.pkl"`), `notebook` (e.g. `"notebooks/automl_predictor_notebook.ipynb"`). |
 | `metrics` | `dict` | Evaluation results on the full dataset: `val_data` holds the AutoGluon evaluation dict (metric names and values, e.g. `root_mean_squared_error`, `r2` for regression). |
 
 Example (regression):
@@ -145,11 +145,11 @@ Example (regression):
     "model_config": {"eval_metric": "r2", "time_limit": 300},
     "location": {
       "model_directory": "LightGBM_BAG_L1_FULL",
-      "predictor": "LightGBM_BAG_L1_FULL/predictor.pkl",
-      "notebook": "notebooks/automl_predictor_notebook.ipynb"
+      "predictor": "LightGBM_BAG_L1_FULL/predictor/predictor.pkl",
+      "notebook": "LightGBM_BAG_L1_FULL/notebooks/automl_predictor_notebook.ipynb"
     },
     "metrics": {
-      "val_data": {
+      "test_data": {
         "root_mean_squared_error": 0.42,
         "r2": 0.85
       }
