@@ -87,9 +87,10 @@ def search_space_preparation(
         parsed = urlparse(url)
         hostname = (parsed.netloc or parsed.path).split(":")[0]
         segment = hostname.split(".")[0] if hostname else ""
-        if not segment:
-            return "default"
-        return segment.rsplit("-", 1)[0]
+        if segment:
+           return segment.rsplit("-", 1)[0]
+        else:
+            return segment
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
