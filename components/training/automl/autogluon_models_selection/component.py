@@ -102,6 +102,10 @@ def models_selection(
             # result.top_models, result.eval_metric, result.predictor_path
             return result
     """  # noqa: E501
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     from pathlib import Path
 
     import pandas as pd
@@ -126,7 +130,7 @@ def models_selection(
         verbosity=2,
     ).fit(
         train_data=train_data_df,
-        num_stack_levels=1,  # TODO: discuss optimal value
+        num_stack_levels=3,  # TODO: discuss optimal value
         num_bag_folds=2,
         use_bag_holdout=True,
         holdout_frac=0.2,  # 0.2 = 20% of the data is used for validation
@@ -135,6 +139,8 @@ def models_selection(
     )
 
     leaderboard = predictor.leaderboard(test_data_df)
+    logger.info(f"Leaderboard:\n\n {leaderboard.to_string()}")
+
     top_n_models = leaderboard.head(top_n)["model"].values.tolist()
 
     outputs = NamedTuple("outputs", top_models=List[str], eval_metric=str, predictor_path=str, model_config=dict)
