@@ -110,6 +110,54 @@ For loading:
 - Model metrics and feature importances are always at `metrics/` under each model directory.
 - The leaderboard HTML is at `leaderboard-evaluation/<task_id>/html_artifact`.
 
+### Model Artifact metadata
+
+Each refit task writes a Model artifact whose `metadata` is set by the autogluon_models_full_refit component. Downstream components (e.g. leaderboard evaluation) and consumers can rely on this structure:
+
+| Key | Type | Description |
+| ----- | ------ | ----------- |
+| `display_name` | `str` | Model name with `_FULL` suffix (e.g. `"LightGBM_BAG_L1_FULL"`). Used by the leaderboard to identify the model and to resolve metrics at `model.path / display_name / metrics / metrics.json`. |
+| `context` | `dict` | Run and model context (see below). |
+
+**`context`** contains:
+
+| Key | Type | Description |
+| ----- | ------ | ----------- |
+| `data_config` | `dict` | `sampling_config` and `split_config` from the pipeline (data loader and train-test split settings). |
+| `task_type` | `str` | Problem type: `"regression"`, `"binary"`, or `"multiclass"`. |
+| `label_column` | `str` | Name of the target/label column. |
+| `model_config` | `dict` | Model training configuration (e.g. preset, eval_metric, time limit) from the selection stage. |
+| `location` | `dict` | Paths relative to the artifact root: `model_directory` (e.g. `"LightGBM_BAG_L1_FULL"`), `predictor` (e.g. `"LightGBM_BAG_L1_FULL/predictor.pkl"`), `notebook` (e.g. `"notebooks/automl_predictor_notebook.ipynb"`). |
+| `metrics` | `dict` | Evaluation results on the full dataset: `val_data` holds the AutoGluon evaluation dict (metric names and values, e.g. `root_mean_squared_error`, `r2` for regression). |
+
+Example (regression):
+
+```json
+{
+  "display_name": "LightGBM_BAG_L1_FULL",
+  "context": {
+    "data_config": {
+      "sampling_config": {"n_samples": 10000},
+      "split_config": {"test_size": 0.2, "random_state": 42}
+    },
+    "task_type": "regression",
+    "label_column": "price",
+    "model_config": {"eval_metric": "r2", "time_limit": 300},
+    "location": {
+      "model_directory": "LightGBM_BAG_L1_FULL",
+      "predictor": "LightGBM_BAG_L1_FULL/predictor.pkl",
+      "notebook": "notebooks/automl_predictor_notebook.ipynb"
+    },
+    "metrics": {
+      "val_data": {
+        "root_mean_squared_error": 0.42,
+        "r2": 0.85
+      }
+    }
+  }
+}
+```
+
 ## Usage Examples 💡
 
 ### Basic usage (regression)
