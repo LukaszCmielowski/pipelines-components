@@ -77,7 +77,7 @@ def rag_templates_optimization(
     import yaml as yml
     from ai4rag.core.experiment.experiment import AI4RAGExperiment
     from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
-    from ai4rag.core.hpo.base_optimizer import OptimizerSettings
+    from ai4rag.core.hpo.gam_opt import GAMOptSettings
     from ai4rag.rag.embedding.base_model import BaseEmbeddingModel
     from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
     from ai4rag.rag.embedding.llama_stack import LSEmbeddingModel
@@ -148,8 +148,8 @@ def rag_templates_optimization(
         client = Client(llama_stack=LlamaStackClient())
     else:
         client = Client(
-            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
-            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
+            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url + "/v1"),
+            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url + "/v1"),
         )
         in_memory_vector_store_scenario = True
 
@@ -211,7 +211,7 @@ def rag_templates_optimization(
     search_space = AI4RAGSearchSpace(params=params)
 
     event_handler = TmpEventHandler()
-    optimizer_settings = OptimizerSettings(max_evals=optimization_settings.get("max_number_of_rag_patterns", 3))  # TODO
+    optimizer_settings = GAMOptSettings(max_evals=optimization_settings.get("max_number_of_rag_patterns", 3))  # TODO
 
     benchmark_data = pd.read_json(Path(test_data))
 

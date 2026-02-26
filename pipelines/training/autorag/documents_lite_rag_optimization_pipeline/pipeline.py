@@ -55,12 +55,16 @@ def documents_lite_rag_optimization_pipeline(
             AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
         input_data_bucket_name: S3 (or compatible) bucket name for the input documents.
         input_data_key: Object key (path) of the input documents in the input data bucket.
-        chat_model_url: Base URL for the chat/generation model API (e.g., OpenAI-compatible endpoint).
+        chat_model_url: Inference endpoint URL for the chat/generation model (OpenAI-compatible endpoint).
         chat_model_token: API token or key for authenticating with the chat model endpoint.
-        embedding_model_url: Base URL for the embedding model API.
+        embedding_model_url: Inference endpoint URL for the embedding model.
         embedding_model_token: API token or key for authenticating with the embedding model endpoint.
         optimization_metric: Quality metric used to optimize RAG patterns. Supported values:
             "faithfulness", "answer_correctness", "context_correctness". Defaults to "faithfulness".
+        embeddings_models: Optional list of embedding model IDs for the search space. If not set,
+            defaults to a single model so the pipeline runs without manual model discovery.
+        generation_models: Optional list of foundation/generation model IDs for the search space.
+            If not set, defaults to a single model so the pipeline runs without manual model discovery.
     """
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,

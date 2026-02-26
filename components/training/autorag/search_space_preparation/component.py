@@ -23,10 +23,8 @@ def search_space_preparation(
     embedding_model_url: str,
     embedding_model_token: str,
     search_space_prep_report: dsl.Output[dsl.Artifact],
-    # constraints: Dict = None,
     embeddings_models: Optional[List] = None,
     generation_models: Optional[List] = None,
-    models_config: Dict = None,  # ???
     metric: str = None,
 ):
     """Runs an AutoRAG experiment's first phase which includes:
@@ -69,6 +67,7 @@ def search_space_preparation(
     import os
     from collections import namedtuple
     from pathlib import Path
+    from urllib.parse import urlparse
 
     import pandas as pd
     import yaml as yml
@@ -82,6 +81,15 @@ def search_space_preparation(
     from langchain_core.documents import Document
     from llama_stack_client import LlamaStackClient
     from openai import OpenAI
+
+    def _model_name_from_url(url: str) -> str:
+        """Extract model name from URL: first hostname segment, then the part left of the last dash (e.g. bge-base-en-v15-v15-predictor.autox.svc... -> bge-base-en-v15-v15)."""
+        parsed = urlparse(url)
+        hostname = (parsed.netloc or parsed.path).split(":")[0]
+        segment = hostname.split(".")[0] if hostname else ""
+        if not segment:
+            return "default"
+        return segment.rsplit("-", 1)[0]
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
@@ -117,46 +125,55 @@ def search_space_preparation(
 
         return documents
 
+    # Determine client and scenario first (llama-stack vs in-memory with chat/embedding URLs).
+    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
+    llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
+    llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
+
+    in_memory_vector_store_scenario = False
+    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
+
+    if llama_stack_client_base_url and llama_stack_client_api_key:
+        client = Client(llama_stack=LlamaStackClient())
+    else:
+        # In-memory scenario: chat_model_url and embedding_model_url (OpenAI-compatible) are used.
+        client = Client(
+            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
+            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
+        )
+        in_memory_vector_store_scenario = True
+
+    # When using llama-stack, model lists are required (no automatic discovery). When using
+    # chat/embedding URLs only, derive model names from the first part of each URL (hostname segment).
+    if in_memory_vector_store_scenario:
+        if not generation_models:
+            generation_models = [_model_name_from_url(chat_model_url)]
+        if not embeddings_models:
+            embeddings_models = [_model_name_from_url(embedding_model_url)]
+    elif not generation_models or not embeddings_models:
+        raise NotImplementedError(
+            "For the time being automatic model discovery is not supported during autorag pipeline execution. "
+            "When using llama-stack, please provide `generation_models` and `embeddings_models` arguments."
+        )
+
     def prepare_ai4rag_search_space():
-
         if in_memory_vector_store_scenario:
-
-            generation_model = OpenAIFoundationModel(client=client.generation_model, model_id=generation_models[0])
-            embeddings_model = OpenAIEmbeddingModel(client=client.embedding_model, model_id=embeddings_models[0])
-
+            generation_model = OpenAIFoundationModel(
+                client=client.generation_model, model_id=generation_models[0]
+            )
+            embeddings_model = OpenAIEmbeddingModel(
+                client=client.embedding_model, model_id=embeddings_models[0]
+            )
             return AI4RAGSearchSpace(
                 params=[
                     Parameter("foundation_model", "C", values=[generation_model]),
                     Parameter("embedding_model", "C", values=[embeddings_model]),
                 ]
             )
-
         return prepare_search_space_with_llama_stack(
-            {"foundation_models": generation_models, "embedding_models": embeddings_models}, client=client.llama_stack
+            {"foundation_models": generation_models, "embedding_models": embeddings_models},
+            client=client.llama_stack,
         )
-
-    if not generation_models or not embeddings_models:
-        raise NotImplementedError(
-            "For the time being automatic model discovery is not supported during autoragpipeline execution. "
-            "Please manually specify models by providing `generation_models` and `embedding_models` arguments."
-        )
-
-    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
-    llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
-    llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
-
-    in_memory_vector_store_scenario = False
-
-    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
-
-    if llama_stack_client_base_url and llama_stack_client_api_key:
-        client = Client(llama_stack=LlamaStackClient())
-    else:
-        client = Client(
-            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
-            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
-        )
-        in_memory_vector_store_scenario = True
 
     search_space = prepare_ai4rag_search_space()
 
