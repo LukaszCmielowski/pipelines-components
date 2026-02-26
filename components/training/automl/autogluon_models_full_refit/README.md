@@ -49,6 +49,49 @@ The refitted predictor, metrics under `model_artifact.path` / `model_name_FULL` 
 `label_column`, `model_config`, `location`, `metrics`). The `context.metrics` dict contains `test_data` with the
 evaluation results on the test dataset.
 
+## Usage Examples 💡
+
+### Refit a single model (typical in a ParallelFor)
+
+Usually used after `models_selection`; refit each top model on the full dataset with pipeline placeholders for name and run ID:
+
+```python
+from kfp import dsl
+from kfp_components.components.training.automl.autogluon_models_full_refit import autogluon_models_full_refit
+
+@dsl.pipeline(name="automl-full-refit-pipeline")
+def my_pipeline(selection_task, full_dataset, split_task):
+    with dsl.ParallelFor(items=selection_task.outputs["top_models"], parallelism=2) as model_name:
+        refit_task = autogluon_models_full_refit(
+            model_name=model_name,
+            full_dataset=full_dataset,
+            predictor_path=selection_task.outputs["predictor_path"],
+            sampling_config=selection_task.outputs["sample_config"],
+            split_config=split_task.outputs["split_config"],
+            model_config=selection_task.outputs["model_config"],
+            pipeline_name=dsl.PIPELINE_JOB_RESOURCE_NAME_PLACEHOLDER,
+            run_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+            sample_row=split_task.outputs["sample_row"],
+        )
+    return refit_task
+```
+
+### Refit with explicit config dicts
+
+```python
+refit_task = autogluon_models_full_refit(
+    model_name="LightGBM_BAG_L1",
+    full_dataset=full_dataset,
+    predictor_path="/workspace/autogluon_predictor",
+    sampling_config={"n_samples": 10000},
+    split_config={"test_size": 0.2, "random_state": 42},
+    model_config={"eval_metric": "r2", "time_limit": 300},
+    pipeline_name="my-automl-pipeline",
+    run_id="run-123",
+    sample_row='[{"feature1": 1.0, "target": 0.5}]',
+)
+```
+
 ## Metadata 🗂️
 
 - **Name**: autogluon_models_full_refit

@@ -110,6 +110,106 @@ For loading:
 - Model metrics and feature importances are always at `metrics/` under each model directory.
 - The leaderboard HTML is at `leaderboard-evaluation/<task_id>/html_artifact`.
 
+## Usage Examples 💡
+
+### Basic usage (regression)
+
+Run the full two-stage pipeline with data from S3; credentials are provided via a Kubernetes secret:
+
+```python
+from kfp import dsl
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+# Compile and run the pipeline
+pipeline = autogluon_tabular_training_pipeline(
+    train_data_secret_name="my-s3-secret",
+    train_data_bucket_name="my-data-bucket",
+    train_data_file_key="datasets/housing_prices.csv",
+    label_column="price",
+    task_type="regression",
+    top_n=3,
+)
+```
+
+### Classification (binary or multiclass)
+
+```python
+pipeline = autogluon_tabular_training_pipeline(
+    train_data_secret_name="my-s3-secret",
+    train_data_bucket_name="my-ml-bucket",
+    train_data_file_key="data/train.csv",
+    label_column="target",
+    task_type="multiclass",
+    top_n=5,
+)
+```
+
+### Compile to YAML
+
+```python
+from kfp.compiler import Compiler
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+Compiler().compile(
+    autogluon_tabular_training_pipeline,
+    package_path="autogluon_tabular_training_pipeline.yaml",
+)
+```
+
+### Run pipeline using KFP SDK
+
+Compile and submit a run using the KFP client. Configure the client for your cluster (e.g. `host`, or in-cluster auth). Pipeline parameters are passed as `arguments`:
+
+```python
+import kfp
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+# Create client (customize host for your KFP instance)
+client = kfp.Client(host="https://your-kfp-host/pipeline")
+
+# Run the pipeline with parameters
+run = client.create_run_from_pipeline_func(
+    autogluon_tabular_training_pipeline,
+    arguments={
+        "train_data_secret_name": "my-s3-secret",
+        "train_data_bucket_name": "my-data-bucket",
+        "train_data_file_key": "datasets/housing_prices.csv",
+        "label_column": "price",
+        "task_type": "regression",
+        "top_n": 3,
+    },
+)
+print(f"Submitted run: {run.run_id}")
+```
+
+To run from a compiled YAML instead:
+
+```python
+from kfp.compiler import Compiler
+
+Compiler().compile(
+    autogluon_tabular_training_pipeline,
+    package_path="autogluon_tabular_training_pipeline.yaml",
+)
+run = client.create_run_from_pipeline_package(
+    "autogluon_tabular_training_pipeline.yaml",
+    arguments={
+        "train_data_secret_name": "my-s3-secret",
+        "train_data_bucket_name": "my-data-bucket",
+        "train_data_file_key": "datasets/housing_prices.csv",
+        "label_column": "price",
+        "task_type": "regression",
+        "top_n": 3,
+    },
+)
+```
+
 ## Metadata 🗂️
 
 - **Name**: autogluon_tabular_training_pipeline

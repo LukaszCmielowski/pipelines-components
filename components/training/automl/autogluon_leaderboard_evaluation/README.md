@@ -26,6 +26,42 @@ best-performing models. The output is written as HTML that can be used for repor
 
 This component does not return any outputs. The leaderboard is written directly to the `html_artifact` output.
 
+## Usage Examples 💡
+
+### Basic usage with collected refit model artifacts
+
+Typical use after refitting multiple models: collect model artifacts and pass the evaluation metric from the selection stage:
+
+```python
+from kfp import dsl
+from kfp_components.components.training.automl.autogluon_leaderboard_evaluation import leaderboard_evaluation
+
+@dsl.pipeline(name="automl-leaderboard-pipeline")
+def my_pipeline(refit_tasks, eval_metric):
+    leaderboard_evaluation(
+        models=dsl.Collected(refit_tasks.outputs["model_artifact"]),
+        eval_metric=eval_metric,
+    )
+```
+
+### Classification (accuracy)
+
+```python
+leaderboard_evaluation(
+    models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
+    eval_metric="accuracy",
+)
+```
+
+### Regression (RMSE)
+
+```python
+leaderboard_evaluation(
+    models=dsl.Collected(refit_full_task.outputs["model_artifact"]),
+    eval_metric="root_mean_squared_error",
+)
+```
+
 ## Metadata 🗂️
 
 - **Name**: leaderboard_evaluation
