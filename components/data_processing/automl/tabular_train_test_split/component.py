@@ -45,10 +45,10 @@ def tabular_train_test_split(  # noqa: D417
     sampled_train_dataset.uri += ".csv"
     sampled_test_dataset.uri += ".csv"
 
-    df = pd.read_csv(dataset.path)
+    X = pd.read_csv(dataset.path)
     # Features and target
-    X = df.drop(columns=[label_column])
-    y = df[label_column]
+    y = X[label_column]
+    X.drop(columns=[label_column], inplace=True)
 
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(

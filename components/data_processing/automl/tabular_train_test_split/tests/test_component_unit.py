@@ -268,7 +268,7 @@ class TestTrainTestSplitUnitTests:
             )
 
             _mock_pd.read_csv.assert_called_once_with(dataset.path)
-            mocks["df"].drop.assert_called_once_with(columns=["target"])
+            mocks["df"].drop.assert_called_once_with(columns=["target"], inplace=True)
             mocks["df"].__getitem__.assert_called_with("target")
 
     def test_uri_appended_with_csv(self, tmp_path):
