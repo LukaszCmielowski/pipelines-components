@@ -85,10 +85,12 @@ Pipeline outputs are written to the artifact store (S3-compatible storage config
     │       └── model_artifact/
     │           └── <ModelName>_FULL/            # e.g. LightGBM_BAG_L1_FULL
     │               ├── predictor/               # AutoGluon TabularPredictor files
-    │               └── metrics/
+    │               ├── metrics/
     │                   ├── metrics.json         # model evaluation metrics (eval_metric, etc.)
     │                   ├── feature_importance.json
     │                   └── confusion_matrix.json  # for classification tasks only
+    │               └── notebooks/
+    │                   └── automl_predictor_notebook.ipynb   # Jupyter notebook for inference & exploration
     ├── automl-data-loader/
     │   └── <task_id>/
     │       └── full_dataset/                    # (optional for debugging) tabular CSV used during run
@@ -109,6 +111,154 @@ For loading:
 - Load a refitted model for deployment or notebook exploration using `TabularPredictor.load(<.../model_artifact/<ModelName>_FULL>)`
 - Model metrics and feature importances are always at `metrics/` under each model directory.
 - The leaderboard HTML is at `leaderboard-evaluation/<task_id>/html_artifact`.
+
+### Model Artifact metadata
+
+Each refit task writes a Model artifact whose `metadata` is set by the autogluon_models_full_refit component. Downstream components (e.g. leaderboard evaluation) and consumers can rely on this structure:
+
+| Key | Type | Description |
+| ----- | ------ | ----------- |
+| `display_name` | `str` | Model name with `_FULL` suffix (e.g. `"LightGBM_BAG_L1_FULL"`). Used by the leaderboard to identify the model and to resolve metrics at `model.path / display_name / metrics / metrics.json`. |
+| `context` | `dict` | Run and model context (see below). |
+
+**`context`** contains:
+
+| Key | Type | Description |
+| ----- | ------ | ----------- |
+| `data_config` | `dict` | `sampling_config` and `split_config` from the pipeline (data loader and train-test split settings). |
+| `task_type` | `str` | Problem type: `"regression"`, `"binary"`, or `"multiclass"`. |
+| `label_column` | `str` | Name of the target/label column. |
+| `model_config` | `dict` | Model training configuration (e.g. preset, eval_metric, time limit) from the selection stage. |
+| `location` | `dict` | Paths relative to the artifact root: `model_directory` (e.g. `"LightGBM_BAG_L1_FULL"`), `predictor` (e.g. `"LightGBM_BAG_L1_FULL/predictor/predictor.pkl"`), `notebook` (e.g. `"notebooks/automl_predictor_notebook.ipynb"`). |
+| `metrics` | `dict` | Evaluation results on the full dataset: `val_data` holds the AutoGluon evaluation dict (metric names and values, e.g. `root_mean_squared_error`, `r2` for regression). |
+
+Example (regression):
+
+```json
+{
+  "display_name": "LightGBM_BAG_L1_FULL",
+  "context": {
+    "data_config": {
+      "sampling_config": {"n_samples": 10000},
+      "split_config": {"test_size": 0.2, "random_state": 42}
+    },
+    "task_type": "regression",
+    "label_column": "price",
+    "model_config": {"eval_metric": "r2", "time_limit": 300},
+    "location": {
+      "model_directory": "LightGBM_BAG_L1_FULL",
+      "predictor": "LightGBM_BAG_L1_FULL/predictor/predictor.pkl",
+      "notebook": "LightGBM_BAG_L1_FULL/notebooks/automl_predictor_notebook.ipynb"
+    },
+    "metrics": {
+      "test_data": {
+        "root_mean_squared_error": 0.42,
+        "r2": 0.85
+      }
+    }
+  }
+}
+```
+
+## Usage Examples 💡
+
+### Basic usage (regression)
+
+Run the full two-stage pipeline with data from S3; credentials are provided via a Kubernetes secret:
+
+```python
+from kfp import dsl
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+# Compile and run the pipeline
+pipeline = autogluon_tabular_training_pipeline(
+    train_data_secret_name="my-s3-secret",
+    train_data_bucket_name="my-data-bucket",
+    train_data_file_key="datasets/housing_prices.csv",
+    label_column="price",
+    task_type="regression",
+    top_n=3,
+)
+```
+
+### Classification (binary or multiclass)
+
+```python
+pipeline = autogluon_tabular_training_pipeline(
+    train_data_secret_name="my-s3-secret",
+    train_data_bucket_name="my-ml-bucket",
+    train_data_file_key="data/train.csv",
+    label_column="target",
+    task_type="multiclass",
+    top_n=5,
+)
+```
+
+### Compile to YAML
+
+```python
+from kfp.compiler import Compiler
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+Compiler().compile(
+    autogluon_tabular_training_pipeline,
+    package_path="autogluon_tabular_training_pipeline.yaml",
+)
+```
+
+### Run pipeline using KFP SDK
+
+Compile and submit a run using the KFP client. Configure the client for your cluster (e.g. `host`, or in-cluster auth). Pipeline parameters are passed as `arguments`:
+
+```python
+import kfp
+from kfp_components.pipelines.training.automl.autogluon_tabular_training_pipeline import (
+    autogluon_tabular_training_pipeline,
+)
+
+# Create client (customize host for your KFP instance)
+client = kfp.Client(host="https://your-kfp-host/pipeline")
+
+# Run the pipeline with parameters
+run = client.create_run_from_pipeline_func(
+    autogluon_tabular_training_pipeline,
+    arguments={
+        "train_data_secret_name": "my-s3-secret",
+        "train_data_bucket_name": "my-data-bucket",
+        "train_data_file_key": "datasets/housing_prices.csv",
+        "label_column": "price",
+        "task_type": "regression",
+        "top_n": 3,
+    },
+)
+print(f"Submitted run: {run.run_id}")
+```
+
+To run from a compiled YAML instead:
+
+```python
+from kfp.compiler import Compiler
+
+Compiler().compile(
+    autogluon_tabular_training_pipeline,
+    package_path="autogluon_tabular_training_pipeline.yaml",
+)
+run = client.create_run_from_pipeline_package(
+    "autogluon_tabular_training_pipeline.yaml",
+    arguments={
+        "train_data_secret_name": "my-s3-secret",
+        "train_data_bucket_name": "my-data-bucket",
+        "train_data_file_key": "datasets/housing_prices.csv",
+        "label_column": "price",
+        "task_type": "regression",
+        "top_n": 3,
+    },
+)
+```
 
 ## Metadata 🗂️
 

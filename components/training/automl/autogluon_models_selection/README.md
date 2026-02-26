@@ -37,6 +37,44 @@ efficiency), then the best candidates are refitted on the full dataset for optim
 | `eval_metric` | `str` | Metric used by TabularPredictor (e.g. "accuracy", "r2"), from task_type. |
 | `predictor_path` | `str` | Path to saved TabularPredictor (`workspace_path / autogluon_predictor`) for downstream use. |
 
+## Usage Examples 💡
+
+### Basic usage (regression)
+
+Train multiple AutoGluon models on train/test splits and select the top N performers; use `dsl.WORKSPACE_PATH_PLACEHOLDER` for workspace in a pipeline:
+
+```python
+from kfp import dsl
+from kfp_components.components.training.automl.autogluon_models_selection import models_selection
+
+@dsl.pipeline(name="automl-models-selection-pipeline")
+def my_pipeline(train_dataset, test_dataset):
+    selection_task = models_selection(
+        label_column="price",
+        task_type="regression",
+        top_n=3,
+        train_data=train_dataset,
+        test_data=test_dataset,
+        workspace_path=dsl.WORKSPACE_PATH_PLACEHOLDER,
+    )
+    return selection_task.outputs["top_models"], selection_task.outputs["predictor_path"]
+```
+
+### Classification (binary / multiclass)
+
+```python
+selection_task = models_selection(
+    label_column="target",
+    task_type="multiclass",
+    top_n=5,
+    train_data=train_test_split_task.outputs["sampled_train_dataset"],
+    test_data=train_test_split_task.outputs["sampled_test_dataset"],
+    workspace_path=dsl.WORKSPACE_PATH_PLACEHOLDER,
+)
+# Use selection_task.outputs["top_models"], selection_task.outputs["eval_metric"],
+# selection_task.outputs["predictor_path"] for downstream refit and leaderboard.
+```
+
 ## Metadata 🗂️
 
 - **Name**: autogluon_models_selection

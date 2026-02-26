@@ -7,14 +7,9 @@ dependencies:
       version: '>=2.15.2'
     - name: Kubernetes
       version: ">=1.28.0"
-  # external_services:  # Add if pipeline uses external services
-  #   - name: Example Service
-  #     version: ">=1.0.0"
 tags:
   - training
   - pipeline
-  # Add more relevant tags here
+  - automl
+  - autogluon-tabular-training-pipeline
 lastVerified: 2026-01-22T11:44:56Z
-# links:  # Add relevant links
-#   documentation: https://your-docs-url.com
-#   issue_tracker: https://github.com/kubeflow/pipelines-components/issues
