@@ -163,7 +163,12 @@ def autogluon_tabular_training_pipeline(
         },
     )
 
-    train_test_split_task = tabular_train_test_split(dataset=tabular_loader_task.outputs["full_dataset"], test_size=0.2)
+    train_test_split_task = tabular_train_test_split(
+        dataset=tabular_loader_task.outputs["full_dataset"],
+        task_type=task_type,
+        label_column=label_column,
+        split_config={"test_size": 0.2},
+    )
 
     # Stage 1: Model Selection
     # Train multiple models on sampled data and select top N performers
