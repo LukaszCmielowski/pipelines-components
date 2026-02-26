@@ -26,9 +26,13 @@ def text_extraction(
     import tempfile
     from pathlib import Path
     from functools import partial
-    from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+    from concurrent.futures import ThreadPoolExecutor
 
     import boto3
+    from docling.datamodel.accelerator_options import AcceleratorOptions
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
 
     SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
@@ -88,17 +92,12 @@ def text_extraction(
             raise
 
     def process_document(file_path_str: str, output_dir_str: str) -> bool:
-        from docling.datamodel.accelerator_options import AcceleratorOptions
-        from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import PdfPipelineOptions
-        from docling.document_converter import DocumentConverter, PdfFormatOption
-
         try:
             path = Path(file_path_str)
             out_dir = Path(output_dir_str)
             pipeline_options = PdfPipelineOptions()
             pipeline_options.do_ocr = False
-            pipeline_options.do_table_structure = True
+            pipeline_options.do_table_structure = False
             pipeline_options.accelerator_options = AcceleratorOptions(device="cpu", num_threads=1)
             converter = DocumentConverter(
                 format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
