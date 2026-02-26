@@ -1,6 +1,6 @@
 """Local runner tests for the documents_rag_optimization_pipeline pipeline."""
 
-from ..pipeline import documents_rag_optimization_pipeline
+from ..pipeline import documents_lite_rag_optimization_pipeline
 
 
 class TestDocumentsRagOptimizationPipelineLocalRunner:
@@ -11,7 +11,7 @@ class TestDocumentsRagOptimizationPipelineLocalRunner:
         # TODO: Implement local runner tests for your pipeline
 
         # Example test structure:
-        result = documents_rag_optimization_pipeline(input_param="test_value")
+        result = documents_lite_rag_optimization_pipeline(input_param="test_value")
 
         # Add assertions about expected outputs if needed
         assert result is not None
