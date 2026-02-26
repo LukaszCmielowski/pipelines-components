@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 
@@ -15,7 +13,11 @@ SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness"
 
 @dsl.pipeline(
     name="documents-lite-rag-optimization-pipeline",
-    description="Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications (lite version). The lite version does not use llama-stack API for inference and vector database operations.",
+    description=(
+        "Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications "
+        "(lite version). The lite version does not use llama-stack API for inference and vector database "
+        "operations."
+    ),
 )
 def documents_lite_rag_optimization_pipeline(
     test_data_secret_name: str,
@@ -28,7 +30,7 @@ def documents_lite_rag_optimization_pipeline(
     chat_model_token: str,
     embedding_model_url: str,
     embedding_model_token: str,
-    optimization_metric: str = "faithfulness"
+    optimization_metric: str = "faithfulness",
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 

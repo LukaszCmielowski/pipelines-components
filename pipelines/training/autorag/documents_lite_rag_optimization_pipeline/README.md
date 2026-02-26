@@ -35,7 +35,7 @@ externally provided MLFlow server to support advanced experiment tracking featur
 
 After pipeline execution, outputs are stored in the pipeline run's artifact location. Layout follows pipeline and component structure:
 
-```
+```text
 <pipeline_name>/
 └── <run_id>/
     ├── documents-sampling/
@@ -78,10 +78,18 @@ Each pattern directory under `rag_patterns_artifact/` contains:
 - **pattern.json**:
   - **name**: pattern identifier.
   - **iteration**, **max_combinations**, **duration_seconds**: optimization run metadata.
-  - **settings**: single object with **vector_store** (`datasource_type`, `collection_name`), **chunking** (`method`, `chunk_size`, `chunk_overlap`), **embedding** (`model_id`, `distance_metric`), **retrieval** (`method`, `number_of_chunks`), **generation** (`model_id`, `context_template_text`, `user_message_text`, `system_message_text`).
-  - **scores**: object whose keys are metric names (e.g. `answer_correctness`, `faithfulness`, `context_correctness`); each value is `{ "mean", "ci_low", "ci_high" }`.
+  - **settings**: single object with **vector_store** (`datasource_type`, `collection_name`),
+    **chunking** (`method`, `chunk_size`, `chunk_overlap`), **embedding** (`model_id`, `distance_metric`),
+    **retrieval** (`method`, `number_of_chunks`), **generation** (`model_id`, `context_template_text`,
+    `user_message_text`, `system_message_text`).
+  - **scores**: object whose keys are metric names (e.g. `answer_correctness`, `faithfulness`,
+    `context_correctness`); each value is `{ "mean", "ci_low", "ci_high" }`.
   - **final_score**: scalar optimization metric value.
-- **evaluation_results.json** — List of per-question evaluation entries. Each entry has `question`, `correct_answers`, `answer`, `answer_contexts` (list of `{text, document_id}`), and `scores` (per-metric score for that question). Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
+- **evaluation_results.json** — List of per-question evaluation entries. Each entry has `question`,
+  `correct_answers`, `answer`, `answer_contexts` (list of `{text, document_id}`), and `scores`
+  (per-metric score for that question). Structure matches ai4rag
+  `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is
+  missing or incomplete so the file is always valid.
 
 **Sample pattern.json:**
 
@@ -112,8 +120,8 @@ Each pattern directory under `rag_patterns_artifact/` contains:
     "generation": {
       "model_id": "mock-llm-1",
       "context_template_text": "{document}",
-      "user_message_text": "\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
-      "system_message_text": "Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+      "user_message_text": "<prompt template: context + question; answer in question language>",
+      "system_message_text": "<system prompt: answer from context only; say if unanswerable>"
     }
   },
   "scores": {
@@ -235,7 +243,6 @@ def example_full_usage():
   - Approvers: None
   - Reviewers: None
 
-
 <!-- custom-content -->
 
 ## Pipeline Workflow 🔄
@@ -295,18 +302,25 @@ This pipeline orchestrates the following AutoRAG components:
 
 For each pipeline run, the following artifacts are produced (see [Stored artifacts (S3 / results storage)](#stored-artifacts-s3--results-storage-) for the exact layout):
 
-- **RAG Patterns Artifact** (`rag_patterns_artifact`): A directory containing one subdirectory per top-N RAG pattern (named by pattern). Each subdirectory includes:
-  - **pattern.json** — Flat schema with `name`, `iteration`, `max_combinations`, `duration_seconds`, `settings` (vector_store, chunking, embedding, retrieval, generation), `scores` (per-metric mean/ci_low/ci_high), and `final_score`
-  - **evaluation_results.json** — Per-question evaluation (question, answer, correct_answers, answer_contexts, scores)
+- **RAG Patterns Artifact** (`rag_patterns_artifact`): A directory containing one subdirectory per
+  top-N RAG pattern (named by pattern). Each subdirectory includes:
+  - **pattern.json** — Flat schema with `name`, `iteration`, `max_combinations`, `duration_seconds`,
+    `settings` (vector_store, chunking, embedding, retrieval, generation), `scores`
+    (per-metric mean/ci_low/ci_high), and `final_score`
+  - **evaluation_results.json** — Per-question evaluation (question, answer, correct_answers,
+    answer_contexts, scores)
   - **indexing_notebook.ipynb** — Notebook for building or populating the vector index/collection
   - **inference_notebook.ipynb** — Notebook for retrieval and generation
-- **Leaderboard HTML Artifact** (`html_artifact`): HTML leaderboard table of RAG patterns ranked by `final_score`, with pattern name, metrics (e.g. mean_answer_correctness, mean_faithfulness, mean_context_correctness), and config columns (chunking, embedding, retrieval, generation)
+- **Leaderboard HTML Artifact** (`html_artifact`): HTML leaderboard table of RAG patterns ranked by
+  `final_score`, with pattern name, metrics and config columns (chunking, embedding, retrieval,
+  generation)
 
 `rag_patterns_artifact` metadata:
+
 ```json
 {
    "name":"rag_patterns_artifact",
-   "uri":"documents-rag-optimization-pipeline/b888dca4-11de-49f5-8b60-e820613a623d/rag-templates-optimization/29a02588-7bed-4bf2-a595-66ae503440d3/rag_patterns/",
+   "uri":"<pipeline_name>/<run_id>/rag-templates-optimization/<task_id>/rag_patterns/",
    "metadata":{
       "patterns":[
          {
@@ -341,8 +355,8 @@ For each pipeline run, the following artifacts are produced (see [Stored artifac
                "generation":{
                   "model_id":"mock-llm-1",
                   "context_template_text":"{document}",
-                  "user_message_text":"\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
-                  "system_message_text":"Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+                  "user_message_text":"<prompt: context + question; answer in question language>",
+                  "system_message_text":"<system: answer from context only; say if unanswerable>"
                }
             },
             "scores":{
@@ -396,8 +410,8 @@ For each pipeline run, the following artifacts are produced (see [Stored artifac
                "generation":{
                   "model_id":"mock-llm-1",
                   "context_template_text":"{document}",
-                  "user_message_text":"\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
-                  "system_message_text":"Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
+                  "user_message_text":"<prompt: context + question; answer in question language>",
+                  "system_message_text":"<system: answer from context only; say if unanswerable>"
                }
             },
             "scores":{
@@ -423,7 +437,6 @@ For each pipeline run, the following artifacts are produced (see [Stored artifac
    }
 }
 ```
-
 
 ## Optimization Engine: ai4rag 🚀
 

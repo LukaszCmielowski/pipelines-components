@@ -4,7 +4,10 @@ from kfp import dsl
 
 
 @dsl.component(
-    base_image="registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc",
+    base_image=(
+        "registry.redhat.io/rhoai/odh-pipeline-runtime-datascience-cpu-py312-rhel9@sha256:"
+        "f9844dc150592a9f196283b3645dda92bd80dfdb3d467fa8725b10267ea5bdbc"
+    ),
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
@@ -26,33 +29,31 @@ def search_space_preparation(
     models_config: Dict = None,  # ???
     metric: str = None,
 ):
-    """
-    Runs an AutoRAG experiment's first phase which includes:
+    """Runs an AutoRAG experiment's first phase which includes:
+
     - AutoRAG search space creation given the user's constraints,
     - embedding and foundation models number limitation and initial selection,
 
     Args:
-        test_data
-            A path to a .json file containing questions and expected answers that can be retrieved
-            from `extracted_data`. Necessary baseline for calculating quality metrics of RAG pipeline.
-
-        extracted_text
-            A path to either a single file or a folder of files. The document(s) will be used during
-            model selection process.
-
-        constraints
-            User defined constraints for the AutoRAG search space.
-
-        models_config
-            User defined models limited selection.
-
-        metric
-            Quality metric to evaluate the intermediate RAG patterns.
+        test_data: A path to a .json file containing questions and expected answers that can be
+            retrieved from `extracted_data`. Necessary baseline for calculating quality metrics
+            of RAG pipeline.
+        extracted_text: A path to either a single file or a folder of files. The document(s) will
+            be used during model selection process.
+        chat_model_url: Base URL for the chat/generation model API.
+        chat_model_token: API token for the chat model endpoint.
+        embedding_model_url: Base URL for the embedding model API.
+        embedding_model_token: API token for the embedding model endpoint.
+        search_space_prep_report: Output artifact path for the .yml-formatted report.
+        embeddings_models: Optional list of embedding model identifiers.
+        generation_models: Optional list of foundation/generation model identifiers.
+        models_config: User defined models limited selection.
+        metric: Quality metric to evaluate the intermediate RAG patterns.
 
     Returns:
-        search_space_prep_report
-            A .yml-formatted report including results of this experiment's phase.
-            For its exact content please refer to the `search_space_prep_report_schema.yml` file.
+        search_space_prep_report: A .yml-formatted report including results of this experiment's
+            phase. For its exact content please refer to the `search_space_prep_report_schema.yml`
+            file.
     """
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
@@ -66,6 +67,7 @@ def search_space_preparation(
         pass
 
     import os
+    from collections import namedtuple
     from pathlib import Path
 
     import pandas as pd
@@ -74,13 +76,12 @@ def search_space_preparation(
     from ai4rag.core.experiment.mps import ModelsPreSelector
     from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
     from ai4rag.rag.foundation_models.openai_model import OpenAIFoundationModel
+    from ai4rag.search_space.prepare_search_space import prepare_search_space_with_llama_stack
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
-    from ai4rag.search_space.prepare_search_space import prepare_search_space_with_llama_stack
     from langchain_core.documents import Document
-    from openai import OpenAI
     from llama_stack_client import LlamaStackClient
-    from collections import namedtuple
+    from openai import OpenAI
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
@@ -91,20 +92,16 @@ def search_space_preparation(
     SEED = 17
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
-        """
-        Given path to a text-based file or a folder thereof load everything to memory and
-        return as a list of langchain `Document` objects.
+        """Given path to a text-based file or a folder thereof load everything to memory.
+
+        Return as a list of langchain `Document` objects.
 
         Args:
-            path
-                A local path to either a text file or a folder of text files.
+            path: A local path to either a text file or a folder of text files.
+
         Returns:
             A list of langchain `Document` objects.
-
-        Note:
-
         """
-
         if isinstance(path, str):
             path = Path(path)
 
