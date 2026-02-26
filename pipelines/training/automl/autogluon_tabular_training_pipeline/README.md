@@ -85,10 +85,12 @@ Pipeline outputs are written to the artifact store (S3-compatible storage config
     │       └── model_artifact/
     │           └── <ModelName>_FULL/            # e.g. LightGBM_BAG_L1_FULL
     │               ├── predictor/               # AutoGluon TabularPredictor files
-    │               └── metrics/
+    │               ├── metrics/
     │                   ├── metrics.json         # model evaluation metrics (eval_metric, etc.)
     │                   ├── feature_importance.json
     │                   └── confusion_matrix.json  # for classification tasks only
+    │               └── notebooks/
+    │                   └── automl_predictor_notebook.ipynb   # Jupyter notebook for inference & exploration
     ├── automl-data-loader/
     │   └── <task_id>/
     │       └── full_dataset/                    # (optional for debugging) tabular CSV used during run
