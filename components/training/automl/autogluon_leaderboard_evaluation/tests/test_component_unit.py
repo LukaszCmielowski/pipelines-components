@@ -62,7 +62,7 @@ class TestLeaderboardEvaluationUnitTests:
                 assert call_args[0]["root_mean_squared_error"] == 0.5
                 assert call_args[0]["mean_absolute_error"] == 0.4
                 assert call_args[0]["r2"] == 0.9
-                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
+                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False, ignore_index=True)
                 mock_df_sorted.to_html.assert_called_once()
                 assert Path(tmp_path).read_text() == expected_html
             finally:
@@ -118,7 +118,7 @@ class TestLeaderboardEvaluationUnitTests:
                 assert call_args[1]["root_mean_squared_error"] == 0.3
                 assert call_args[2]["model"] == "Model3"
                 assert call_args[2]["root_mean_squared_error"] == 0.5
-                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
+                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False, ignore_index=True)
                 mock_df_sorted.to_html.assert_called_once()
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
@@ -163,7 +163,7 @@ class TestLeaderboardEvaluationUnitTests:
                     html_artifact=mock_html,
                 )
 
-                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
+                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False, ignore_index=True)
                 mock_df_sorted.to_html.assert_called_once()
                 assert Path(tmp_path).read_text() == sorted_html
             finally:
@@ -208,7 +208,7 @@ class TestLeaderboardEvaluationUnitTests:
                 assert call_args[0]["model"] == "Model1"
                 assert call_args[0]["root_mean_squared_error"] == 0.5
                 assert call_args[0]["mean_absolute_error"] == 0.4
-                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False)
+                mock_df.sort_values.assert_called_once_with(by="root_mean_squared_error", ascending=False, ignore_index=True)
                 mock_df_sorted.to_html.assert_called_once()
                 assert Path(tmp_path).read_text() == expected_html
             finally:
