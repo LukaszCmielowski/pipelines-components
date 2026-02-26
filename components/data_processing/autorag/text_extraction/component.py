@@ -24,23 +24,25 @@ def text_extraction(
     import sys
     import tempfile
     from concurrent.futures import ThreadPoolExecutor
+    from functools import partial
     from pathlib import Path
 
     import boto3
     import yaml
+    from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     SAMPLED_DOCUMENTS_DESCRIPTOR_FILENAME = "sampled_documents_descriptor.yaml"
+    SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
+    DOWNLOAD_MAX_WORKERS = 8
 
     logger = logging.getLogger("Text Extraction component logger")
     logger.setLevel(logging.INFO)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(handler)
-
-    SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".md", ".html", ".txt"}
 
     descriptor_root = Path(sampled_documents_descriptor.path)
     if descriptor_root.is_dir():
@@ -57,42 +59,60 @@ def text_extraction(
     bucket = descriptor["bucket"]
     documents = descriptor["documents"]
 
-    s3_creds = {
-        k: os.environ.get(k)
-        for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION"]
-    }
+    s3_creds = {k: os.environ.get(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT"]}
     for k, v in s3_creds.items():
         if v is None:
             raise ValueError(f"{k} environment variable not set. Check if kubernetes secret was configured properly.")
 
-    s3_client = boto3.client(
-        "s3",
-        endpoint_url=s3_creds["AWS_S3_ENDPOINT"],
-        region_name=s3_creds["AWS_DEFAULT_REGION"],
+    s3_creds["AWS_DEFAULT_REGION"] = os.environ.get("AWS_DEFAULT_REGION", "")
+
+    session = boto3.session.Session(
         aws_access_key_id=s3_creds["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=s3_creds["AWS_SECRET_ACCESS_KEY"],
+        region_name=s3_creds.get("AWS_DEFAULT_REGION"),
     )
+    s3_client = session.client(
+        service_name="s3",
+        endpoint_url=s3_creds["AWS_S3_ENDPOINT"],
+    )
+
+    def download_document(doc: dict) -> bool:
+        key = doc["key"]
+        local_path = download_path / key
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            logger.info("Downloading %s", key)
+            s3_client.download_file(bucket, key, str(local_path))
+            return True
+        except Exception as e:
+            logger.error("Failed to fetch %s: %s", key, e)
+            raise
+
+    def process_document(file_path_str: str, output_dir_str: str) -> bool:
+        try:
+            path = Path(file_path_str)
+            out_dir = Path(output_dir_str)
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = False
+            pipeline_options.do_table_structure = False
+            pipeline_options.accelerator_options = AcceleratorOptions(device="cpu", num_threads=1)
+            converter = DocumentConverter(
+                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+            )
+            result = converter.convert(path)
+            markdown_content = result.document.export_to_markdown()
+            output_file = out_dir / f"{path.name}.md"
+            output_file.write_text(markdown_content, encoding="utf-8")
+            return True
+        except Exception as e:
+            logger.error("Failed to process %s: %s", file_path_str, e)
+            return False
 
     with tempfile.TemporaryDirectory() as download_dir:
         download_path = Path(download_dir)
-        for doc in documents:
-            key = doc["key"]
-            local_path = download_path / key
-            local_path.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                logger.info("Downloading %s", key)
-                s3_client.download_file(bucket, key, str(local_path))
-            except Exception as e:
-                logger.error("Failed to fetch %s: %s", key, e)
-                raise
-
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = False
-        pipeline_options.do_table_structure = True
-
-        converter = DocumentConverter(
-            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
-        )
+        download_workers = min(DOWNLOAD_MAX_WORKERS, len(documents)) if documents else 1
+        with ThreadPoolExecutor(max_workers=download_workers) as executor:
+            list(executor.map(download_document, documents))
 
         output_dir = Path(extracted_text.path)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -103,30 +123,10 @@ def text_extraction(
 
         logger.info("Starting text extraction for %d documents.", len(files_to_process))
 
-        def process_file(file_path: Path):
-            try:
-                logger.info("Processing document: %s", file_path.name)
-
-                result = converter.convert(file_path)
-
-                markdown_content = result.document.export_to_markdown()
-
-                output_file_name = f"{file_path.stem}.md"
-                output_file_path = output_dir / output_file_name
-
-                with open(output_file_path, "w", encoding="utf-8") as f:
-                    f.write(markdown_content)
-
-                logger.info("Successfully extracted text from %s", file_path.name)
-                return True
-            except Exception as e:
-                logger.error("Failed to process %s: %s", file_path.name, e)
-                return False
-
-        max_workers = min(len(files_to_process), (os.cpu_count() or 1) * 2) if files_to_process else 1
-
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            results = list(executor.map(process_file, files_to_process))
+        process_workers = min(os.cpu_count() or 1, len(files_to_process)) if files_to_process else 1
+        worker_fn = partial(process_document, output_dir_str=str(output_dir))
+        with ThreadPoolExecutor(max_workers=process_workers) as executor:
+            results = list(executor.map(worker_fn, [str(f) for f in files_to_process]))
 
     processed_count = sum(1 for r in results if r)
     error_count = len(results) - processed_count
