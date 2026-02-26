@@ -14,8 +14,8 @@ SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness"
 
 
 @dsl.pipeline(
-    name="documents-rag-optimization-pipeline",
-    description="Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications",
+    name="documents-lite-rag-optimization-pipeline",
+    description="Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications (lite version). The lite version does not use llama-stack API for inference and vector database operations.",
 )
 def documents_lite_rag_optimization_pipeline(
     test_data_secret_name: str,
@@ -32,7 +32,7 @@ def documents_lite_rag_optimization_pipeline(
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
-    The Documents RAG Optimization Pipeline is an automated system for building and optimizing
+    The Documents Lite RAG Optimization Pipeline is an automated system for building and optimizing
     Retrieval-Augmented Generation (RAG) applications within Red Hat OpenShift AI. It leverages
     Kubeflow Pipelines to orchestrate the optimization workflow, using the ai4rag optimization
     engine to systematically explore RAG configurations and identify the best performing parameter
