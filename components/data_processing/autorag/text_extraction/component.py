@@ -19,16 +19,16 @@ def text_extraction(
             sampled_documents_descriptor.yaml with bucket, prefix, and documents list.
         extracted_text: Output artifact where the extracted text content will be stored.
     """
+    import logging
     import os
     import sys
-    import yaml
-    import logging
     import tempfile
-    from pathlib import Path
-    from functools import partial
     from concurrent.futures import ThreadPoolExecutor
+    from functools import partial
+    from pathlib import Path
 
     import boto3
+    import yaml
     from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions

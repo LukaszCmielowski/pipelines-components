@@ -6,12 +6,18 @@
 
 Pipeline to load test data and documents, sample them, and extract text for AutoRAG.
 
-The AutoRAG Data Processing Pipeline prepares input data for the AutoRAG optimization workflow. It orchestrates three steps: loading test data (JSON) from S3, sampling documents from an S3 bucket based on that test data, and extracting text from the sampled documents using the docling library. The pipeline uses S3-compatible credentials injected from Kubernetes secrets and produces artifacts (test data, sampled documents descriptor, extracted text) that can be consumed by downstream pipelines such as the Documents RAG Optimization Pipeline.
+The AutoRAG Data Processing Pipeline prepares input data for the AutoRAG optimization workflow.
+It runs on Red Hat OpenShift AI using Kubeflow Pipelines to orchestrate three steps: loading test
+data (JSON) from S3, sampling documents from an S3 bucket based on that test data, and extracting
+text from the sampled documents using the docling library. The pipeline uses S3-compatible
+credentials injected from Kubernetes secrets and produces artifacts (test data, sampled documents
+descriptor, extracted text) that can be consumed by downstream pipelines such as the Documents RAG
+Optimization Pipeline.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `test_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (test data). Must provide: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
 | `input_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (input documents). Same env vars as above. |
 | `test_data_bucket_name` | `str` | — | S3 (or compatible) bucket that contains the test data JSON file. |
@@ -24,7 +30,7 @@ The AutoRAG Data Processing Pipeline prepares input data for the AutoRAG optimiz
 
 After pipeline execution, outputs are stored in the pipeline run's artifact location. Layout follows pipeline and component structure:
 
-```
+```text
 <pipeline_name>/
 └── <run_id>/
     ├── test-data-loader/
@@ -79,7 +85,6 @@ def example_minimal_usage():
 - **Owners**:
   - Approvers: None
   - Reviewers: None
-
 
 <!-- custom-content -->
 
