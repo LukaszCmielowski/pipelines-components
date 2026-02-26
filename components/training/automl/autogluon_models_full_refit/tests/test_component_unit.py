@@ -70,7 +70,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             # Call the component function
             result = autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
-                full_dataset=mock_full_dataset,
+                test_dataset=mock_full_dataset,
                 predictor_path=mock_predictor_artifact.path,
                 sampling_config={},
                 split_config={},
@@ -85,7 +85,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             assert mock_model_artifact.metadata["display_name"] == "LightGBM_BAG_L1_FULL"
             assert mock_model_artifact.metadata["context"]["task_type"] == "regression"
             assert mock_model_artifact.metadata["context"]["label_column"] == mock_predictor.label
-            assert mock_model_artifact.metadata["context"]["metrics"]["val_data"] == eval_results
+            assert mock_model_artifact.metadata["context"]["metrics"]["test_data"] == eval_results
 
             # Verify read_csv was called with correct path
             mock_read_csv.assert_called_once_with("/tmp/full_dataset.csv")
@@ -161,7 +161,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         with pytest.raises(FileNotFoundError):
             autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
-                full_dataset=mock_full_dataset,
+                test_dataset=mock_full_dataset,
                 predictor_path="/nonexistent/predictor",
                 sampling_config={},
                 split_config={},
@@ -196,7 +196,7 @@ class TestAutogluonModelsFullRefitUnitTests:
         with pytest.raises(ValueError, match="Model not found in predictor"):
             autogluon_models_full_refit.python_func(
                 model_name="NonexistentModel",
-                full_dataset=mock_full_dataset,
+                test_dataset=mock_full_dataset,
                 predictor_path="/tmp/predictor",
                 sampling_config={},
                 split_config={},
@@ -232,7 +232,7 @@ class TestAutogluonModelsFullRefitUnitTests:
 
         autogluon_models_full_refit.python_func(
             model_name="LightGBM_BAG_L1",
-            full_dataset=mock_full_dataset,
+            test_dataset=mock_full_dataset,
             predictor_path=mock_predictor_artifact.path,
             sampling_config={},
             split_config={},
@@ -290,7 +290,7 @@ class TestAutogluonModelsFullRefitUnitTests:
 
             autogluon_models_full_refit.python_func(
                 model_name="LightGBM_BAG_L1",
-                full_dataset=mock_full_dataset,
+                test_dataset=mock_full_dataset,
                 predictor_path=mock_predictor_artifact.path,
                 sampling_config={},
                 split_config={},
@@ -332,7 +332,7 @@ class TestAutogluonModelsFullRefitUnitTests:
             with pytest.raises(ValueError, match="Invalid problem type: unknown"):
                 autogluon_models_full_refit.python_func(
                     model_name="LightGBM_BAG_L1",
-                    full_dataset=mock_full_dataset,
+                    test_dataset=mock_full_dataset,
                     predictor_path="/tmp/predictor",
                     sampling_config={},
                     split_config={},

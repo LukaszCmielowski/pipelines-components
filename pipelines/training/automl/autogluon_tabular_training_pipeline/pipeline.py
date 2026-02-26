@@ -188,7 +188,7 @@ def autogluon_tabular_training_pipeline(
     with dsl.ParallelFor(items=selection_task.outputs["top_models"], parallelism=2) as model_name:
         refit_full_task = autogluon_models_full_refit(
             model_name=model_name,
-            full_dataset=tabular_loader_task.outputs["full_dataset"],
+            test_dataset=train_test_split_task.outputs["sampled_test_dataset"],
             predictor_path=selection_task.outputs["predictor_path"],
             sampling_config=tabular_loader_task.outputs["sample_config"],
             split_config=train_test_split_task.outputs["split_config"],

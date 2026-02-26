@@ -6,16 +6,17 @@
 
 Refit a specific AutoGluon model on the full training dataset.
 
-This component takes a trained AutoGluon TabularPredictor and refits a specific model (identified by `model_name`) on the
-complete training dataset. The refitting process retrains the model architecture on the full data, typically improving
-performance compared to models trained on sampled data.
+This component takes a trained AutoGluon TabularPredictor and refits a specific model (identified by `model_name`). By
+default AutoGluon `refit_full` uses the predictor's training and validation data; the **test_dataset** input is used for
+**evaluation** and for writing metrics. The refitting process retrains the model architecture on the full (train+val)
+data, typically improving performance compared to models trained on sampled data.
 
 After refitting, the component creates a cleaned clone of the predictor containing only the original model and its
 refitted version (with `_FULL` suffix). The refitted model is set as the best model and the predictor is optimized to
 save space by removing unnecessary models and files. Evaluation metrics, feature importance, and (for classification)
 confusion matrix are written under `model_artifact.path` / `model_name_FULL` / `metrics`. A Jupyter notebook
-(`automl_predictor_notebook.ipynb`) is generated at the artifact root for inference and exploration, using
-`pipeline_name`, `run_id`, and `sample_row` for run context and example input.
+(`automl_predictor_notebook.ipynb`) is generated under `model_artifact.path` / `model_name_FULL` / `notebooks` for
+inference and exploration, using `pipeline_name`, `run_id`, and `sample_row` for run context and example input.
 
 This component is typically used in a two-stage training pipeline where models are first trained on sampled data for
 exploration, then the best candidates are refitted on the full dataset for optimal performance. Supported problem types
@@ -26,7 +27,7 @@ are `regression`, `binary`, and `multiclass`; any other type raises `ValueError`
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
 | `model_name` | `str` | — | Name of the model to refit (refitted model saved with `_FULL` suffix). |
-| `full_dataset` | `dsl.Input[dsl.Dataset]` | — | Dataset artifact (CSV) with complete training data; format must match initial training. |
+| `test_dataset` | `dsl.Input[dsl.Dataset]` | — | Dataset artifact (CSV) used for evaluation and for writing metrics; format should match the data used during initial training. |
 | `predictor_path` | `str` | — | Path to a trained AutoGluon TabularPredictor that includes the model specified by `model_name`. |
 | `sampling_config` | `dict` | — | Configuration for data sampling (stored in artifact metadata). |
 | `split_config` | `dict` | — | Configuration for data splitting (stored in artifact metadata). |
@@ -42,9 +43,11 @@ are `regression`, `binary`, and `multiclass`; any other type raises `ValueError`
 | --------- | ---- | ----------- |
 | `model_name` | `str` | Name of the refitted model (i.e. `model_name` with `_FULL` suffix). |
 
-The refitted predictor, metrics under `model_artifact.path` / `model_name_FULL` / `metrics`, and
-`model_artifact.path` / `automl_predictor_notebook.ipynb` are written to the `model_artifact` output. Artifact metadata
-includes `display_name` and `context` (e.g. `data_config`, `task_type`, `label_column`, `model_config`, `location`, `metrics`).
+The refitted predictor, metrics under `model_artifact.path` / `model_name_FULL` / `metrics`, and the notebook under
+`model_artifact.path` / `model_name_FULL` / `notebooks` / `automl_predictor_notebook.ipynb` are written to the
+`model_artifact` output. Artifact metadata includes `display_name` and `context` (e.g. `data_config`, `task_type`,
+`label_column`, `model_config`, `location`, `metrics`). The `context.metrics` dict contains `test_data` with the
+evaluation results on the test dataset.
 
 ## Metadata 🗂️
 

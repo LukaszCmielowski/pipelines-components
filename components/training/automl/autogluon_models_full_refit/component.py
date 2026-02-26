@@ -16,7 +16,7 @@ from kfp import dsl
 )
 def autogluon_models_full_refit(
     model_name: str,
-    full_dataset: dsl.Input[dsl.Dataset],
+    test_dataset: dsl.Input[dsl.Dataset],
     predictor_path: str,
     sampling_config: dict,
     split_config: dict,
@@ -31,7 +31,7 @@ def autogluon_models_full_refit(
     This component takes a trained AutoGluon TabularPredictor, loaded from
     predictor_path, and refits a specific model, identified by model_name, on
     the full training data. By default AutoGluon refit_full uses the
-    predictor's training and validation data; the full_dataset is used for
+    predictor's training and validation data; the test_dataset is used for
     evaluation and for writing metrics. The refitted model is saved with the
     suffix "_FULL" appended to model_name.
 
@@ -57,7 +57,7 @@ def autogluon_models_full_refit(
         model_name: The name of the model to refit. Must match a model name
             in the predictor. The refitted model is saved with the suffix
             "_FULL" appended to this name.
-        full_dataset: Dataset artifact (CSV) with the complete training data.
+        test_dataset: Dataset artifact (CSV) with the complete training data.
             Used for evaluation and for writing metrics; the dataset format
             should match the data used during initial training.
         predictor_path: Path to a trained AutoGluon TabularPredictor that
@@ -85,7 +85,7 @@ def autogluon_models_full_refit(
         written to model_artifact.
 
     Raises:
-        FileNotFoundError: If the predictor path or full_dataset path
+        FileNotFoundError: If the predictor path or test_dataset path
             cannot be found.
         ValueError: If the predictor cannot be loaded, model_name is not
             found in the predictor, refit fails, or problem_type is not
@@ -99,10 +99,10 @@ def autogluon_models_full_refit(
         )
 
         @dsl.pipeline(name="model-refit-pipeline")
-        def refit_pipeline(train_data, predictor_path, pipeline_name, run_id):
+        def refit_pipeline(test_data, predictor_path, pipeline_name, run_id):
             refitted = autogluon_models_full_refit(
                 model_name="LightGBM_BAG_L1",
-                full_dataset=train_data,
+                test_dataset=test_data,
                 predictor_path=predictor_path,
                 sampling_config={},
                 split_config={},
@@ -122,7 +122,7 @@ def autogluon_models_full_refit(
     import pandas as pd
     from autogluon.tabular import TabularPredictor
 
-    full_dataset_df = pd.read_csv(full_dataset.path)
+    test_dataset_df = pd.read_csv(test_dataset.path)
 
     predictor = TabularPredictor.load(predictor_path)
 
@@ -157,9 +157,9 @@ def autogluon_models_full_refit(
     predictor_clone.set_model_best(model=model_name_full, save_trainer=True)
     predictor_clone.save_space()
 
-    eval_results = predictor_clone.evaluate(full_dataset_df)
-    model_artifact.metadata["context"]["metrics"] = {"val_data": eval_results}
-    feature_importance = predictor_clone.feature_importance(full_dataset_df)
+    eval_results = predictor_clone.evaluate(test_dataset_df)
+    model_artifact.metadata["context"]["metrics"] = {"test_data": eval_results}
+    feature_importance = predictor_clone.feature_importance(test_dataset_df)
 
     # save evaluation results to output artifact
     os.makedirs(str(output_path / "metrics"), exist_ok=True)
@@ -175,8 +175,8 @@ def autogluon_models_full_refit(
         from autogluon.core.metrics import confusion_matrix
 
         confusion_matrix_res = confusion_matrix(
-            solution=predictor_clone.predict(full_dataset_df),
-            prediction=full_dataset_df[predictor.label],
+            solution=predictor_clone.predict(test_dataset_df),
+            prediction=test_dataset_df[predictor.label],
             output_format="pandas_dataframe",
         )
         with (output_path / "metrics" / "confusion_matrix.json").open("w") as f:
