@@ -144,7 +144,7 @@ def autogluon_models_full_refit(
     model_artifact.metadata["context"]["model_config"] = model_config
     model_artifact.metadata["context"]["location"] = {
         "model_directory": f"{model_name_full}",
-        "predictor": f"{model_name_full}/predictor.pkl",
+        "predictor": f"{model_name_full}/predictor/predictor.pkl",
     }
 
     # clone the predictor to the output artifact path and delete unnecessary models
