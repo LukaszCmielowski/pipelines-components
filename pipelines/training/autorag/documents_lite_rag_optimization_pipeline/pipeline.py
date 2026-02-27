@@ -1,6 +1,5 @@
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-
 from kfp_components.components.data_processing.autorag.documents_sampling import documents_sampling
 from kfp_components.components.data_processing.autorag.test_data_loader import test_data_loader
 from kfp_components.components.data_processing.autorag.text_extraction import text_extraction
