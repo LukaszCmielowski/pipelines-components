@@ -118,11 +118,11 @@ def search_space_preparation(
         if path.is_dir():
             for doc_path in path.iterdir():
                 with doc_path.open("r", encoding="utf-8") as doc:
-                    documents.append(Document(page_content=doc.read(), metadata={"file_name": doc_path.name}))
+                    documents.append(Document(page_content=doc.read(), metadata={"document_id": doc_path.stem}))
 
         elif path.is_file():
             with path.open("r", encoding="utf-8") as doc:
-                documents.append(Document(page_content=doc.read(), metadata={"file_name": path.name}))
+                documents.append(Document(page_content=doc.read(), metadata={"document.id": path.stem}))
 
         return documents
 
