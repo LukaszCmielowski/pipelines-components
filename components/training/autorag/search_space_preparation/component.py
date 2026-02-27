@@ -82,15 +82,26 @@ def search_space_preparation(
     from llama_stack_client import LlamaStackClient
     from openai import OpenAI
 
+    def _model_id_from_api(url: str, token: str) -> Optional[str]:
+        """Retrieve model id from deployment via OpenAI-compatible GET /v1/models. Returns None if unavailable or on error."""
+        try:
+            api_client = OpenAI(api_key=token or "dummy", base_url=url.rstrip("/"))
+            models = api_client.models.list()
+            if getattr(models, "data", None) and len(models.data) > 0:
+                first = models.data[0]
+                return getattr(first, "id", None)
+        except Exception:
+            pass
+        return None
+
     def _model_name_from_url(url: str) -> str:
         """Extract model name from URL: first hostname segment, then the part left of the last dash (e.g. bge-base-en-v15-v15-predictor.autox.svc... -> bge-base-en-v15-v15)."""
         parsed = urlparse(url)
         hostname = (parsed.netloc or parsed.path).split(":")[0]
         segment = hostname.split(".")[0] if hostname else ""
         if segment:
-           return segment.rsplit("-", 1)[0]
-        else:
-            return segment
+            return segment.rsplit("-", 1)[0]
+        return segment or "default"
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
@@ -145,12 +156,15 @@ def search_space_preparation(
         in_memory_vector_store_scenario = True
 
     # When using llama-stack, model lists are required (no automatic discovery). When using
-    # chat/embedding URLs only, derive model names from the first part of each URL (hostname segment).
+    # chat/embedding URLs only, get model id from the deployment API (GET /v1/models) when
+    # supported, otherwise fall back to deriving from the URL hostname.
     if in_memory_vector_store_scenario:
         if not generation_models:
-            generation_models = [_model_name_from_url(chat_model_url)]
+            model_id = _model_id_from_api(chat_model_url, chat_model_token)
+            generation_models = [model_id or _model_name_from_url(chat_model_url)]
         if not embeddings_models:
-            embeddings_models = [_model_name_from_url(embedding_model_url)]
+            model_id = _model_id_from_api(embedding_model_url, embedding_model_token)
+            embeddings_models = [model_id or _model_name_from_url(embedding_model_url)]
     elif not generation_models or not embeddings_models:
         raise NotImplementedError(
             "For the time being automatic model discovery is not supported during autorag pipeline execution. "
