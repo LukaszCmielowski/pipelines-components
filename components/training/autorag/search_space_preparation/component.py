@@ -67,7 +67,6 @@ def search_space_preparation(
     import os
     from collections import namedtuple
     from pathlib import Path
-    from urllib.parse import urlparse
 
     import pandas as pd
     import yaml as yml
@@ -96,18 +95,6 @@ def search_space_preparation(
         except Exception:
             pass
         return None
-
-    def _model_name_from_url(url: str) -> str:
-        """Extract model name from URL: first hostname segment, then part left of last dash.
-
-        E.g. bge-base-en-v15-v15-predictor.autox.svc... -> bge-base-en-v15-v15.
-        """
-        parsed = urlparse(url)
-        hostname = (parsed.netloc or parsed.path).split(":")[0]
-        segment = hostname.split(".")[0] if hostname else ""
-        if segment:
-            return segment.rsplit("-", 1)[0]
-        return segment or "default"
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
@@ -162,15 +149,24 @@ def search_space_preparation(
         in_memory_vector_store_scenario = True
 
     # When using llama-stack, model lists are required (no automatic discovery). When using
-    # chat/embedding URLs only, get model id from the deployment API (GET /v1/models) when
-    # supported, otherwise fall back to deriving from the URL hostname.
+    # chat/embedding URLs only, get model id from the deployment API (GET /v1/models).
     if in_memory_vector_store_scenario:
         if not generation_models:
             model_id = _model_id_from_api(chat_model_url, chat_model_token)
-            generation_models = [model_id or _model_name_from_url(chat_model_url)]
+            if not model_id:
+                raise ValueError(
+                    "Could not retrieve model id from chat model endpoint. "
+                    "Provide generation_models explicitly or ensure the endpoint supports GET /v1/models."
+                )
+            generation_models = [model_id]
         if not embeddings_models:
             model_id = _model_id_from_api(embedding_model_url, embedding_model_token)
-            embeddings_models = [model_id or _model_name_from_url(embedding_model_url)]
+            if not model_id:
+                raise ValueError(
+                    "Could not retrieve model id from embedding model endpoint. "
+                    "Provide embeddings_models explicitly or ensure the endpoint supports GET /v1/models."
+                )
+            embeddings_models = [model_id]
     elif not generation_models or not embeddings_models:
         raise NotImplementedError(
             "For the time being automatic model discovery is not supported during autorag pipeline execution. "
