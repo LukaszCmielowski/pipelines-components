@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from kfp import dsl
 
@@ -83,7 +83,10 @@ def search_space_preparation(
     from openai import OpenAI
 
     def _model_id_from_api(url: str, token: str) -> Optional[str]:
-        """Retrieve model id from deployment via OpenAI-compatible GET /v1/models. Returns None if unavailable or on error."""
+        """Retrieve model id from deployment via OpenAI-compatible GET /v1/models.
+
+        Returns None if unavailable or on error.
+        """
         try:
             api_client = OpenAI(api_key=token or "dummy", base_url=url.rstrip("/"))
             models = api_client.models.list()
@@ -95,7 +98,10 @@ def search_space_preparation(
         return None
 
     def _model_name_from_url(url: str) -> str:
-        """Extract model name from URL: first hostname segment, then the part left of the last dash (e.g. bge-base-en-v15-v15-predictor.autox.svc... -> bge-base-en-v15-v15)."""
+        """Extract model name from URL: first hostname segment, then part left of last dash.
+
+        E.g. bge-base-en-v15-v15-predictor.autox.svc... -> bge-base-en-v15-v15.
+        """
         parsed = urlparse(url)
         hostname = (parsed.netloc or parsed.path).split(":")[0]
         segment = hostname.split(".")[0] if hostname else ""

@@ -9,8 +9,7 @@ def leaderboard_evaluation(
     html_artifact: dsl.Output[dsl.HTML],
     optimization_metric: str = "faithfulness",
 ):
-    """
-    Build an HTML leaderboard artifact from RAG pattern evaluation results.
+    """Build an HTML leaderboard artifact from RAG pattern evaluation results.
 
     Reads pattern.json from each subdirectory of rag_patterns (produced by
     rag_templates_optimization) and generates a single HTML table: Pattern_Name,
@@ -19,15 +18,12 @@ def leaderboard_evaluation(
     generation.model_id). Writes the HTML to html_artifact.path.
 
     Args:
-        rag_patterns
-            Path to the directory of RAG patterns; each subdir contains
+        rag_patterns: Path to the directory of RAG patterns; each subdir contains
             pattern.json (pattern_name, indexing_params, rag_params, scores,
             execution_time, final_score).
-        html_artifact
-            Output HTML artifact; the leaderboard table is written to
+        html_artifact: Output HTML artifact; the leaderboard table is written to
             html_artifact.path (single file).
-        optimization_metric
-            Name of the metric used to rank patterns (e.g. faithfulness,
+        optimization_metric: Name of the metric used to rank patterns (e.g. faithfulness,
             answer_correctness, context_correctness). Shown in the leaderboard
             subtitle. Defaults to "faithfulness".
     """
@@ -344,7 +340,8 @@ def leaderboard_evaluation(
         "retrieval.number_of_chunks",
         "generation.model_id",
     ]
-    # Build metric columns present in data (preferred order above). Support flat scores (metric dict at top level) or nested scores.scores.
+    # Build metric columns present in data (preferred order above). Support flat scores
+    # (metric dict at top level) or nested scores.scores.
     all_metric_names = []
     for e in evaluations:
         raw = e.get("scores") or {}

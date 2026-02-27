@@ -1,6 +1,5 @@
 """Example usage of the documents_lite_rag_optimization_pipeline."""
 
-from kfp import dsl
 from kfp_components.pipelines.training.autorag.documents_lite_rag_optimization_pipeline import (
     documents_lite_rag_optimization_pipeline,
 )

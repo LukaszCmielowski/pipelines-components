@@ -26,41 +26,31 @@ def rag_templates_optimization(
     vector_database_id: Optional[str] = None,
     optimization_settings: Optional[dict] = None,
 ):
-    """
-    RAG Templates Optimization component.
+    """RAG Templates Optimization component.
 
     Carries out the iterative RAG optimization process.
 
     Args:
-        extracted_text
-            Path to a folder containing extracted texts from input documents.
-        test_data
-            Path to test data used for evaluating RAG pattern quality.
-        search_space_prep_report
-            Path to a .yml file containing the report from the search space preparation phase.
-        chat_model_url
-            Inference endpoint URL for the chat/generation model (OpenAI-compatible). Required for
-            in-memory scenario.
-        chat_model_token
-            Optional API token for the chat model endpoint. Omit if the deployment has no auth.
-        embedding_model_url
-            Inference endpoint URL for the embedding model. Required for in-memory scenario.
-        embedding_model_token
-            Optional API token for the embedding model endpoint. Omit if the deployment has no auth.
-        vector_database_id
-            Identifier of the vector store used in the experiment (e.g. "chroma", "ls_milvus").
-            Optional; defaults may apply depending on scenario.
-        optimization_settings
-            Additional settings for the experiment. May include "metric" (str): quality metric for
-            optimization. Supported values: "faithfulness", "answer_correctness", "context_correctness".
-            Defaults to "faithfulness" if omitted.
+        extracted_text: Path to a folder containing extracted texts from input documents.
+        test_data: Path to test data used for evaluating RAG pattern quality.
+        search_space_prep_report: Path to a .yml file containing the report from the search space
+            preparation phase.
+        rag_patterns: Output artifact for the folder of generated RAG patterns.
+        autorag_run_artifact: Output artifact for run log and experiment status (TODO).
+        chat_model_url: Inference endpoint URL for the chat/generation model (OpenAI-compatible).
+            Required for in-memory scenario.
+        chat_model_token: Optional API token for the chat model endpoint. Omit if deployment has no auth.
+        embedding_model_url: Inference endpoint URL for the embedding model. Required for in-memory scenario.
+        embedding_model_token: Optional API token for the embedding model endpoint. Omit if no auth.
+        vector_database_id: Identifier of the vector store (e.g. "chroma", "ls_milvus"). Optional.
+        optimization_settings: Additional settings; may include "metric" (str) for optimization.
+            Supported: "faithfulness", "answer_correctness", "context_correctness". Defaults to
+            "faithfulness" if omitted.
 
     Returns:
-        rag_patterns
-            Folder containing all generated RAG patterns (each subdir: pattern.json,
+        rag_patterns: Folder containing all generated RAG patterns (each subdir: pattern.json,
             indexing_notebook.ipynb, inference_notebook.ipynb).
-        autorag_run_artifact
-            Run log and experiment status (TODO).
+        autorag_run_artifact: Run log and experiment status (TODO).
     """
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
@@ -74,29 +64,26 @@ def rag_templates_optimization(
         pass
 
     import os
+    from collections import namedtuple
     from json import dump as json_dump
     from pathlib import Path
 
     import pandas as pd
     import yaml as yml
     from ai4rag.core.experiment.experiment import AI4RAGExperiment
-    from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
+    from ai4rag.core.experiment.results import ExperimentResults
     from ai4rag.core.hpo.gam_opt import GAMOptSettings
-    from ai4rag.rag.embedding.base_model import BaseEmbeddingModel
-    from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
     from ai4rag.rag.embedding.llama_stack import LSEmbeddingModel
-    from ai4rag.rag.foundation_models.base_model import BaseFoundationModel
-    from ai4rag.rag.foundation_models.openai_model import OpenAIFoundationModel
+    from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
     from ai4rag.rag.foundation_models.llama_stack import LSFoundationModel
+    from ai4rag.rag.foundation_models.openai_model import OpenAIFoundationModel
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
     from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
     from langchain_core.documents import Document
     from llama_stack_client import LlamaStackClient
     from openai import OpenAI
-    from collections import namedtuple
 
-    MAX_NUMBER_OF_RAG_PATTERNS = 8
     METRIC = "faithfulness"
     SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
 
@@ -110,20 +97,14 @@ def rag_templates_optimization(
             pass
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
-        """
-        Given path to a text-based file or a folder thereof load everything to memory and
-        return as a list of langchain `Document` objects.
+        """Load a text file or folder into a list of langchain Document objects.
 
         Args:
-            path
-                A local path to either a text file or a folder of text files.
+            path: A local path to either a text file or a folder of text files.
+
         Returns:
             A list of langchain `Document` objects.
-
-        Note:
-
         """
-
         if isinstance(path, str):
             path = Path(path)
 
@@ -238,7 +219,7 @@ def rag_templates_optimization(
     )
 
     # retrieve documents && run optimisation loop
-    best_pattern = rag_exp.search()
+    rag_exp.search()
 
     def _evaluation_result_fallback(eval_data_list, evaluation_result):
         """Build evaluation_results.json-style list when question_scores missing or incomplete."""
@@ -267,7 +248,7 @@ def rag_templates_optimization(
     evaluation_data_list = getattr(rag_exp.results, "evaluation_data", [])
 
     def _build_pattern_json(evaluation_result, iteration: int, max_combinations: int) -> dict:
-        """Build pattern.json content as flat schema: name, iteration, max_combinations, duration_seconds, settings, scores, final_score."""
+        """Build pattern.json with flat schema (name, iteration, settings, scores, final_score)."""
         idx = evaluation_result.indexing_params or {}
         rp = evaluation_result.rag_params or {}
         chunking = idx.get("chunking") or {}
@@ -324,11 +305,19 @@ def rag_templates_optimization(
                     "context_template_text": generation.get("context_template_text", "{document}"),
                     "user_message_text": generation.get(
                         "user_message_text",
-                        "\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
+                        (
+                            "\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer "
+                            "the question based on the context provided only. If the context is not related to "
+                            "the question, just say you cannot answer. Respond exclusively in the language of "
+                            "the question."
+                        ),
                     ),
                     "system_message_text": generation.get(
                         "system_message_text",
-                        "Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer.",
+                        (
+                            "Please answer the question I provide in the Question section below, based solely "
+                            "on the information I provide in the Context section. If unanswerable, say so."
+                        ),
                     ),
                 },
             },
