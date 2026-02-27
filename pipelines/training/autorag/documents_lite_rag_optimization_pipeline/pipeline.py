@@ -1,44 +1,45 @@
-from typing import List, Optional
-
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
-
-from components.data_processing.autorag.documents_sampling import documents_sampling
-from components.data_processing.autorag.test_data_loader import test_data_loader
-from components.data_processing.autorag.text_extraction import text_extraction
-from components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
-from components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
-from components.training.autorag.search_space_preparation.component import search_space_preparation
+from kfp_components.components.data_processing.autorag.documents_sampling import documents_sampling
+from kfp_components.components.data_processing.autorag.test_data_loader import test_data_loader
+from kfp_components.components.data_processing.autorag.text_extraction import text_extraction
+from kfp_components.components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
+from kfp_components.components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
+from kfp_components.components.training.autorag.search_space_preparation.component import search_space_preparation
 
 SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
 
 
 @dsl.pipeline(
-    name="documents-rag-optimization-pipeline",
-    description="Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications",
+    name="documents-lite-rag-optimization-pipeline",
+    description=(
+        "Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications "
+        "(lite version). The lite version does not use llama-stack API for inference and vector database "
+        "operations."
+    ),
 )
-def documents_rag_optimization_pipeline(
+def documents_lite_rag_optimization_pipeline(
     test_data_secret_name: str,
     test_data_bucket_name: str,
     test_data_key: str,
     input_data_secret_name: str,
     input_data_bucket_name: str,
     input_data_key: str,
-    llama_stack_secret_name: str,
-    embeddings_models: Optional[List] = None,
-    generation_models: Optional[List] = None,
+    chat_model_url: str,
+    chat_model_token: str,
+    embedding_model_url: str,
+    embedding_model_token: str,
     optimization_metric: str = "faithfulness",
-    vector_database_id: Optional[str] = None,
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
-    The Documents RAG Optimization Pipeline is an automated system for building and optimizing
+    The Documents Lite RAG Optimization Pipeline is an automated system for building and optimizing
     Retrieval-Augmented Generation (RAG) applications within Red Hat OpenShift AI. It leverages
     Kubeflow Pipelines to orchestrate the optimization workflow, using the ai4rag optimization
     engine to systematically explore RAG configurations and identify the best performing parameter
     settings based on an upfront-specified quality metric.
 
-    The system integrates with llama-stack API for inference and vector database operations,
+    The system integrates with OpenAI API for inference and in-memory ChromaDB vector database operations,
     producing optimized RAG patterns as artifacts that can be deployed and used for production
     RAG applications.
 
@@ -53,15 +54,16 @@ def documents_rag_optimization_pipeline(
             AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION.
         input_data_bucket_name: S3 (or compatible) bucket name for the input documents.
         input_data_key: Object key (path) of the input documents in the input data bucket.
-        llama_stack_secret_name: Name of the Kubernetes secret for llama-stack API connection.
-            The secret must define: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL.
-        embeddings_models: Optional list of embedding model identifiers to use in the search space.
-        generation_models: Optional list of foundation/generation model identifiers to use in the
-            search space.
+        chat_model_url: Inference endpoint URL for the chat/generation model (OpenAI-compatible endpoint).
+        chat_model_token: API token or key for authenticating with the chat model endpoint.
+        embedding_model_url: Inference endpoint URL for the embedding model.
+        embedding_model_token: API token or key for authenticating with the embedding model endpoint.
         optimization_metric: Quality metric used to optimize RAG patterns. Supported values:
-            "faithfulness", "answer_correctness", "context_correctness".
-        vector_database_id: Optional vector database id (e.g., registered in llama-stack Milvus).
-            If not provided, an in-memory database may be used.
+            "faithfulness", "answer_correctness", "context_correctness". Defaults to "faithfulness".
+        embeddings_models: Optional list of embedding model IDs for the search space. If not set,
+            defaults to a single model so the pipeline runs without manual model discovery.
+        generation_models: Optional list of foundation/generation model IDs for the search space.
+            If not set, defaults to a single model so the pipeline runs without manual model discovery.
     """
     test_data_loader_task = test_data_loader(
         test_data_bucket_name=test_data_bucket_name,
@@ -78,6 +80,10 @@ def documents_rag_optimization_pipeline(
     text_extraction_task = text_extraction(
         sampled_documents_descriptor=documents_sampling_task.outputs["sampled_documents"],
     )
+
+    test_data_loader_task.set_caching_options(False)
+    documents_sampling_task.set_caching_options(False)
+    text_extraction_task.set_caching_options(False)
 
     for task, secret_name in zip(
         [test_data_loader_task, documents_sampling_task, text_extraction_task],
@@ -97,25 +103,33 @@ def documents_rag_optimization_pipeline(
     mps_task = search_space_preparation(
         test_data=test_data_loader_task.outputs["test_data"],
         extracted_text=text_extraction_task.outputs["extracted_text"],
-        embeddings_models=embeddings_models,
-        generation_models=generation_models,
+        chat_model_url=chat_model_url,
+        chat_model_token=chat_model_token,
+        embedding_model_url=embedding_model_url,
+        embedding_model_token=embedding_model_token,
     )
 
     hpo_task = rag_templates_optimization(
         extracted_text=text_extraction_task.outputs["extracted_text"],
         test_data=test_data_loader_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
-        vector_database_id=vector_database_id or "ls_milvus",
+        chat_model_url=chat_model_url,
+        chat_model_token=chat_model_token,
+        embedding_model_url=embedding_model_url,
+        embedding_model_token=embedding_model_token,
         optimization_settings={"metric": optimization_metric},
     )
 
-    leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])
+    leaderboard_evaluation(
+        rag_patterns=hpo_task.outputs["rag_patterns"],
+        optimization_metric=optimization_metric,
+    )
 
 
 if __name__ == "__main__":
     from kfp.compiler import Compiler
 
     Compiler().compile(
-        documents_rag_optimization_pipeline,
+        documents_lite_rag_optimization_pipeline,
         package_path=__file__.replace(".py", "_pipeline.yaml"),
     )
