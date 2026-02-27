@@ -25,10 +25,10 @@ def documents_rag_optimization_pipeline(
     input_data_bucket_name: str,
     input_data_key: str,
     llama_stack_secret_name: str,
-    embeddings_models: Optional[List] = None,
-    generation_models: Optional[List] = None,
+    embeddings_models: List,
+    generation_models: List,
     optimization_metric: str = "faithfulness",
-    vector_database_id: Optional[str] = None,
+    llama_stack_vector_database_id: Optional[str] = None,
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
@@ -108,7 +108,7 @@ def documents_rag_optimization_pipeline(
         extracted_text=text_extraction_task.outputs["extracted_text"],
         test_data=test_data_loader_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
-        vector_database_id=vector_database_id or "ls_milvus",
+        vector_database_id=llama_stack_vector_database_id or "ls_milvus",
         optimization_settings={"metric": optimization_metric},
     )
 

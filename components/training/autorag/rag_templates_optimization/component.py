@@ -19,7 +19,7 @@ def rag_templates_optimization(
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
     rag_patterns: dsl.Output[dsl.Artifact],
     autorag_run_artifact: dsl.Output[dsl.Artifact],
-    vector_database_id: Optional[str] = None,
+    llama_stack_vector_database_id: Optional[str] = None,
     optimization_settings: Optional[dict] = None,
 ):
     """
