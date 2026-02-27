@@ -17,46 +17,50 @@ def rag_templates_optimization(
     extracted_text: dsl.InputPath(dsl.Artifact),
     test_data: dsl.InputPath(dsl.Artifact),
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
-    chat_model_url: str,
-    chat_model_token: str,
-    embedding_model_url: str,
-    embedding_model_token: str,
     rag_patterns: dsl.Output[dsl.Artifact],
     autorag_run_artifact: dsl.Output[dsl.Artifact],
+    chat_model_url: Optional[str] = None,
+    chat_model_token: Optional[str] = None,
+    embedding_model_url: Optional[str] = None,
+    embedding_model_token: Optional[str] = None,
     vector_database_id: Optional[str] = None,
     optimization_settings: Optional[dict] = None,
 ):
     """
-    Rag Templates Optimization component.
+    RAG Templates Optimization component.
 
     Carries out the iterative RAG optimization process.
 
     Args:
         extracted_text
-            A path pointing to a folder containg extracted texts from input documents.
-
+            Path to a folder containing extracted texts from input documents.
         test_data
-            A path pointing to test data used for evaluating RAG pattern quality.
-
+            Path to test data used for evaluating RAG pattern quality.
         search_space_prep_report
-            A path pointing to a .yml file containig short report on the experiment's first phase
-            (search space preparation).
-
-        vector_database
-            An identificator of the vector store used in the experiment.
-
+            Path to a .yml file containing the report from the search space preparation phase.
+        chat_model_url
+            Inference endpoint URL for the chat/generation model (OpenAI-compatible). Required for
+            in-memory scenario.
+        chat_model_token
+            Optional API token for the chat model endpoint. Omit if the deployment has no auth.
+        embedding_model_url
+            Inference endpoint URL for the embedding model. Required for in-memory scenario.
+        embedding_model_token
+            Optional API token for the embedding model endpoint. Omit if the deployment has no auth.
+        vector_database_id
+            Identifier of the vector store used in the experiment (e.g. "chroma", "ls_milvus").
+            Optional; defaults may apply depending on scenario.
         optimization_settings
-            Additional settings customising the experiment. May include "metric" (str): quality
-            metric for optimization. Supported values: "faithfulness", "answer_correctness",
-            "context_correctness". Defaults to "faithfulness" if omitted.
+            Additional settings for the experiment. May include "metric" (str): quality metric for
+            optimization. Supported values: "faithfulness", "answer_correctness", "context_correctness".
+            Defaults to "faithfulness" if omitted.
 
     Returns:
         rag_patterns
-            A path pointing to a folder containing all of the generated RAG patterns
-            (each subdir: pattern.json, indexing_notebook.ipynb, inference_notebook.ipynb).
+            Folder containing all generated RAG patterns (each subdir: pattern.json,
+            indexing_notebook.ipynb, inference_notebook.ipynb).
         autorag_run_artifact
             Run log and experiment status (TODO).
-
     """
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.

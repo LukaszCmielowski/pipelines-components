@@ -92,12 +92,27 @@ def leaderboard_evaluation(
         with pattern_file.open("r", encoding="utf-8") as f:
             evaluations.append(json.load(f))
 
-    # Sort by final_score descending (best first); missing final_score last
-    def _final_score(e):
+    # Sort by optimization metric score descending (highest first); missing scores last
+    def _optimization_score(e):
         v = e.get("final_score")
-        return (v is None, -(v if v is not None else float("-inf")))
+        if v is not None:
+            try:
+                return (False, -float(v))
+            except (TypeError, ValueError):
+                pass
+        raw = e.get("scores") or {}
+        aggregate = raw.get("scores") if isinstance(raw.get("scores"), dict) else raw
+        for _k, info in (aggregate or {}).items():
+            if isinstance(info, dict):
+                mean = info.get("mean")
+                if mean is not None:
+                    try:
+                        return (False, -float(mean))
+                    except (TypeError, ValueError):
+                        pass
+        return (True, 0)
 
-    evaluations.sort(key=_final_score)
+    evaluations.sort(key=_optimization_score)
 
     # Default column order: metrics first, then RAG config (chunking, embeddings, retrieval, generation).
     leaderboard_metric_columns = [
