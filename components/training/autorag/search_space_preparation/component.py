@@ -173,12 +173,8 @@ def search_space_preparation(
 
     def prepare_ai4rag_search_space():
         if in_memory_vector_store_scenario:
-            generation_model = OpenAIFoundationModel(
-                client=client.generation_model, model_id=generation_models[0]
-            )
-            embeddings_model = OpenAIEmbeddingModel(
-                client=client.embedding_model, model_id=embeddings_models[0]
-            )
+            generation_model = OpenAIFoundationModel(client=client.generation_model, model_id=generation_models[0])
+            embeddings_model = OpenAIEmbeddingModel(client=client.embedding_model, model_id=embeddings_models[0])
             return AI4RAGSearchSpace(
                 params=[
                     Parameter("foundation_model", "C", values=[generation_model]),

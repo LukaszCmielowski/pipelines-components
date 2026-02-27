@@ -311,7 +311,9 @@ def rag_templates_optimization(
                 },
                 "embedding": {
                     "model_id": embedding_model_id or "",
-                    "distance_metric": embeddings.get("distance_metric", "cosine") if isinstance(embeddings, dict) else "cosine",
+                    "distance_metric": embeddings.get("distance_metric", "cosine")
+                    if isinstance(embeddings, dict)
+                    else "cosine",
                 },
                 "retrieval": {
                     "method": retrieval.get("method", "simple"),

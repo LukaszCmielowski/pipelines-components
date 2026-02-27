@@ -364,17 +364,13 @@ def leaderboard_evaluation(
 
     rows = []
     for i, e in enumerate(evaluations):
-        pattern_name = (
-            e.get("name") or e.get("pattern_name") or (e.get("rag_pattern") or {}).get("name", "—")
-        )
+        pattern_name = e.get("name") or e.get("pattern_name") or (e.get("rag_pattern") or {}).get("name", "—")
         raw = e.get("scores") or {}
         scores = raw.get("scores") if isinstance(raw.get("scores"), dict) else raw
         merged = (
             _settings_from_rag_pattern(e)
             or _normalize_flat_settings(e.get("settings"))
-            or _merge_params(
-                e.get("indexing_params") or {}, e.get("rag_params") or {}
-            )
+            or _merge_params(e.get("indexing_params") or {}, e.get("rag_params") or {})
         )
 
         cells = [html.escape(str(pattern_name))]
