@@ -4,66 +4,30 @@
 
 ## Overview 🧾
 
-Builds and validates the search space of RAG configurations, including model preselection and
-validation using in-memory vector databases.
+Builds the search space defining RAG configurations. 
+Performs the so called model preselection that limits the number of foundation and embedding models for the further optimization stage to 3 and 2 (respectively) of the best performing ones.
+The output of this step is a .yml formatted report file containg the search space definition.
+It allows for easy recreation at any time making the eventual re-runs faster and reproducible to greate extent.
 
-The Search Space Preparation component (also known as Model Preselector) is a critical stage in the
-AutoRAG pipeline that builds and validates the search space of RAG configurations. It validates
-available models and their performance using an in-memory vector database, adjusting the search
-space as needed. The component outputs a series of valid configurations and data for optimization.
-
-This component uses the `ai4rag` library to systematically explore and validate RAG configuration
-combinations based on provided constraints (chunking, embeddings, generation, retrieval). It
-ensures that only valid and performant configurations are passed to the optimization stage,
-reducing computational cost and improving optimization efficiency.
+The preselection phase, similarly to the optimization stage, also makes use of the `ai4rag` library to explore some RAG configurations allowing to grade the models' performance and choose a couple of best ones from the start.
+The usage of this compoent ensures that only valid and performant configurations are passed to the further optimization stage greatly reducing computational cost and improving optimization efficiency.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `constraints` | `dict` | `{}` | Dictionary containing search space constraints. See [Constraints Structure](#constraints-structure) below. |
-| `models_config` | `dict` | `None` | Optional dictionary with models configuration. |
+| `test_data` | dsl.Input[dsl.Artifact] | - | The test data for an experiment in form of a JSON file. |
+| `extracted_text` | dsl.Input[dsl.Artifact] | - | A folder of files with text extracted from the input documents. |
+| `embeddings_models` | dsl.Input[dsl.Artifact] | - | List of embedding model identifiers to try out in the experiment process. |
+| `generation_models` | dsl.Input[dsl.Artifact] | - | List of foundation model identifiers to try out in the experiment process. |
 | `metric` | `str` | `faithfulness` | A RAG metric to optimise the experiment for. |
 
-### Constraints Structure
-
-The `constraints` dictionary should contain:
-
-```python
-{
-    "chunking": [
-        {
-            "method": "recursive",
-            "chunk_overlap": 256,
-            "chunk_size": 2048
-        }
-    ],
-    "embeddings": [
-        {"model": "ibm/slate-125m-english-rtrvr-v2"},
-        {"model": "intfloat/multilingual-e5-large"}
-    ],
-    "generation": [
-        {"model": "mistralai/mixtral-8x7b-instruct-v01"},
-        {"model": "ibm/granite-13b-instruct-v2"}
-    ],
-    "retrieval": [
-        {
-            "method": "simple",
-            "number_of_chunks": 2,
-            "hybrid_ranker": {
-                "strategy": "weighted",
-                "alpha": 0.6
-            }
-        }
-    ]
-}
-```
 
 ## Outputs 📤
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `phase_report` | `dsl.OutputPath(dsl.Artifact)` | Path to a .yml-formatted file containing short report on the current experiment's phase. |
+| `search_space_prep_report` | `dsl.Output[dsl.Artifact]` | Path to a .yml-formatted file containing the search space definition. |
 
 ## Usage Examples 💡
 
@@ -101,78 +65,24 @@ def my_pipeline():
     }
     
     prep_task = search_space_preparation(
-        constraints=constraints
+        test_data=,
+        extracted_text=,
+        embedding_models=,
+        generation_models=,
     )
     return prep_task
 ```
 
-### With Multiple Constraints
 
-```python
-@dsl.pipeline(name="search-space-preparation-advanced-pipeline")
-def my_pipeline():
-    """Example pipeline with multiple constraint options."""
-    constraints = {
-        "chunking": [
-            {
-                "method": "recursive",
-                "chunk_overlap": 256,
-                "chunk_size": 2048
-            },
-            {
-                "method": "recursive",
-                "chunk_overlap": 128,
-                "chunk_size": 1024
-            }
-        ],
-        "embeddings": [
-            {"model": "ibm/slate-125m-english-rtrvr-v2"},
-            {"model": "intfloat/multilingual-e5-large"}
-        ],
-        "generation": [
-            {"model": "mistralai/mixtral-8x7b-instruct-v01"},
-            {
-                "model": "ibm/granite-3-8b-instruct",
-                "context_template_text": "\n[Document]\n{document}",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant."
-                    }
-                ]
-            }
-        ],
-        "retrieval": [
-            {
-                "method": "simple",
-                "number_of_chunks": 2,
-                "hybrid_ranker": {
-                    "strategy": "weighted",
-                    "alpha": 0.6
-                }
-            },
-            {
-                "method": "simple",
-                "number_of_chunks": 4
-            }
-        ]
-    }
-    
-    prep_task = search_space_preparation(
-        constraints=constraints
-    )
-    return prep_task
-```
+## Search space creation Process 🔧
 
-## Validation Process 🔧
-
-The component performs the following validation steps:
+The component performs the following checks in order to ensure a valid search space:
 
 1. **Model Availability**: Validates that specified models are available and accessible
 2. **Configuration Compatibility**: Ensures configuration combinations are compatible
-3. **Performance Testing**: Tests configurations using in-memory vector database
+3. **Performance Testing**: Tests configurations using an in-memory vector database
 4. **Search Space Adjustment**: Adjusts the search space based on validation results
-5. **Output Generation**: Produces validated configurations ready for optimization
+5. **Output Generation**: Produces serialized search space in a form of a .yml file
 
 ## In-Memory Vector Database 🗄️
 

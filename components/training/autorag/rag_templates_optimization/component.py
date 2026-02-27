@@ -9,6 +9,8 @@ from kfp import dsl
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pyyaml",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
+        "llama-stack-client",
+        "openai",
     ],
 )
 def rag_templates_optimization(
@@ -17,7 +19,7 @@ def rag_templates_optimization(
     search_space_prep_report: dsl.InputPath(dsl.Artifact),
     rag_patterns: dsl.Output[dsl.Artifact],
     autorag_run_artifact: dsl.Output[dsl.Artifact],
-    vector_database_id: Optional[str] = None,
+    llama_stack_vector_database_id: Optional[str] = None,
     optimization_settings: Optional[dict] = None,
 ):
     """
@@ -66,20 +68,25 @@ def rag_templates_optimization(
     import os
     from json import dump as json_dump
     from pathlib import Path
-    from random import random
-    from typing import Any, List, TextIO
 
     import pandas as pd
     import yaml as yml
     from ai4rag.core.experiment.experiment import AI4RAGExperiment
     from ai4rag.core.experiment.results import EvaluationData, EvaluationResult, ExperimentResults
-    from ai4rag.core.hpo.base_optimiser import OptimiserSettings
-    from ai4rag.rag.embedding.base_model import EmbeddingModel
-    from ai4rag.rag.foundation_models.base_model import FoundationModel
+    from ai4rag.core.hpo.gam_opt import GAMOptSettings
+    from ai4rag.rag.embedding.base_model import BaseEmbeddingModel
+    from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
+    from ai4rag.rag.embedding.llama_stack import LSEmbeddingModel
+    from ai4rag.rag.foundation_models.base_model import BaseFoundationModel
+    from ai4rag.rag.foundation_models.openai_model import OpenAIFoundationModel
+    from ai4rag.rag.foundation_models.llama_stack import LSFoundationModel
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
     from ai4rag.utils.event_handler.event_handler import BaseEventHandler, LogLevel
     from langchain_core.documents import Document
+    from llama_stack_client import LlamaStackClient
+    from openai import OpenAI
+    from collections import namedtuple
 
     MAX_NUMBER_OF_RAG_PATTERNS = 8
     METRIC = "faithfulness"
@@ -93,112 +100,6 @@ def rag_templates_optimization(
 
         def on_pattern_creation(self, payload: dict, evaluation_results: list, **kwargs) -> None:
             pass
-
-    class DisconnectedAI4RAGExperiment(AI4RAGExperiment):
-        """Mock experiment that returns fake results when no llama-stack client is configured."""
-
-        def __init__(self, rag_experiment: AI4RAGExperiment) -> None:
-            self.rag_experiment = rag_experiment
-            self.metrics = ["faithfulness"]
-
-        def search(self, **kwargs):
-            self.results = ExperimentResults()
-            embedding_models = ["mock-embed-a", "mock-embed-b", "mock-embed-a"]
-            generation_models = ["mock-llm-1", "mock-llm-1", "mock-llm-2"]
-            for i in range(3):
-                indexing_params = {
-                    "chunking": {
-                        "method": "recursive",
-                        "chunk_size": 256,
-                        "chunk_overlap": 128,
-                    },
-                }
-                rag_params = {
-                    "embeddings": {"model_id": embedding_models[i]},
-                    "retrieval": {"method": "window", "number_of_chunks": 5},
-                    "generation": {"model_id": generation_models[i]},
-                }
-                eval_res = EvaluationResult(
-                    f"pattern{i}",
-                    f"collection{i}",
-                    indexing_params,
-                    rag_params,
-                    scores={
-                        "scores": {
-                            "answer_correctness": {"mean": 0.5 + 0.1 * i, "ci_low": 0.4, "ci_high": 0.7},
-                            "faithfulness": {"mean": 0.2 + 0.1 * i, "ci_low": 0.1, "ci_high": 0.5},
-                            "context_correctness": {"mean": 1.0, "ci_low": 0.9, "ci_high": 1.0},
-                        },
-                        "question_scores": {
-                            "answer_correctness": {"q_id_0": 0.0, "q_id_1": 0.0, "q_id_2": 0.0146},
-                            "faithfulness": {"q_id_0": 0.0909, "q_id_1": 0.1818, "q_id_2": 0.1818},
-                            "context_correctness": {"q_id_0": 0.0, "q_id_1": 0.2, "q_id_2": 0.0},
-                        },
-                    },
-                    execution_time=0.5 * i,
-                    final_score=0.5 + 0.1 * i,
-                )
-                eval_data = [
-                    EvaluationData(
-                        question="What foundation models are available in watsonx.ai?",
-                        answer="I cannot answer this question, because I am just a mocked model.",
-                        contexts=[
-                            "*  asset_name_or_item: (Required) Either a string with the name of a stored data asset or an item like those returned by list_stored_data().",
-                            "Model architecture   The architecture of the model influences how the model behaves.",
-                            "Learn more \n\nParent topic:[Governing assets in AI use cases]",
-                        ],
-                        context_ids=[
-                            "0ECEAC44DA213D067B5B5EA66694E6283457A441_9.txt",
-                            "120CAE8361AE4E0B6FE4D6F0D32EEE9517F11190_1.txt",
-                            "391DBD504569F02CCC48B181E3B953198C8F3C8A_8.txt",
-                        ],
-                        ground_truths=[
-                            "The following models are available in watsonx.ai: \nflan-t5-xl-3b\nFlan-t5-xxl-11b\nflan-ul2-20b\ngpt-neox-20b\ngranite-13b-chat-v2\ngranite-13b-chat-v1\ngranite-13b-instruct-v2\ngranite-13b-instruct-v1\nllama-2-13b-chat\nllama-2-70b-chat\nmpt-7b-instruct2\nmt0-xxl-13b\nstarcoder-15.5b",
-                        ],
-                        question_id="q_id_0",
-                        ground_truths_context_ids=None,
-                    ),
-                    EvaluationData(
-                        question="What foundation models are available on Watsonx, and which of these has IBM built?",
-                        answer="I cannot answer this question, because I am just a mocked model.",
-                        contexts=[
-                            "Retrieval-augmented generation \n\nYou can use foundation models in IBM watsonx.ai to generate factually accurate output.",
-                            "Methods for tuning foundation models \n\nLearn more about different tuning methods and how they work.",
-                            "Foundation models built by IBM \n\nIn IBM watsonx.ai, you can use IBM foundation models that are built with integrity and designed for business.",
-                        ],
-                        context_ids=[
-                            "752D982C2F694FFEE2A312CEA6ADF22C2384D4B2_0.txt",
-                            "15A014C514B00FF78C689585F393E21BAE922DB2_0.txt",
-                            "B2593108FA446C4B4B0EF5ADC2CD5D9585B0B63C_0.txt",
-                        ],
-                        ground_truths=[
-                            "The following foundation models are available on Watsonx:\n\n1. flan-t5-xl-3b\n2. flan-t5-xxl-11b\n3. flan-ul2-20b\n4. gpt-neox-20b\n5. granite-13b-chat-v2 (IBM built)\n6. granite-13b-chat-v1 (IBM built)\n7. granite-13b-instruct-v2 (IBM built)\n8. granite-13b-instruct-v1 (IBM built)\n9. llama-2-13b-chat\n10. llama-2-70b-chat\n11. mpt-7b-instruct2\n12. mt0-xxl-13b\n13. starcoder-15.5b\n\n The Granite family of foundation models, including granite-13b-chat-v2, granite-13b-chat-v1, and granite-13b-instruct-v2 has been build by IBM.",
-                        ],
-                        question_id="q_id_1",
-                        ground_truths_context_ids=None,
-                    ),
-                    EvaluationData(
-                        question="How can I ensure that the generated answers will be accurate, factual and based on my information?",
-                        answer="I cannot answer this question, because I am just a mocked model.",
-                        contexts=[
-                            "Functions used in Watson Pipelines's Expression Builder \n\nUse these functions in Pipelines code editors.",
-                            "Table 1. Supported values, defaults, and usage notes for sampling decoding\n\n Parameter        Supported values                                                                                 Default  Use",
-                            "applygmm properties \n\nYou can use the Gaussian Mixture node to generate a Gaussian Mixture model nugget.",
-                        ],
-                        context_ids=[
-                            "E933C12C1DF97E13CBA40BCD54E4F4B8133DA10C_0.txt",
-                            "42AE491240EF740E6A8C5CF32B817E606F554E49_1.txt",
-                            "F2D3C76D5EABBBF72A0314F29374527C8339591A_0.txt",
-                        ],
-                        ground_truths=[
-                            "To ensure a language model provides the most accurate and factual answers to questions based on your data, you can follow these steps:\n1. Utilize Retrieval-augmented generation pattern. In this pattaern, you provide the relevant facts from your dataset as context in your prompt text. This will guide the model to generate responses grounded in the provided data\n2. Prompt Engineering: Experiment with prompt engineering techniques to shape the model's output. Understand the capabilities and limitations of the foundation model by fine-tuning prompts and adjusting inputs to align with the desired output. This process helps in refining the generated responses for accuracy.\n3. Review and Validate Output: Regularly review the generated output for biased, inappropriate, or incorrect content. Third-party models may produce outputs containing misinformation, offensive language, or biased content. Implement mechanisms to evaluate and validate the accuracy of the model's responses, ensuring alignment with factual information from your dataset.\n",
-                        ],
-                        question_id="q_id_2",
-                        ground_truths_context_ids=None,
-                    ),
-                ]
-                self.results.add_evaluation(eval_data, eval_res)
-            return self.results.get_best_evaluations(k=1)
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
         """
@@ -222,39 +123,23 @@ def rag_templates_optimization(
         if path.is_dir():
             for doc_path in path.iterdir():
                 with doc_path.open("r", encoding="utf-8") as doc:
-                    documents.append(Document(page_content=doc.read(), metadata={"file_name": doc_path.name}))
+                    documents.append(Document(page_content=doc.read(), metadata={"document_id": doc_path.stem}))
 
         elif path.is_file():
             with path.open("r", encoding="utf-8") as doc:
-                documents.append(Document(page_content=doc.read(), metadata={"file_name": path.name}))
+                documents.append(Document(page_content=doc.read(), metadata={"document_id": path.stem}))
 
         return documents
 
-    class MockGenerationModel(FoundationModel):
-        def __init__(
-            self,
-            model_id: str,
-            client: None = None,
-            model_params: dict[str, Any] | None = None,
-        ):
-            super().__init__(client, model_id, model_params)
+        # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
 
-        def chat(self, system_message: str, user_message: str) -> str:
-            return "Dummy response from a generation model!"
+    llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
+    llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
 
-    class MockEmbeddingModel(EmbeddingModel):
-        def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
-            super().__init__(client, model_id, params)
+    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
 
-        def embed_documents(self, texts: List[str]) -> List[List[float]]:
-            n = []
-            for _ in texts:
-                n.append([random() for _ in range(self.params["embedding_dimension"])])
-
-            return n
-
-        def embed_query(self, query: str) -> List[float]:
-            return [random() for _ in range(self.params["embedding_dimension"])]
+    if llama_stack_client_base_url and llama_stack_client_api_key:
+        client = Client(llama_stack=LlamaStackClient())
 
     optimization_settings = optimization_settings if optimization_settings else {}
     if not (optimization_metric := optimization_settings.get("metric", None)):
@@ -271,45 +156,53 @@ def rag_templates_optimization(
     with open(search_space_prep_report, "r") as f:
         search_space = yml.load(f, yml.SafeLoader)
     params = []
+
     for param, values in search_space.items():
-        if param == "foundation_models":
-            params.append(Parameter("foundation_model", "C", values=list(map(MockGenerationModel, values))))
-        elif param == "embedding_models":
-            params.append(Parameter("embedding_model", "C", values=list(map(MockEmbeddingModel, values))))
+        if param == "foundation_model":
+            params.append(
+                Parameter(
+                    "foundation_model",
+                    "C",
+                    values=[LSFoundationModel(client=client.llama_stack, model_id=fm["model_id"]) for fm in values],
+                )
+            )
+        elif param == "embedding_model":
+            params.append(
+                Parameter(
+                    "embedding_model",
+                    "C",
+                    values=[
+                        LSEmbeddingModel(
+                            client=client.llama_stack,
+                            model_id=em["model_id"],
+                            params={"embedding_dimension": 768, "context_length": 512},
+                        )
+                        for em in values
+                    ],
+                )
+            )
         else:
             params.append(Parameter(param, "C", values=values))
     search_space = AI4RAGSearchSpace(params=params)
 
     event_handler = TmpEventHandler()
-    optimiser_settings = OptimiserSettings(
+    optimizer_settings = GAMOptSettings(
         max_evals=optimization_settings.get("max_number_of_rag_patterns", MAX_NUMBER_OF_RAG_PATTERNS)
     )
 
     benchmark_data = pd.read_json(Path(test_data))
 
-    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
-    client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL")
-    client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY")
-    client_connection = client_base_url if (client_base_url and client_api_key) else None
-
-    # ai4rag does not accept None for vector_store_type; use a supported default when omitted
-    vector_store_type = vector_database_id if vector_database_id else "ls_milvus"
-
     rag_exp = AI4RAGExperiment(
-        client=client_connection,
+        client=client.llama_stack,
         event_handler=event_handler,
-        optimiser_settings=optimiser_settings,
+        optimizer_settings=optimizer_settings,
         search_space=search_space,
         benchmark_data=benchmark_data,
-        vector_store_type=vector_store_type,
+        vector_store_type="ls_milvus",
         documents=documents,
         optimization_metric=optimization_metric,
         # TODO some necessary kwargs (if any at all)
     )
-
-    # When no llama-stack client is configured, use mocked experiment to avoid server dependency
-    if not client_connection:
-        rag_exp = DisconnectedAI4RAGExperiment(rag_exp)
 
     # retrieve documents && run optimisation loop
     best_pattern = rag_exp.search()

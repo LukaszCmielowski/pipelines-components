@@ -3,12 +3,12 @@ from typing import List, Optional
 from kfp import dsl
 from kfp.kubernetes import use_secret_as_env
 
-from components.data_processing.autorag.documents_sampling import documents_sampling
-from components.data_processing.autorag.test_data_loader import test_data_loader
-from components.data_processing.autorag.text_extraction import text_extraction
-from components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
-from components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
-from components.training.autorag.search_space_preparation.component import search_space_preparation
+from kfp_components.components.data_processing.autorag.documents_sampling import documents_sampling
+from kfp_components.components.data_processing.autorag.test_data_loader import test_data_loader
+from kfp_components.components.data_processing.autorag.text_extraction import text_extraction
+from kfp_components.components.training.autorag.leaderboard_evaluation import leaderboard_evaluation
+from kfp_components.components.training.autorag.rag_templates_optimization.component import rag_templates_optimization
+from kfp_components.components.training.autorag.search_space_preparation.component import search_space_preparation
 
 SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
 
@@ -25,10 +25,10 @@ def documents_rag_optimization_pipeline(
     input_data_bucket_name: str,
     input_data_key: str,
     llama_stack_secret_name: str,
-    embeddings_models: Optional[List] = None,
-    generation_models: Optional[List] = None,
+    embeddings_models: List,
+    generation_models: List,
     optimization_metric: str = "faithfulness",
-    vector_database_id: Optional[str] = None,
+    llama_stack_vector_database_id: Optional[str] = None,
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
@@ -55,6 +55,9 @@ def documents_rag_optimization_pipeline(
         input_data_key: Object key (path) of the input documents in the input data bucket.
         llama_stack_secret_name: Name of the Kubernetes secret for llama-stack API connection.
             The secret must define: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL.
+        openai_secret_name: Name of the Kubernetes secret containig connection info for externally reachable models (w/o Llama-stack server).
+            The secret must define: OPENAI_API_KEY, OPENAI_BASE_URL.
+            Providing this secret is synonymous with running the experiment using an in-memory vector store (ChromaDB).
         embeddings_models: Optional list of embedding model identifiers to use in the search space.
         generation_models: Optional list of foundation/generation model identifiers to use in the
             search space.
@@ -105,8 +108,25 @@ def documents_rag_optimization_pipeline(
         extracted_text=text_extraction_task.outputs["extracted_text"],
         test_data=test_data_loader_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
-        vector_database_id=vector_database_id or "ls_milvus",
+        vector_database_id=llama_stack_vector_database_id or "ls_milvus",
         optimization_settings={"metric": optimization_metric},
+    )
+
+    use_secret_as_env(
+        mps_task,
+        llama_stack_secret_name,
+        {
+            "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+            "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+        },
+    )
+    use_secret_as_env(
+        hpo_task,
+        llama_stack_secret_name,
+        {
+            "LLAMA_STACK_CLIENT_BASE_URL": "LLAMA_STACK_CLIENT_BASE_URL",
+            "LLAMA_STACK_CLIENT_API_KEY": "LLAMA_STACK_CLIENT_API_KEY",
+        },
     )
 
     leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])

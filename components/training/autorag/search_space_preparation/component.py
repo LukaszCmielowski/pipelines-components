@@ -1,7 +1,4 @@
-import os
-from pathlib import Path
-from random import random
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from kfp import dsl
 
@@ -11,18 +8,17 @@ from kfp import dsl
     packages_to_install=[
         "ai4rag@git+https://github.com/IBM/ai4rag.git",
         "pysqlite3-binary",  # ChromaDB requires sqlite3 >= 3.35; base image has older sqlite
+        "openai",
+        "llama-stack-client",
     ],
 )
 def search_space_preparation(
     test_data: dsl.Input[dsl.Artifact],
     extracted_text: dsl.Input[dsl.Artifact],
     search_space_prep_report: dsl.Output[dsl.Artifact],
-    # test_data: dsl.InputPath(dsl.Artifact),
-    # extracted_text: dsl.InputPath(dsl.Artifact),
-    # search_space_prep_report: dsl.OutputPath(dsl.Artifact),
     # constraints: Dict = None,
-    embeddings_models: Optional[List] = None,
-    generation_models: Optional[List] = None,
+    embeddings_models: List,
+    generation_models: List,
     models_config: Dict = None,  # ???
     metric: str = None,
 ):
@@ -67,87 +63,30 @@ def search_space_preparation(
 
     import os
     from pathlib import Path
-    from random import random
-    from typing import Any, List, Optional
 
     import pandas as pd
     import yaml as yml
     from ai4rag.core.experiment.benchmark_data import BenchmarkData
     from ai4rag.core.experiment.mps import ModelsPreSelector
-    from ai4rag.rag.embedding.base_model import EmbeddingModel
-    from ai4rag.rag.foundation_models.base_model import FoundationModel
+    from ai4rag.rag.embedding.openai_model import OpenAIEmbeddingModel
+    from ai4rag.rag.embedding.llama_stack import LSEmbeddingModel
+    from ai4rag.rag.foundation_models.openai_model import OpenAIFoundationModel
+    from ai4rag.rag.foundation_models.llama_stack import LSFoundationModel
     from ai4rag.search_space.src.parameter import Parameter
     from ai4rag.search_space.src.search_space import AI4RAGSearchSpace
+    from ai4rag.search_space.prepare_search_space import prepare_search_space_with_llama_stack
     from langchain_core.documents import Document
+    from openai import OpenAI
+    from llama_stack_client import LlamaStackClient
+    from collections import namedtuple
 
     # TODO whole component has to be run conditionally
     # TODO these defaults should be exposed by ai4rag library
-    TOP_N_GENERATION_MODELS = 3  # change names (topNmodels? )
+    TOP_N_GENERATION_MODELS = 3
     TOP_K_EMBEDDING_MODELS = 2
     METRIC = "faithfulness"
     SAMPLE_SIZE = 5
     SEED = 17
-
-    class DisconnectedModelsPreSelector(ModelsPreSelector):
-
-        def __init__(self, mps: ModelsPreSelector) -> None:
-            self.mps: ModelsPreSelector = mps
-            self.metric = mps.metric
-
-        def evaluate_patterns(self):
-
-            self.evaluation_results = [
-                {
-                    "embedding_model": "granite_emb1",
-                    "foundation_model": "mistral1",
-                    "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
-                    "question_scores": {
-                        "faithfulness": {
-                            "q_id_0": 0.5,
-                            "q_id_1": 0.8,
-                        }
-                    },
-                },
-                {
-                    "embedding_model": "granite_emb2",
-                    "foundation_model": "mistral2",
-                    "scores": {"faithfulness": {"mean": 0.5, "ci_low": 0.4, "ci_high": 0.6}},
-                    "question_scores": {
-                        "faithfulness": {
-                            "q_id_0": 0.5,
-                            "q_id_1": 0.8,
-                        }
-                    },
-                },
-            ]
-
-    class MockGenerationModel(FoundationModel):
-
-        def __init__(
-            self,
-            model_id: str,
-            client: None = None,
-            model_params: dict[str, Any] | None = None,
-        ):
-            super().__init__(client, model_id, model_params)
-
-        def chat(self, system_message: str, user_message: str) -> str:
-            return "Dummy response from a generation model!"
-
-    class MockEmbeddingModel(EmbeddingModel):
-
-        def __init__(self, model_id: str, params: dict[str, Any] | None = None, client: None = None):
-            super().__init__(client, model_id, params)
-
-        def embed_documents(self, texts: List[str]) -> List[List[float]]:
-            n = []
-            for _ in texts:
-                n.append([random() for _ in range(self.params["embedding_dimension"])])
-
-            return n
-
-        def embed_query(self, query: str) -> List[float]:
-            return [random() for _ in range(self.params["embedding_dimension"])]
 
     def load_as_langchain_doc(path: str | Path) -> list[Document]:
         """
@@ -171,51 +110,50 @@ def search_space_preparation(
         if path.is_dir():
             for doc_path in path.iterdir():
                 with doc_path.open("r", encoding="utf-8") as doc:
-                    documents.append(Document(page_content=doc.read(), metadata={"file_name": doc_path.name}))
+                    documents.append(Document(page_content=doc.read(), metadata={"document_id": doc_path.stem}))
 
         elif path.is_file():
             with path.open("r", encoding="utf-8") as doc:
-                documents.append(Document(page_content=doc.read(), metadata={"file_name": path.name}))
+                documents.append(Document(page_content=doc.read(), metadata={"document_id": path.stem}))
 
         return documents
 
     def prepare_ai4rag_search_space():
-        generation_models_list = generation_models if generation_models else ["mocked_gen_model1"]
-        embeddings_models_list = embeddings_models if embeddings_models else ["mocked_em_model1"]
 
-        generation_models_local = list(map(MockGenerationModel, generation_models_list))
-        embedding_models_local = list(map(MockEmbeddingModel, embeddings_models_list))
-
-        return AI4RAGSearchSpace(
-            params=[
-                Parameter("foundation_model", "C", values=generation_models_local),
-                Parameter("embedding_model", "C", values=embedding_models_local),
-            ]
+        return prepare_search_space_with_llama_stack(
+            {"foundation_models": generation_models, "embedding_models": embeddings_models}, client=client.llama_stack
         )
 
-    # build search space
-    # constraints = constraints if constraints else {}
+    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
+    llama_stack_client_base_url = os.environ.get("LLAMA_STACK_CLIENT_BASE_URL", None)
+    llama_stack_client_api_key = os.environ.get("LLAMA_STACK_CLIENT_API_KEY", None)
+
+    Client = namedtuple("Client", ["llama_stack", "generation_model", "embedding_model"], defaults=[None, None, None])
+
+    if llama_stack_client_base_url and llama_stack_client_api_key:
+        client = Client(llama_stack=LlamaStackClient())
+
     search_space = prepare_ai4rag_search_space()
 
     benchmark_data = BenchmarkData(pd.read_json(Path(test_data.path)))
     documents = load_as_langchain_doc(extracted_text.path)
 
-    mps = ModelsPreSelector(
-        benchmark_data=benchmark_data.get_random_sample(n_records=SAMPLE_SIZE, random_seed=SEED),
-        documents=documents,
-        foundation_models=search_space._search_space["foundation_model"].values,
-        embedding_models=search_space._search_space["embedding_model"].values,
-        metric=metric if metric else METRIC,
-    )
+    if len(embeddings_models) > TOP_K_EMBEDDING_MODELS or len(generation_models) > TOP_N_GENERATION_MODELS:
+        mps = ModelsPreSelector(
+            benchmark_data=benchmark_data.get_random_sample(n_records=SAMPLE_SIZE, random_seed=SEED),
+            documents=documents,
+            foundation_models=search_space._search_space["foundation_model"].values,
+            embedding_models=search_space._search_space["embedding_model"].values,
+            metric=metric if metric else METRIC,
+        )
+        mps.evaluate_patterns()
+        selected_models = mps.select_models(
+            n_embedding_models=TOP_K_EMBEDDING_MODELS, n_foundation_models=TOP_N_GENERATION_MODELS
+        )
+        selected_models_names = {k: list(map(str, v)) for k, v in selected_models.items()}
 
-    # Llama-stack secret must provide: LLAMA_STACK_CLIENT_API_KEY, LLAMA_STACK_CLIENT_BASE_URL
-    if not (os.environ.get("LLAMA_STACK_CLIENT_BASE_URL") and os.environ.get("LLAMA_STACK_CLIENT_API_KEY")):
-        mps = DisconnectedModelsPreSelector(mps)
-
-    mps.evaluate_patterns()
-
-    selected_models = mps.select_models(n_em=TOP_K_EMBEDDING_MODELS, n_fm=TOP_N_GENERATION_MODELS)
-    selected_models_names = {k: list(map(str, v)) for k, v in selected_models.items()}
+    else:
+        selected_models_names = {"foundation_model": generation_models, "embedding_model": embeddings_models}
 
     verbose_search_space_repr = {
         k: v.all_values()

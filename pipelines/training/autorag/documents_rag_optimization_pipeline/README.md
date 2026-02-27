@@ -4,36 +4,35 @@
 
 ## Overview 🧾
 
-Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
+Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications as part of Red Hat OpenShift AI.
 
-The Documents RAG Optimization Pipeline is an automated system for building and optimizing Retrieval-Augmented
-Generation (RAG) applications within Red Hat OpenShift AI. It leverages Kubeflow Pipelines to orchestrate the
-optimization workflow, using the ai4rag optimization engine to systematically explore RAG configurations and identify
-the best performing parameter settings based on an upfront-specified quality metric.
+Documents Rag Optimization Pipeline leverages Kubeflow Pipelines to orchestrate the experiment workflow, 
+using the ai4rag optimization engine to systematically explore RAG configurations and 
+identify the best performing parameter settings based on an upfront-specified quality metric.
 
-The system integrates with llama-stack API for inference and vector database operations, producing optimized RAG
-Patterns as artifacts that can be deployed and used for production RAG applications. It can also communicate with
+The system integrates with llama-stack API for model inference and vector database operations, producing optimized RAG
+Patterns as artifacts that can be deployed and used for production-grade RAG applications. It can also communicate with
 externally provided MLFlow server to support advanced experiment tracking features.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `test_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (test data). Must provide: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
-| `test_data_bucket_name` | `str` | — | S3 (or compatible) bucket name for the test data JSON file. |
-| `test_data_key` | `str` | — | Object key (path) of the test data JSON file in the test data bucket. |
-| `input_data_secret_name` | `str` | — | Kubernetes secret name for S3-compatible credentials (input documents). Same env vars as above. |
-| `input_data_bucket_name` | `str` | — | S3 (or compatible) bucket name for the input documents. |
-| `input_data_key` | `str` | — | Object key (path) of the input documents in the input data bucket. |
-| `llama_stack_secret_name` | `str` | — | Kubernetes secret name for llama-stack API connection. The secret must define: `LLAMA_STACK_CLIENT_API_KEY`, `LLAMA_STACK_CLIENT_BASE_URL`. |
-| `embeddings_models` | `Optional[List]` | `None` | Optional list of embedding model identifiers for the search space. |
-| `generation_models` | `Optional[List]` | `None` | Optional list of foundation/generation model identifiers for the search space. |
-| `optimization_metric` | `str` | `"faithfulness"` | Metric to optimize. Supported: `faithfulness`, `answer_correctness`, `context_correctness`. |
-| `vector_database_id` | `Optional[str]` | `None` | Optional vector database id (e.g. llama-stack Milvus). If not set, in-memory database may be used. |
+| `test_data_secret_name` | `str` | — | Kubernetes secret's name for S3-compatible storage credentials holding test data. Must include: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_DEFAULT_REGION. |
+| `test_data_bucket_name` | `str` | — | Name of the S3-like bucket holding test data. |
+| `test_data_key` | `str` | — | S3-like object key (a path) identifying the test data (a JSON file)|
+| `input_data_secret_name` | `str` | — | Kubernetes secret's name for S3-compatible storage credentials holding input documents. Must include the same set of keys as `test_data_secret_name`. |
+| `input_data_bucket_name` | `str` | — | Name of the S3-like bucket holding input documents. |
+| `input_data_key` | `str` | — | S3-like object key (a path) identifying the input data (file or a folder of thereof). |
+| `llama_stack_secret_name` | `str` | — | Kubernetes secret's name for llama-stack server connection info. The secret must include: `LLAMA_STACK_CLIENT_API_KEY`, `LLAMA_STACK_CLIENT_BASE_URL`. |
+| `embeddings_models` | `List` | - | List of embedding model identifiers to try out in the experiment process. |
+| `generation_models` | `List` | - | List of foundation/generation model identifiers to try out in the experiment process. |
+| `optimization_metric` | `str` | `"faithfulness"` | Metric to optimize for. Supported: `faithfulness`, `answer_correctness`, `context_correctness`. |
+| `llama_stack_vector_database_id` | `Optional[str]` | `ls_milvus` | vector database identifier as registered in llama-stack (e.g. llama-stack Milvus). |
 
 ## Stored artifacts (S3 / results storage) 📁
 
-After pipeline execution, outputs are stored in the pipeline run's artifact location. Layout follows pipeline and component structure:
+Any outputs from the pipeline execution are stored in the predefined artifact location (can set for whole KP server or for each pipeline separately). Below layout presents the pipeline and component structure:
 
 ```
 <pipeline_name>/
@@ -47,11 +46,9 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
     ├── leaderboard-evaluation/
     │   └── <task_id>/
     │       └── html_artifact                     # HTML leaderboard (RAG pattern names + metrics); single file at path
-    ├── autorag-run/
-    │   └── <task_id>/
-    │       └── run_artifact                      # Log and experiment status
     └── rag-templates-optimization/
         └── <task_id>/
+            └── autorag_run_artifact              # Log and experiment status
             └── rag_patterns_artifact/
                 ├── <pattern_name_0>/             # one per top-N RAG pattern
                 │   ├── pattern.json              # Flat schema: name, iteration, settings, scores, final_score
@@ -75,13 +72,8 @@ After pipeline execution, outputs are stored in the pipeline run's artifact loca
 
 Each pattern directory under `rag_patterns_artifact/` contains:
 
-- **pattern.json**:
-  - **name**: pattern identifier.
-  - **iteration**, **max_combinations**, **duration_seconds**: optimization run metadata.
-  - **settings**: single object with **vector_store** (`datasource_type`, `collection_name`), **chunking** (`method`, `chunk_size`, `chunk_overlap`), **embedding** (`model_id`, `distance_metric`), **retrieval** (`method`, `number_of_chunks`), **generation** (`model_id`, `context_template_text`, `user_message_text`, `system_message_text`).
-  - **scores**: object whose keys are metric names (e.g. `answer_correctness`, `faithfulness`, `context_correctness`); each value is `{ "mean", "ci_low", "ci_high" }`.
-  - **final_score**: scalar optimization metric value.
-- **evaluation_results.json** — List of per-question evaluation entries. Each entry has `question`, `correct_answers`, `answer`, `answer_contexts` (list of `{text, document_id}`), and `scores` (per-metric score for that question). Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
+- **pattern.json**: Collection of pattern details and related metadata.  
+- **evaluation_results.json** — Structure matches ai4rag `ExperimentResults.create_evaluation_results_json()`; a fallback is used when `question_scores` is missing or incomplete so the file is always valid.
 
 **Sample pattern.json:**
 
@@ -180,20 +172,7 @@ from kfp_components.pipelines.training.autorag.documents_rag_optimization_pipeli
 )
 
 
-def example_minimal_usage():
-    """Minimal example with only required parameters."""
-    return documents_rag_optimization_pipeline(
-        test_data_secret_name="s3-test-data-secret",
-        test_data_bucket_name="autorag-benchmarks",
-        test_data_key="test_data.json",
-        input_data_secret_name="s3-input-secret",
-        input_data_bucket_name="my-documents-bucket",
-        input_data_key="rh_documents/",
-        llama_stack_secret_name="llama-stack-secret",
-    )
-
-
-def example_full_usage():
+def my_pipeline():
     """Full example with optional parameters."""
     return documents_rag_optimization_pipeline(
         test_data_secret_name="s3-test-data-secret",
@@ -206,35 +185,9 @@ def example_full_usage():
         embeddings_models=["ibm/slate-125m-english-rtrvr-v2", "intfloat/multilingual-e5-large"],
         generation_models=["mistralai/mixtral-8x7b-instruct-v01", "ibm/granite-13b-instruct-v2"],
         optimization_metric="answer_correctness",
-        vector_database_id="milvus-database",
+        llama_stack_vector_database_id="milvus-database",
     )
 ```
-
-## Metadata 🗂️
-
-- **Name**: documents_rag_optimization_pipeline
-- **Stability**: alpha
-- **Dependencies**:
-  - Kubeflow:
-    - Name: Pipelines, Version: >=2.15.2
-  - External Services:
-    - Name: ai4rag, Version: >=1.0.0
-    - Name: llama-stack API, Version: >=1.0.0
-    - Name: RHOAI Connections API, Version: >=1.0.0
-    - Name: Milvus, Version: >=2.0.0
-    - Name: Milvus Lite, Version: >=2.0.0
-    - Name: MLFlow, Version: >=2.0.0
-    - Name: docling, Version: >=1.0.0
-- **Tags**:
-  - training
-  - pipeline
-  - autorag
-  - rag-optimization
-- **Last Verified**: 2026-01-23 14:57:32+00:00
-- **Owners**:
-  - Approvers: None
-  - Reviewers: None
-
 
 <!-- custom-content -->
 
@@ -243,53 +196,39 @@ def example_full_usage():
 The optimization process involves the following stages:
 
 1. **Test Data Loading**: Loads test data from JSON files for evaluation
-2. **Document Loading & Sampling**: Loads documents from data sources and samples a subset based
-   on test data
+2. **Document Loading & Sampling**: Loads documents from data sources and chooses a subset based
+   on the test data
 3. **Text Extraction**: Extracts text from sampled documents using the docling library
-4. **Search Space Preparation**: Builds and validates the search space of RAG configurations,
-   including model preselection and validation using in-memory vector databases
+4. **Search Space Preparation**: Builds the search space defining RAG configurations to try out in the experiment process. Limits the foundation and embedding models to 3 and 2 (respectively)
 5. **RAG Templates Optimization**: Systematically tests different RAG configurations from the
    defined search space using GAM-based prediction
 6. **Evaluation**: Assesses each configuration's performance using test data
 7. **Pattern Generation**: Produces artifacts including RAG Patterns, associated metrics, logs and
    notebooks
-8. **Leaderboard**: Maintains a leaderboard of RAG Patterns ranked by performance
+8. **Leaderboard**: Builds a leaderboard of RAG Patterns ranked by performance
 
-## Required Parameters ✅
 
-The following parameters are required to run the pipeline:
-
-- `test_data_secret_name` - Kubernetes secret for S3 credentials (test data)
-- `test_data_bucket_name` - Bucket containing the test data JSON file
-- `test_data_key` - Object key to the test data JSON file
-- `input_data_secret_name` - Kubernetes secret for S3 credentials (input documents)
-- `input_data_bucket_name` - Bucket containing the input documents
-- `input_data_key` - Object key to the input documents (folder or file)
-- `llama_stack_secret_name` - Kubernetes secret for llama-stack API connection (must define `LLAMA_STACK_CLIENT_API_KEY`, `LLAMA_STACK_CLIENT_BASE_URL`)
-
-Optional parameters (`embeddings_models`, `generation_models`, `optimization_metric`, `vector_database_id`) use defaults or search-space defaults when omitted.
-
-## Components Used 🔧
+## Components of the pipeline 🔧
 
 This pipeline orchestrates the following AutoRAG components:
 
 1. **[Test Data Loader](../components/data_processing/autorag/test_data_loader/README.md)** -
-   Loads test data from JSON files
+   Loads test data from specified S3-compatible data sources
 
 2. **[Documents sampling](../components/data_processing/autorag/documents_sampling/README.md)** -
-   Loads documents from data sources and performs document sampling
+   Loads and samples documents from specified S3-compatible data sources
 
 3. **[Text Extraction](../components/data_processing/autorag/text_extraction/README.md)** -
    Extracts text from documents using docling library
 
 4. **[Search Space Preparation](../components/training/autorag/search_space_preparation/README.md)** -
-   Builds and validates RAG configuration search space
+   Builds RAG configuration search space
 
 5. **[RAG Templates Optimization](../components/training/autorag/rag_templates_optimization/README.md)** -
    Core optimization component using GAM-based prediction
 
 6. **[Leaderboard Evaluation](../components/training/autorag/leaderboard_evaluation/README.md)** -
-   Builds an HTML leaderboard artifact from RAG pattern results (pattern names, settings, metrics)
+   Builds a HTML leaderboard artifact from RAG pattern results (pattern names, settings, metrics)
 
 ## Artifacts 📦
 
@@ -364,61 +303,6 @@ For each pipeline run, the following artifacts are produced (see [Stored artifac
             },
             "final_score":0.5
          },
-         {
-            "name":"pattern1",
-            "iteration":2,
-            "max_combinations":3,
-            "duration_seconds":10,
-            "location": {
-               "evaluation_results": "pattern1/evaluation_results.json",
-               "indexing_notebook": "pattern1/indexing_notebook.ipynb",  
-               "inference_notebook": "pattern1/inference_notebook.ipynb",
-               "pattern_descriptor": "pattern1/pattern.json"
-            },  
-            "settings":{
-               "vector_store":{
-                  "datasource_type":"ls_milvus",
-                  "collection_name":"collection0"
-               },
-               "chunking":{
-                  "method":"recursive",
-                  "chunk_size":256,
-                  "chunk_overlap":128
-               },
-               "embedding":{
-                  "model_id":"mock-embed-a",
-                  "distance_metric":"cosine"
-               },
-               "retrieval":{
-                  "method":"window",
-                  "number_of_chunks":5
-               },
-               "generation":{
-                  "model_id":"mock-llm-1",
-                  "context_template_text":"{document}",
-                  "user_message_text":"\n\nContext:\n{reference_documents}:\n\nQuestion: {question}. \nAgain, please answer the question based on the context provided only. If the context is not related to the question, just say you cannot answer. Respond exclusively in the language of the question, regardless of any other language used in the provided context. Ensure that your entire response is in the same language as the question.",
-                  "system_message_text":"Please answer the question I provide in the Question section below, based solely on the information I provide in the Context section. If the question is unanswerable, please say you cannot answer."
-               }
-            },
-            "scores":{
-               "answer_correctness":{
-                  "mean":0.5,
-                  "ci_low":0.4,
-                  "ci_high":0.7
-               },
-               "faithfulness":{
-                  "mean":0.2,
-                  "ci_low":0.1,
-                  "ci_high":0.5
-               },
-               "context_correctness":{
-                  "mean":1.0,
-                  "ci_low":0.9,
-                  "ci_high":1.0
-               }
-            },
-            "final_score":0.5
-         }
       ]
    }
 }
@@ -449,7 +333,7 @@ RAG templates with optimal parameter values, which are referred to as RAG Patter
 
 ### Infrastructure Components
 
-- **Vector Databases**: Milvus, Milvus Lite
+- **Vector Databases**: Milvus, Milvus Lite, ChromaDB
 - **LLM Provider**: Llama-stack-supported models and vendors
 - **Experiment Tracking**: MLFlow (optional) - For experiment tracking, metrics logging, and
   artifact management
@@ -499,3 +383,28 @@ parameter values to create RAG Patterns.
 
 - **ai4rag Documentation**: [ai4rag GitHub](https://github.com/IBM/ai4rag)
 - **Issue Tracker**: [GitHub Issues](https://github.com/kubeflow/pipelines-components/issues)
+
+## Metadata 🗂️
+
+- **Name**: documents_rag_optimization_pipeline
+- **Stability**: alpha
+- **Dependencies**:
+  - Kubeflow:
+    - Name: Pipelines, Version: >=2.15.2
+  - External Services:
+    - Name: ai4rag, Version: >=1.0.0
+    - Name: llama-stack API, Version: >=1.0.0
+    - Name: RHOAI Connections API, Version: >=1.0.0
+    - Name: Milvus, Version: >=2.0.0
+    - Name: Milvus Lite, Version: >=2.0.0
+    - Name: MLFlow, Version: >=2.0.0
+    - Name: docling, Version: >=1.0.0
+- **Tags**:
+  - training
+  - pipeline
+  - autorag
+  - rag-optimization
+- **Last Verified**: 2026-01-23 14:57:32+00:00  Feb 27 15:28:30 CET 2026
+- **Owners**:
+  - Approvers: None
+  - Reviewers: None
