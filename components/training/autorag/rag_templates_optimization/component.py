@@ -271,9 +271,27 @@ def rag_templates_optimization(
         idx = evaluation_result.indexing_params or {}
         rp = evaluation_result.rag_params or {}
         chunking = idx.get("chunking") or {}
-        embeddings = rp.get("embeddings") or rp.get("embedding") or {}
+        # ai4rag puts embedding in indexing_params.embedding, not rag_params
+        embedding_from_idx = idx.get("embedding") or idx.get("embeddings") or {}
+        embeddings = rp.get("embeddings") or rp.get("embedding") or embedding_from_idx
         retrieval = rp.get("retrieval") or {}
         generation = rp.get("generation") or {}
+        # embedding model_id: from indexing_params.embedding (ai4rag), or rag_params, or flat embedding_model
+        embedding_model_id = None
+        if isinstance(embedding_from_idx, dict) and embedding_from_idx.get("model_id"):
+            embedding_model_id = embedding_from_idx.get("model_id")
+        if not embedding_model_id and isinstance(embeddings, dict):
+            embedding_model_id = embeddings.get("model_id")
+        if not embedding_model_id and isinstance(rp.get("embedding_model"), str):
+            embedding_model_id = rp.get("embedding_model")
+        if not embedding_model_id and hasattr(rp.get("embedding_model"), "model_id"):
+            embedding_model_id = getattr(rp.get("embedding_model"), "model_id", None)
+        # generation model_id: from rag_params.generation (ai4rag) or flat foundation_model
+        generation_model_id = generation.get("model_id") if isinstance(generation, dict) else None
+        if not generation_model_id and isinstance(rp.get("foundation_model"), str):
+            generation_model_id = rp.get("foundation_model")
+        if not generation_model_id and hasattr(rp.get("foundation_model"), "model_id"):
+            generation_model_id = getattr(rp.get("foundation_model"), "model_id", None)
         return {
             "name": getattr(evaluation_result, "pattern_name", ""),
             "iteration": iteration,
@@ -292,15 +310,15 @@ def rag_templates_optimization(
                     "chunk_overlap": chunking.get("chunk_overlap", 256),
                 },
                 "embedding": {
-                    "model_id": embeddings.get("model_id", ""),
-                    "distance_metric": embeddings.get("distance_metric", "cosine"),
+                    "model_id": embedding_model_id or "",
+                    "distance_metric": embeddings.get("distance_metric", "cosine") if isinstance(embeddings, dict) else "cosine",
                 },
                 "retrieval": {
                     "method": retrieval.get("method", "simple"),
                     "number_of_chunks": retrieval.get("number_of_chunks", 5),
                 },
                 "generation": {
-                    "model_id": generation.get("model_id", ""),
+                    "model_id": generation_model_id or "",
                     "context_template_text": generation.get("context_template_text", "{document}"),
                     "user_message_text": generation.get(
                         "user_message_text",

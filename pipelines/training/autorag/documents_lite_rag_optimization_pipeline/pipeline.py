@@ -121,7 +121,10 @@ def documents_lite_rag_optimization_pipeline(
         optimization_settings={"metric": optimization_metric},
     )
 
-    leaderboard_evaluation(rag_patterns=hpo_task.outputs["rag_patterns"])
+    leaderboard_evaluation(
+        rag_patterns=hpo_task.outputs["rag_patterns"],
+        optimization_metric=optimization_metric,
+    )
 
 
 if __name__ == "__main__":
