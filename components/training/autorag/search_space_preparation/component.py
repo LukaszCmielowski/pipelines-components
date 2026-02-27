@@ -87,7 +87,7 @@ def search_space_preparation(
         Returns None if unavailable or on error.
         """
         try:
-            api_client = OpenAI(api_key=token or "dummy", base_url=url.rstrip("/"))
+            api_client = OpenAI(api_key=token or "dummy", base_url=url.rstrip("/") + "/v1")
             models = api_client.models.list()
             if getattr(models, "data", None) and len(models.data) > 0:
                 first = models.data[0]
@@ -143,8 +143,8 @@ def search_space_preparation(
     else:
         # In-memory scenario: chat_model_url and embedding_model_url (OpenAI-compatible) are used.
         client = Client(
-            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url),
-            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url),
+            generation_model=OpenAI(api_key=chat_model_token, base_url=chat_model_url + "/v1"),
+            embedding_model=OpenAI(api_key=embedding_model_token, base_url=embedding_model_url + "/v1"),
         )
         in_memory_vector_store_scenario = True
 
