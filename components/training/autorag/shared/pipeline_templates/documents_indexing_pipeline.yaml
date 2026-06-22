@@ -1,0 +1,1007 @@
+# PIPELINE DEFINITION
+# Name: autorag-documents-indexing-pipeline
+# Description: AutoRAG pipeline for preparing a high-quality knowledge base for accurate RAG retrieval. It transforms unstructured documents into optimized vector indexes for semantic search and downstream RAG workflows. Delivers production-grade embeddings, flexible indexing controls, and a reliable foundation for scalable RAG applications.
+# Inputs:
+#    batch_size: int [Default: 20.0]
+#    chunk_overlap: int [Default: 0.0]
+#    chunk_size: int [Default: 1024.0]
+#    chunking_method: str [Default: 'recursive']
+#    collection_name: str
+#    distance_metric: str [Default: 'cosine']
+#    embedding_model_id: str
+#    embedding_params: dict
+#    input_data_bucket_name: str
+#    input_data_key: str
+#    input_data_secret_name: str
+#    ogx_secret_name: str
+#    pattern_name: str
+#    vector_io_provider_id: str
+#    vector_store_type: str
+components:
+  comp-documents-discovery:
+    executorLabel: exec-documents-discovery
+    inputDefinitions:
+      artifacts:
+        test_data:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: Optional input artifact containing test data for sampling.
+          isOptional: true
+      parameters:
+        input_data_bucket_name:
+          description: S3 (or compatible) bucket containing input data.
+          parameterType: STRING
+        input_data_path:
+          defaultValue: ''
+          description: Path to folder with input documents within the bucket.
+          isOptional: true
+          parameterType: STRING
+        sampling_enabled:
+          defaultValue: true
+          description: Whether to enable sampling or not.
+          isOptional: true
+          parameterType: BOOLEAN
+        sampling_max_size:
+          defaultValue: 1.0
+          description: Maximum size of sampled documents (in gigabytes).
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        component_status:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        discovered_documents:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-documents-indexing:
+    executorLabel: exec-documents-indexing
+    inputDefinitions:
+      artifacts:
+        extracted_text:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: Input artifact (folder) containing .md files from text extraction.
+      parameters:
+        batch_size:
+          defaultValue: 20.0
+          description: Number of documents per batch; 0 means process all in one batch.
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunk_overlap:
+          defaultValue: 0.0
+          description: Chunk overlap in characters.
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunk_size:
+          defaultValue: 1024.0
+          description: Chunk size in characters.
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunking_method:
+          defaultValue: recursive
+          description: Chunking method.
+          isOptional: true
+          parameterType: STRING
+        collection_name:
+          description: Optional name of the collection to reuse; omit to create a
+            new one.
+          isOptional: true
+          parameterType: STRING
+        distance_metric:
+          defaultValue: cosine
+          description: Vector distance metric (e.g. "cosine").
+          isOptional: true
+          parameterType: STRING
+        embedding_model_id:
+          description: Embedding model ID used for the vector store.
+          parameterType: STRING
+        embedding_params:
+          description: Optional embedding parameters.
+          isOptional: true
+          parameterType: STRUCT
+        pattern_name:
+          description: Optional RAG pattern identifier for run metadata.
+          isOptional: true
+          parameterType: STRING
+        vector_io_provider_id:
+          description: OGX provider ID for the vector database.
+          parameterType: STRING
+        vector_store_type:
+          description: Optional vector store provider type (e.g. milvus) for statistics.
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        indexing_stats:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-text-extraction:
+    executorLabel: exec-text-extraction
+    inputDefinitions:
+      artifacts:
+        documents_descriptor:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: 'Input artifact containing
+
+            documents_descriptor.json with bucket, prefix, and documents list.'
+      parameters:
+        error_tolerance:
+          description: "Fraction of documents (0.0\u20131.0) allowed to fail without\n\
+            raising an error. None (the default) means zero tolerance \u2014 any failure\n\
+            raises immediately after all documents are processed. 0.1 means up to\n\
+            10 % of documents may fail. Exceeding the threshold raises RuntimeError\n\
+            with a summary of up to 10 failing documents."
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        max_extraction_workers:
+          description: 'Number of parallel worker processes used for text
+
+            extraction. Each worker loads a full docling DocumentConverter into memory
+
+            (ONNX models, layout detection, etc.), so this should be kept low to avoid
+
+            out-of-memory issues. Defaults to 4. Set to None to use all available
+            CPU
+
+            cores. Set to 1 to disable parallelism.'
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        component_status:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        extracted_text:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-documents-discovery:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - documents_discovery
+        command:
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\n__KFP_EMBEDDED_ARCHIVE_B64 = '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'\n\
+          \nimport base64 as __kfp_b64\nimport io as __kfp_io\nimport os as __kfp_os\n\
+          import sys as __kfp_sys\nimport tarfile as __kfp_tarfile\nimport tempfile\
+          \ as __kfp_tempfile\n\n# Extract embedded archive at import time to ensure\
+          \ sys.path and globals are set\n__kfp_tmpdir = __kfp_tempfile.TemporaryDirectory()\n\
+          __KFP_EMBEDDED_ASSET_DIR = __kfp_tmpdir.name\ntry:\n    __kfp_bytes = __kfp_b64.b64decode(__KFP_EMBEDDED_ARCHIVE_B64.encode('ascii'))\n\
+          \    with __kfp_tarfile.open(fileobj=__kfp_io.BytesIO(__kfp_bytes), mode='r:gz')\
+          \ as __kfp_tar:\n        __kfp_tar.extractall(path=__KFP_EMBEDDED_ASSET_DIR)\n\
+          except Exception as __kfp_e:\n    raise RuntimeError(f'Failed to extract\
+          \ embedded archive: {__kfp_e}')\n\n# Always prepend the extracted directory\
+          \ to sys.path for import resolution\nif __KFP_EMBEDDED_ASSET_DIR not in\
+          \ __kfp_sys.path:\n    __kfp_sys.path.insert(0, __KFP_EMBEDDED_ASSET_DIR)\n\
+          \n__KFP_EMBEDDED_ASSET_FILE = __kfp_os.path.join(__KFP_EMBEDDED_ASSET_DIR,\
+          \ 'component_status.py')\n\n\n\n\ndef documents_discovery(\n    input_data_bucket_name:\
+          \ str,\n    component_status: dsl.Output[dsl.Artifact],\n    input_data_path:\
+          \ str = \"\",\n    test_data: dsl.Input[dsl.Artifact] = None,\n    sampling_enabled:\
+          \ bool = True,\n    sampling_max_size: float = 1,\n    discovered_documents:\
+          \ dsl.Output[dsl.Artifact] = None,\n    embedded_artifact: dsl.EmbeddedInput[dsl.Dataset]\
+          \ = None,\n):\n    \"\"\"Documents discovery component.\n\n    Lists available\
+          \ documents from S3, performs sampling if applied and writes a JSON manifest\n\
+          \    (documents_descriptor.json) with metadata. Does not download document\
+          \ contents.\n\n    Args:\n        input_data_bucket_name: S3 (or compatible)\
+          \ bucket containing input data.\n        input_data_path: Path to folder\
+          \ with input documents within the bucket.\n        test_data: Optional input\
+          \ artifact containing test data for sampling.\n        sampling_enabled:\
+          \ Whether to enable sampling or not.\n        sampling_max_size: Maximum\
+          \ size of sampled documents (in gigabytes).\n        discovered_documents:\
+          \ Output artifact containing the documents descriptor JSON file.\n     \
+          \   component_status: Output artifact containing stage-level progress tracking.\n\
+          \        embedded_artifact: Embedded ``autorag.shared`` helpers injected\
+          \ by KFP at runtime.\n\n    Environment variables (required when run with\
+          \ pipeline secret injection):\n        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,\
+          \ AWS_S3_ENDPOINT.\n        AWS_DEFAULT_REGION is optional.\n    \"\"\"\n\
+          \    import json\n    import logging\n    import os\n    import sys\n  \
+          \  from math import inf\n    from pathlib import Path\n\n    import boto3\n\
+          \n    logger = logging.getLogger(\"Document Loader component logger\")\n\
+          \    logger.setLevel(logging.INFO)\n    handler = logging.StreamHandler(sys.stdout)\n\
+          \    logger.addHandler(handler)\n\n    DOCUMENTS_DESCRIPTOR_FILENAME = \"\
+          documents_descriptor.json\"\n    SUPPORTED_EXTENSIONS = {\".pdf\", \".docx\"\
+          , \".pptx\", \".md\", \".html\", \".txt\"}\n    MAX_SIZE_BYTES = float(inf)\n\
+          \n    if sampling_enabled:\n        MAX_SIZE_BYTES = float(sampling_max_size)\
+          \ * 1024**3\n\n    def get_test_data_docs_names() -> list[str]:\n      \
+          \  if test_data is None:\n            return []\n        with open(test_data.path,\
+          \ \"r\") as f:\n            benchmark = json.load(f)\n\n        docs_names\
+          \ = []\n        for question in benchmark:\n            docs_names.extend(question[\"\
+          correct_answer_document_ids\"])\n\n        return docs_names\n\n    import\
+          \ importlib.util\n\n    from botocore.exceptions import SSLError\n\n   \
+          \ _embedded_path = Path(embedded_artifact.path)\n    _module_path = _embedded_path\
+          \ if _embedded_path.is_file() else _embedded_path / \"component_status.py\"\
+          \n    _spec = importlib.util.spec_from_file_location(\"_autorag_component_status\"\
+          , _module_path)\n    if _spec is None or _spec.loader is None:\n       \
+          \ raise ValueError(f\"Cannot load embedded module from {_module_path}\"\
+          )\n    _status_module = importlib.util.module_from_spec(_spec)\n    _spec.loader.exec_module(_status_module)\n\
+          \    status = _status_module.bootstrap_status_tracker(embedded_artifact,\
+          \ component_status, \"documents_discovery\")\n    with status:\n       \
+          \ status.set_metadata(display_name=\"Documents Discovery Status\")\n   \
+          \     component_status.metadata[\"display_name\"] = \"Documents Discovery\
+          \ Status\"\n        with status.stage(\"discover_documents\"):\n       \
+          \     s3_creds = {k: os.environ.get(k) for k in [\"AWS_ACCESS_KEY_ID\",\
+          \ \"AWS_SECRET_ACCESS_KEY\", \"AWS_S3_ENDPOINT\"]}\n            for k, v\
+          \ in s3_creds.items():\n                if v is None:\n                \
+          \    raise ValueError(\n                        \"%s environment variable\
+          \ not set. Check if kubernetes secret was configured properly\" % k\n  \
+          \                  )\n            s3_creds[\"AWS_DEFAULT_REGION\"] = os.environ.get(\"\
+          AWS_DEFAULT_REGION\")\n\n            def _make_s3_client(verify=True):\n\
+          \                return boto3.client(\n                    \"s3\",\n   \
+          \                 endpoint_url=s3_creds[\"AWS_S3_ENDPOINT\"],\n        \
+          \            region_name=s3_creds[\"AWS_DEFAULT_REGION\"],\n           \
+          \         aws_access_key_id=s3_creds[\"AWS_ACCESS_KEY_ID\"],\n         \
+          \           aws_secret_access_key=s3_creds[\"AWS_SECRET_ACCESS_KEY\"],\n\
+          \                    verify=verify,\n                )\n\n            #\
+          \ Use paginator to handle buckets with >1,000 objects\n            def _list_all_objects(s3_client):\n\
+          \                \"\"\"List all objects under prefix using pagination.\"\
+          \"\"\n                paginator = s3_client.get_paginator(\"list_objects_v2\"\
+          )\n                contents = []\n                for page in paginator.paginate(\n\
+          \                    Bucket=input_data_bucket_name,\n                  \
+          \  Prefix=input_data_path,\n                ):\n                    contents.extend(page.get(\"\
+          Contents\", []))\n                return contents\n\n            try:\n\
+          \                s3_client = _make_s3_client()\n                contents\
+          \ = _list_all_objects(s3_client)\n            except SSLError:\n       \
+          \         logger.warning(\n                    \"SSL error when listing\
+          \ objects in s3://%s/%s, retrying with verify=False\",\n               \
+          \     input_data_bucket_name,\n                    input_data_path,\n  \
+          \              )\n                s3_client = _make_s3_client(verify=False)\n\
+          \                contents = _list_all_objects(s3_client)\n\n           \
+          \ logger.info(\n                \"S3_DISCOVERY bucket=%s prefix=%s total_objects=%d\"\
+          ,\n                input_data_bucket_name,\n                input_data_path,\n\
+          \                len(contents),\n            )\n\n            supported_files\
+          \ = [c for c in contents if c[\"Key\"].endswith(tuple(SUPPORTED_EXTENSIONS))]\n\
+          \            if not supported_files:\n                raise Exception(\"\
+          No supported documents found.\")\n\n            test_data_docs_names = get_test_data_docs_names()\n\
+          \            if test_data_docs_names:\n                test_keys_set = {c[\"\
+          Key\"] for c in supported_files if Path(c[\"Key\"]).name in test_data_docs_names}\n\
+          \                supported_files.sort(key=lambda c: c[\"Key\"] not in test_keys_set)\n\
+          \n            total_size = 0\n            selected = []\n            for\
+          \ file in supported_files:\n                if total_size + file[\"Size\"\
+          ] > MAX_SIZE_BYTES:\n                    continue\n                selected.append(file)\n\
+          \                total_size += file[\"Size\"]\n\n            documents =\
+          \ []\n            for file_info in selected:\n                key = file_info[\"\
+          Key\"]\n                size_bytes = file_info[\"Size\"]\n             \
+          \   documents.append(\n                    {\n                        \"\
+          key\": key,\n                        \"size_bytes\": size_bytes,\n     \
+          \               }\n                )\n            if not documents:\n  \
+          \              raise ValueError(\n                    \"No documents to\
+          \ process. Check that the bucket/prefix is correct and contains supported\
+          \ files.\"\n                )\n\n            descriptor = {\n          \
+          \      \"bucket\": input_data_bucket_name,\n                \"prefix\":\
+          \ input_data_path,\n                \"documents\": documents,\n        \
+          \        \"total_size_bytes\": total_size,\n                \"count\": len(documents),\n\
+          \            }\n\n            logger.info(\n                \"DISCOVERY_COMPLETE\
+          \ bucket=%s prefix=%s document_count=%d total_size_bytes=%d sampling=%s\"\
+          ,\n                input_data_bucket_name,\n                input_data_path,\n\
+          \                len(documents),\n                total_size,\n        \
+          \        f\"enabled_max={sampling_max_size}GB\" if sampling_enabled else\
+          \ \"disabled\",\n            )\n\n            os.makedirs(discovered_documents.path,\
+          \ exist_ok=True)\n            descriptor_path = os.path.join(discovered_documents.path,\
+          \ DOCUMENTS_DESCRIPTOR_FILENAME)\n            with open(descriptor_path,\
+          \ \"w\") as f:\n                json.dump(descriptor, f, indent=2)\n\n \
+          \           logger.info(\"Documents descriptor written to %s\", descriptor_path)\n\
+          \n"
+        image: quay.io/opendatahub/odh-autorag:odh-stable
+    exec-documents-indexing:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - documents_indexing
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.1'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef documents_indexing(\n    embedding_model_id: str,\n    extracted_text:\
+          \ dsl.Input[dsl.Artifact],\n    vector_io_provider_id: str,\n    indexing_stats:\
+          \ dsl.Output[dsl.Artifact],\n    embedding_params: Optional[dict] = None,\n\
+          \    distance_metric: str = \"cosine\",\n    chunking_method: str = \"recursive\"\
+          ,\n    chunk_size: int = 1024,\n    chunk_overlap: int = 0,\n    batch_size:\
+          \ int = 20,\n    collection_name: Optional[str] = None,\n    pattern_name:\
+          \ Optional[str] = None,\n    vector_store_type: Optional[str] = None,\n\
+          ):\n    \"\"\"Index extracted text into a vector store with optional batch\
+          \ processing.\n\n    Reads markdown files from extracted_text, chunks them,\
+          \ embeds via OGX,\n    and adds them to the vector store. When batch_size\
+          \ > 0, processes documents\n    in batches to limit memory use and allow\
+          \ progress on large inputs.\n\n    Args:\n        embedding_model_id: Embedding\
+          \ model ID used for the vector store.\n        extracted_text: Input artifact\
+          \ (folder) containing .md files from text extraction.\n        vector_io_provider_id:\
+          \ OGX provider ID for the vector database.\n        embedding_params: Optional\
+          \ embedding parameters.\n        distance_metric: Vector distance metric\
+          \ (e.g. \"cosine\").\n        chunking_method: Chunking method.\n      \
+          \  chunk_size: Chunk size in characters.\n        chunk_overlap: Chunk overlap\
+          \ in characters.\n        batch_size: Number of documents per batch; 0 means\
+          \ process all in one batch.\n        collection_name: Optional name of the\
+          \ collection to reuse; omit to create a new one.\n        indexing_stats:\
+          \ Output artifact directory containing vector_store_stats.json and\n   \
+          \         indexing_run_metadata.json.\n        pattern_name: Optional RAG\
+          \ pattern identifier for run metadata.\n        vector_store_type: Optional\
+          \ vector store provider type (e.g. milvus) for statistics.\n    \"\"\"\n\
+          \    import json\n    import logging\n    import os\n    import ssl\n  \
+          \  import sys\n    import time\n    from datetime import datetime, timezone\n\
+          \    from pathlib import Path\n\n    import httpx\n    from ai4rag.rag.chunking\
+          \ import LangChainChunker\n    from ai4rag.rag.embedding.ogx import OGXEmbeddingModel,\
+          \ OGXEmbeddingParams\n    from ai4rag.rag.vector_store.ogx import OGXVectorStore\n\
+          \    from langchain_core.documents import Document\n    from ogx_client\
+          \ import APIConnectionError as OGXAPIConnectionError\n    from ogx_client\
+          \ import OgxClient\n\n    def _is_ssl_error(exc: BaseException) -> bool:\n\
+          \        \"\"\"Check whether an exception (or its cause/context chain) is\
+          \ an SSL verification failure.\"\"\"\n        seen = set()\n        current:\
+          \ BaseException | None = exc\n        while current is not None and id(current)\
+          \ not in seen:\n            seen.add(id(current))\n            msg = str(current).upper()\n\
+          \            if \"CERTIFICATE_VERIFY_FAILED\" in msg or \"SSL\" in msg:\n\
+          \                return True\n            current = current.__cause__ or\
+          \ current.__context__\n        return False\n\n    def _create_ogx_client(**kwargs)\
+          \ -> OgxClient:\n        \"\"\"Create OgxClient, falling back to SSL-unverified\
+          \ if self-signed cert detected.\"\"\"\n        client = OgxClient(**kwargs)\n\
+          \        try:\n            client.models.list()\n        except (ssl.SSLCertVerificationError,\
+          \ httpx.ConnectError, OGXAPIConnectionError) as exc:\n            if _is_ssl_error(exc):\n\
+          \                logger.warning(\n                    \"SSL verification\
+          \ failed for OgxClient \u2014 retrying with verify=False. \",\n        \
+          \        )\n                client = OgxClient(\n                    **kwargs,\n\
+          \                    http_client=httpx.Client(verify=False),\n         \
+          \       )\n            else:\n                raise\n        return client\n\
+          \n    logger = logging.getLogger(\"Document Loader component logger\")\n\
+          \    logger.setLevel(logging.INFO)\n    handler = logging.StreamHandler(sys.stdout)\n\
+          \    logger.addHandler(handler)\n\n    supported_distance_metrics = (\"\
+          cosine\", \"euclidean\")\n    supported_chunking_methods = (\"recursive\"\
+          ,)\n    supported_chunks_sizes_range = (128, 2048)\n\n    if not vector_io_provider_id\
+          \ or not vector_io_provider_id.strip():\n        raise ValueError(\"vector_io_provider_id\
+          \ must be a non-empty string.\")\n\n    if not embedding_model_id:\n   \
+          \     raise ValueError(\"embedding_model_id must be a non-empty string.\"\
+          )\n\n    if distance_metric not in supported_distance_metrics:\n       \
+          \ raise ValueError(\n            f\"distance metric {distance_metric} is\
+          \ not supported, supported types are {supported_distance_metrics}.\"\n \
+          \       )\n\n    if chunking_method not in supported_chunking_methods:\n\
+          \        raise ValueError(f\"chunking_method is not supported, supported\
+          \ methods are {supported_chunking_methods}.\")\n\n    if not isinstance(chunk_size,\
+          \ int):\n        raise TypeError(\"chunk_size must be an integer.\")\n \
+          \   else:\n        if not (supported_chunks_sizes_range[0] <= chunk_size\
+          \ <= supported_chunks_sizes_range[1]):\n            raise ValueError(\n\
+          \                f\"chunk_size must be an integer in the range\"\n     \
+          \           f\" {supported_chunks_sizes_range[0]} to {supported_chunks_sizes_range[1]}.\"\
+          \n            )\n\n    if not isinstance(chunk_overlap, (int, float)):\n\
+          \        raise TypeError(\"chunk_overlap must be a numerical value.\")\n\
+          \n    if embedding_params is None:\n        embedding_params = {}\n    else:\n\
+          \        if not isinstance(embedding_params, dict):\n            raise TypeError(\"\
+          embedding_params must be a dictionary.\")\n\n    params = OGXEmbeddingParams(**embedding_params)\n\
+          \n    ogx_base_url = os.getenv(\"OGX_CLIENT_BASE_URL\")\n    ogx_api_key\
+          \ = os.getenv(\"OGX_CLIENT_API_KEY\")\n    missing = [\n        name for\
+          \ name, val in ((\"OGX_CLIENT_BASE_URL\", ogx_base_url), (\"OGX_CLIENT_API_KEY\"\
+          , ogx_api_key)) if not val\n    ]\n    if missing:\n        raise RuntimeError(f\"\
+          Required environment variable(s) not set: {', '.join(missing)}\")\n\n  \
+          \  def _write_indexing_artifacts(\n        *,\n        indexing_stats_path:\
+          \ Path,\n        started_at: datetime,\n        duration_seconds: float,\n\
+          \        pattern_name: str | None,\n        vector_store_type: str | None,\n\
+          \        collection_name: str | None,\n        vector_io_provider_id: str,\n\
+          \        embedding_model_id: str,\n        embedding_params: dict,\n   \
+          \     distance_metric: str,\n        document_count: int,\n        chunk_count:\
+          \ int,\n    ) -> None:\n        indexing_stats_path.mkdir(parents=True,\
+          \ exist_ok=True)\n        completed_at = datetime.now(timezone.utc)\n  \
+          \      embedding_dimension = (\n            embedding_params.get(\"embedding_dimension\"\
+          ) if isinstance(embedding_params, dict) else None\n        )\n\n       \
+          \ vector_store_stats = {\n            \"collection_name\": collection_name,\n\
+          \            \"vector_store_type\": vector_store_type or vector_io_provider_id,\n\
+          \            \"document_count\": document_count,\n            \"chunk_count\"\
+          : chunk_count,\n            \"embedding_model\": embedding_model_id,\n \
+          \           \"embedding_dimension\": embedding_dimension,\n            \"\
+          distance_metric\": distance_metric,\n            \"indexing_duration_seconds\"\
+          : round(duration_seconds, 3),\n            \"created_at\": completed_at.isoformat().replace(\"\
+          +00:00\", \"Z\"),\n            \"pattern_id\": pattern_name,\n        }\n\
+          \        run_metadata = {\n            \"pattern_id\": pattern_name,\n \
+          \           \"started_at\": started_at.isoformat().replace(\"+00:00\", \"\
+          Z\"),\n            \"completed_at\": completed_at.isoformat().replace(\"\
+          +00:00\", \"Z\"),\n            \"duration_seconds\": round(duration_seconds,\
+          \ 3),\n            \"document_count\": document_count,\n            \"chunk_count\"\
+          : chunk_count,\n            \"embedding_model_id\": embedding_model_id,\n\
+          \            \"vector_io_provider_id\": vector_io_provider_id,\n       \
+          \     \"collection_name\": collection_name,\n        }\n\n        (indexing_stats_path\
+          \ / \"vector_store_stats.json\").write_text(\n            json.dumps(vector_store_stats,\
+          \ indent=2),\n            encoding=\"utf-8\",\n        )\n        (indexing_stats_path\
+          \ / \"indexing_run_metadata.json\").write_text(\n            json.dumps(run_metadata,\
+          \ indent=2),\n            encoding=\"utf-8\",\n        )\n\n    client =\
+          \ _create_ogx_client(\n        base_url=ogx_base_url,\n        api_key=ogx_api_key,\n\
+          \    )\n\n    started_at = datetime.now(timezone.utc)\n    start_monotonic\
+          \ = time.monotonic()\n\n    base = Path(extracted_text.path)\n    paths\
+          \ = sorted(p for p in base.iterdir() if p.is_file() and p.suffix.lower()\
+          \ == \".md\")\n    total_documents = len(paths)\n    logger.info(\"Found\
+          \ %s documents to index\", total_documents)\n\n    resolved_collection_name\
+          \ = collection_name\n    total_chunks = 0\n\n    if total_documents == 0:\n\
+          \        logger.warning(\"No documents found in %s\", extracted_text.path)\n\
+          \        _write_indexing_artifacts(\n            indexing_stats_path=Path(indexing_stats.path),\n\
+          \            started_at=started_at,\n            duration_seconds=time.monotonic()\
+          \ - start_monotonic,\n            pattern_name=pattern_name,\n         \
+          \   vector_store_type=vector_store_type,\n            collection_name=resolved_collection_name,\n\
+          \            vector_io_provider_id=vector_io_provider_id,\n            embedding_model_id=embedding_model_id,\n\
+          \            embedding_params=embedding_params,\n            distance_metric=distance_metric,\n\
+          \            document_count=0,\n            chunk_count=0,\n        )\n\
+          \        return\n\n    chunker = LangChainChunker(method=chunking_method,\
+          \ chunk_size=chunk_size, chunk_overlap=chunk_overlap)\n    embedding_model\
+          \ = OGXEmbeddingModel(client=client, model_id=embedding_model_id, params=params)\n\
+          \n    collection_name_param = {\"reuse_collection_name\": collection_name}\
+          \ if collection_name is not None else {}\n    ogx_vectorstore = OGXVectorStore(\n\
+          \        embedding_model=embedding_model,\n        client=client,\n    \
+          \    provider_id=vector_io_provider_id,\n        distance_metric=distance_metric,\n\
+          \        **collection_name_param,\n    )\n\n    effective_batch_size = batch_size\
+          \ if batch_size > 0 else total_documents\n\n    for start in range(0, total_documents,\
+          \ effective_batch_size):\n        batch_paths = paths[start : start + effective_batch_size]\n\
+          \        batch_documents = [\n            Document(\n                page_content=p.read_text(encoding=\"\
+          utf-8\", errors=\"replace\"),\n                metadata={\"document_id\"\
+          : p.stem},\n            )\n            for p in batch_paths\n        ]\n\
+          \        batch_chunks = chunker.split_documents(batch_documents)\n     \
+          \   ogx_vectorstore.add_documents(batch_chunks)\n        total_chunks +=\
+          \ len(batch_chunks)\n        batch_num = start // effective_batch_size +\
+          \ 1\n        num_batches = (total_documents + effective_batch_size - 1)\
+          \ // effective_batch_size\n        logger.info(\n            \"Batch %s/%s:\
+          \ indexed %s documents (%s chunks), total chunks so far: %s\",\n       \
+          \     batch_num,\n            num_batches,\n            len(batch_documents),\n\
+          \            len(batch_chunks),\n            total_chunks,\n        )\n\n\
+          \    logger.info(\n        \"Documents indexing finished: %s documents,\
+          \ %s chunks\",\n        total_documents,\n        total_chunks,\n    )\n\
+          \n    if resolved_collection_name is None:\n        resolved_collection_name\
+          \ = getattr(ogx_vectorstore, \"collection_name\", None)\n\n    _write_indexing_artifacts(\n\
+          \        indexing_stats_path=Path(indexing_stats.path),\n        started_at=started_at,\n\
+          \        duration_seconds=time.monotonic() - start_monotonic,\n        pattern_name=pattern_name,\n\
+          \        vector_store_type=vector_store_type,\n        collection_name=resolved_collection_name,\n\
+          \        vector_io_provider_id=vector_io_provider_id,\n        embedding_model_id=embedding_model_id,\n\
+          \        embedding_params=embedding_params,\n        distance_metric=distance_metric,\n\
+          \        document_count=total_documents,\n        chunk_count=total_chunks,\n\
+          \    )\n\n"
+        image: quay.io/opendatahub/odh-autorag:odh-stable
+    exec-text-extraction:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - text_extraction
+        command:
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\n__KFP_EMBEDDED_ARCHIVE_B64 = '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'\n\
+          \nimport base64 as __kfp_b64\nimport io as __kfp_io\nimport os as __kfp_os\n\
+          import sys as __kfp_sys\nimport tarfile as __kfp_tarfile\nimport tempfile\
+          \ as __kfp_tempfile\n\n# Extract embedded archive at import time to ensure\
+          \ sys.path and globals are set\n__kfp_tmpdir = __kfp_tempfile.TemporaryDirectory()\n\
+          __KFP_EMBEDDED_ASSET_DIR = __kfp_tmpdir.name\ntry:\n    __kfp_bytes = __kfp_b64.b64decode(__KFP_EMBEDDED_ARCHIVE_B64.encode('ascii'))\n\
+          \    with __kfp_tarfile.open(fileobj=__kfp_io.BytesIO(__kfp_bytes), mode='r:gz')\
+          \ as __kfp_tar:\n        __kfp_tar.extractall(path=__KFP_EMBEDDED_ASSET_DIR)\n\
+          except Exception as __kfp_e:\n    raise RuntimeError(f'Failed to extract\
+          \ embedded archive: {__kfp_e}')\n\n# Always prepend the extracted directory\
+          \ to sys.path for import resolution\nif __KFP_EMBEDDED_ASSET_DIR not in\
+          \ __kfp_sys.path:\n    __kfp_sys.path.insert(0, __KFP_EMBEDDED_ASSET_DIR)\n\
+          \n__KFP_EMBEDDED_ASSET_FILE = __kfp_os.path.join(__KFP_EMBEDDED_ASSET_DIR,\
+          \ 'component_status.py')\n\n\n\n\ndef text_extraction(\n    documents_descriptor:\
+          \ dsl.Input[dsl.Artifact],\n    extracted_text: dsl.Output[dsl.Artifact],\n\
+          \    component_status: dsl.Output[dsl.Artifact],\n    embedded_artifact:\
+          \ dsl.EmbeddedInput[dsl.Dataset] = None,\n    error_tolerance: Optional[float]\
+          \ = None,\n    max_extraction_workers: Optional[int] = None,\n):\n    \"\
+          \"\"Text Extraction component.\n\n    Reads the documents_descriptor JSON\
+          \ (from documents_discovery), fetches\n    the listed documents from S3,\
+          \ and extracts text using the docling library.\n\n    Args:\n        documents_descriptor:\
+          \ Input artifact containing\n            documents_descriptor.json with\
+          \ bucket, prefix, and documents list.\n        extracted_text: Output artifact\
+          \ where the extracted text content will be stored.\n        component_status:\
+          \ Output artifact containing stage-level progress tracking.\n        embedded_artifact:\
+          \ Embedded ``autorag.shared`` helpers injected by KFP at runtime.\n    \
+          \    error_tolerance: Fraction of documents (0.0\u20131.0) allowed to fail\
+          \ without\n            raising an error. None (the default) means zero tolerance\
+          \ \u2014 any failure\n            raises immediately after all documents\
+          \ are processed. 0.1 means up to\n            10 % of documents may fail.\
+          \ Exceeding the threshold raises RuntimeError\n            with a summary\
+          \ of up to 10 failing documents.\n        max_extraction_workers: Number\
+          \ of parallel worker processes used for text\n            extraction. Each\
+          \ worker loads a full docling DocumentConverter into memory\n          \
+          \  (ONNX models, layout detection, etc.), so this should be kept low to\
+          \ avoid\n            out-of-memory issues. Defaults to 4. Set to None to\
+          \ use all available CPU\n            cores. Set to 1 to disable parallelism.\n\
+          \    \"\"\"\n    import json\n    import logging\n    import os\n    import\
+          \ sys\n    import tempfile\n    import time\n    import traceback\n    from\
+          \ concurrent.futures import ThreadPoolExecutor, as_completed\n    from multiprocessing.pool\
+          \ import AsyncResult\n    from pathlib import Path\n\n    import boto3\n\
+          \    import multiprocess as multiprocessing\n    from botocore.exceptions\
+          \ import SSLError\n\n    DOCUMENTS_DESCRIPTOR_FILENAME = \"documents_descriptor.json\"\
+          \n    SUPPORTED_EXTENSIONS = {\".pdf\", \".docx\", \".pptx\", \".md\", \"\
+          .html\", \".txt\"}\n    DOWNLOAD_MAX_THREADS = 8\n\n    def make_s3_client(verify=True):\n\
+          \        \"\"\"Create a new boto3 S3 client from the environment credentials.\n\
+          \n        A fresh client is created on every call so it is safe to use from\n\
+          \        multiple threads without sharing state. Pass verify=False to skip\n\
+          \        TLS certificate verification (used as a fallback when an SSLError\n\
+          \        is encountered during download).\n        \"\"\"\n        session\
+          \ = boto3.session.Session(\n            aws_access_key_id=s3_creds[\"AWS_ACCESS_KEY_ID\"\
+          ],\n            aws_secret_access_key=s3_creds[\"AWS_SECRET_ACCESS_KEY\"\
+          ],\n            region_name=s3_creds.get(\"AWS_DEFAULT_REGION\"),\n    \
+          \    )\n        return session.client(\n            service_name=\"s3\"\
+          ,\n            endpoint_url=s3_creds[\"AWS_S3_ENDPOINT\"],\n           \
+          \ verify=verify,\n        )\n\n    def download_document(doc: dict, base_path:\
+          \ Path) -> Path:\n        \"\"\"Download a single document from S3 to a\
+          \ local path mirroring the S3 key structure.\n\n        On an SSLError the\
+          \ download is retried once with certificate verification\n        disabled.\
+          \ Any other exception propagates to the caller.\n\n        Args:\n     \
+          \       doc: Document descriptor dict containing at least a \"key\" field\
+          \ with\n                the S3 object key.\n            base_path: Local\
+          \ directory under which the file is saved, preserving\n                the\
+          \ S3 key as a relative sub-path.\n\n        Returns:\n            Path to\
+          \ the downloaded local file.\n        \"\"\"\n        raw_key = doc[\"key\"\
+          ]\n        safe_key = raw_key.strip().lstrip(\"/\")\n        rel = Path(safe_key)\n\
+          \        if not safe_key or rel.is_absolute() or \"..\" in rel.parts:\n\
+          \            raise ValueError(f\"Unsafe S3 key (path traversal): {raw_key!r}\"\
+          )\n        local_path = (base_path / rel).resolve()\n        base_resolved\
+          \ = base_path.resolve()\n        if not local_path.is_relative_to(base_resolved):\n\
+          \            raise ValueError(f\"Unsafe S3 key (escapes download directory):\
+          \ {raw_key!r}\")\n        local_path.parent.mkdir(parents=True, exist_ok=True)\n\
+          \        _dl_t0 = time.perf_counter()\n        logger.info(\"Downloading\
+          \ %s\", raw_key)\n        try:\n            make_s3_client().download_file(bucket,\
+          \ raw_key, str(local_path))\n        except SSLError:\n            logger.warning(\"\
+          SSL error when downloading %s, retrying with verify=False\", raw_key)\n\
+          \            make_s3_client(verify=False).download_file(bucket, raw_key,\
+          \ str(local_path))\n        logger.info(\"Download finished %s (%.1fs)\"\
+          , raw_key, time.perf_counter() - _dl_t0)\n        return local_path\n\n\
+          \    def _docling_artifacts_path() -> Optional[Path]:\n        \"\"\"Local\
+          \ Docling models root (contains docling-project--* dirs). Set via image\
+          \ ENV for offline use.\n\n        Returns the path only when it exists and\
+          \ contains at least one model\n        directory. If the path is missing\
+          \ or empty, returns None so that\n        docling falls back to downloading\
+          \ models from HuggingFace.\n        \"\"\"\n        raw = os.environ.get(\"\
+          DOCLING_ARTIFACTS_PATH\")\n        if not raw:\n            logger.info(\"\
+          DOCLING_ARTIFACTS_PATH not set \u2014 models will be downloaded from HuggingFace.\"\
+          )\n            return None\n        p = Path(raw)\n        if not p.is_dir()\
+          \ or not any(p.iterdir()):\n            logger.warning(\n              \
+          \  \"DOCLING_ARTIFACTS_PATH=%s is set but the directory is missing or empty\
+          \ \"\n                \"\u2014 falling back to HuggingFace model download.\"\
+          ,\n                raw,\n            )\n            return None\n      \
+          \  logger.info(\"Using local Docling artifacts from %s\", p)\n        return\
+          \ p\n\n    def _build_docling_format_options():\n        \"\"\"Shared pipeline\
+          \ options for main-process warmup and worker processes (spawn-safe: module-level).\"\
+          \"\"\n        from docling.datamodel.accelerator_options import AcceleratorOptions\n\
+          \        from docling.datamodel.base_models import InputFormat\n       \
+          \ from docling.datamodel.pipeline_options import PaginatedPipelineOptions,\
+          \ ThreadedPdfPipelineOptions\n        from docling.document_converter import\
+          \ (\n            HTMLFormatOption,\n            MarkdownFormatOption,\n\
+          \            PdfFormatOption,\n            PowerpointFormatOption,\n   \
+          \         WordFormatOption,\n        )\n\n        ap = _docling_artifacts_path()\n\
+          \        pdf_pipeline_options = ThreadedPdfPipelineOptions(\n          \
+          \  artifacts_path=ap,\n            do_ocr=False,\n            do_table_structure=False,\n\
+          \            accelerator_options=AcceleratorOptions(device=\"cpu\", num_threads=2),\n\
+          \        )\n        paginated_pipeline_options = PaginatedPipelineOptions(\n\
+          \            artifacts_path=ap,\n            generate_page_images=False,\n\
+          \            accelerator_options=AcceleratorOptions(device=\"cpu\", num_threads=2),\n\
+          \        )\n        return {\n            InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_pipeline_options),\n\
+          \            InputFormat.DOCX: WordFormatOption(pipeline_options=paginated_pipeline_options),\n\
+          \            InputFormat.PPTX: PowerpointFormatOption(pipeline_options=paginated_pipeline_options),\n\
+          \            InputFormat.HTML: HTMLFormatOption(),\n            InputFormat.MD:\
+          \ MarkdownFormatOption(),\n        }\n\n    def _text_extraction_pool_initializer()\
+          \ -> None:\n        \"\"\"Pool initializer (top-level for multiprocessing\
+          \ spawn pickling).\"\"\"\n        import time\n\n        os.environ[\"TQDM_DISABLE\"\
+          ] = \"1\"\n        os.environ.setdefault(\"OPENBLAS_NUM_THREADS\", \"1\"\
+          )\n        os.environ.setdefault(\"MKL_NUM_THREADS\", \"1\")\n        os.environ.setdefault(\"\
+          OMP_NUM_THREADS\", \"1\")\n\n        if _docling_artifacts_path() is not\
+          \ None:\n            os.environ.setdefault(\"HF_HUB_OFFLINE\", \"1\")\n\n\
+          \        from docling.document_converter import DocumentConverter\n\n  \
+          \      worker_log = logging.getLogger(\"text_extraction_worker\")\n    \
+          \    worker_log.setLevel(logging.INFO)\n        worker_log.propagate = False\n\
+          \        if not worker_log.handlers:\n            worker_log.addHandler(logging.StreamHandler(sys.stdout))\n\
+          \n        worker_pid = os.getpid()\n        init_start_time = time.perf_counter()\n\
+          \        worker_log.debug(\"Worker pid=%s: loading DocumentConverter.\"\
+          , worker_pid)\n\n        mod = sys.modules[__name__]\n        mod._mp_worker_converter\
+          \ = DocumentConverter(format_options=_build_docling_format_options())\n\
+          \        worker_log.debug(\n            \"Worker pid=%s: DocumentConverter\
+          \ ready (%.1fs)\",\n            worker_pid,\n            time.perf_counter()\
+          \ - init_start_time,\n        )\n\n    def worker_process_document(file_path_str:\
+          \ str, output_dir_str: str) -> tuple[bool, str | None]:\n        \"\"\"\
+          Convert a single document to Markdown and write it to the output directory.\n\
+          \n        Plain-text (.txt) files are copied as-is without invoking docling.\n\
+          \        All other supported formats are converted via the DocumentConverter\n\
+          \        that was created by the multiprocessing pool initializer in this\
+          \ process.\n\n        Args:\n            file_path_str: Absolute path to\
+          \ the local input file.\n            output_dir_str: Absolute path to the\
+          \ directory where the resulting\n                Markdown file will be written\
+          \ (named <original_filename>.md).\n\n        Returns:\n            (True,\
+          \ None) on success; (False, error_message) on failure where\n          \
+          \  error_message is either a full traceback string or a plain description.\n\
+          \        \"\"\"\n        worker_log = logging.getLogger(\"text_extraction_worker\"\
+          )\n        start_time = time.perf_counter()\n        try:\n            input_file\
+          \ = Path(file_path_str)\n            output_dir = Path(output_dir_str)\n\
+          \            output_file = output_dir / f\"{input_file.name}.md\"\n    \
+          \        if input_file.suffix.lower() == \".txt\":\n                output_file.write_text(input_file.read_text(encoding=\"\
+          utf-8\"), encoding=\"utf-8\")\n                return True, None\n\n   \
+          \         converter = getattr(sys.modules[__name__], \"_mp_worker_converter\"\
+          , None)\n            if converter is None:\n                error_message\
+          \ = (\n                    f\"Worker pid={os.getpid()} has no DocumentConverter.\
+          \ \"\n                    \"Pool initializer did not run or failed before\
+          \ setting _mp_worker_converter. \"\n                )\n                return\
+          \ False, error_message\n\n            file_size_mib = input_file.stat().st_size\
+          \ / (1024 * 1024) if input_file.exists() else 0.0\n            worker_log.info(\n\
+          \                \"pid=%s docling convert start: %s (%.1f MiB on disk)\"\
+          , os.getpid(), input_file.name, file_size_mib\n            )\n         \
+          \   conversion_result = converter.convert(input_file)\n            output_file.write_text(conversion_result.document.export_to_markdown(),\
+          \ encoding=\"utf-8\")\n            worker_log.info(\n                \"\
+          pid=%s docling convert done: %s -> %s (%.1fs)\",\n                os.getpid(),\n\
+          \                input_file.name,\n                output_file.name,\n \
+          \               time.perf_counter() - start_time,\n            )\n     \
+          \       return True, None\n        except Exception:\n            error_traceback\
+          \ = traceback.format_exc()\n            worker_log.error(\"Failed to process\
+          \ %s:\\n%s\", file_path_str, error_traceback)\n            return False,\
+          \ error_traceback\n\n    def download_and_submit(\n        docs: list, download_path:\
+          \ Path, process_pool, out_dir: Path\n    ) -> tuple[list[tuple[str, AsyncResult]],\
+          \ list[dict]]:\n        \"\"\"Download all documents from S3, then submit\
+          \ for extraction largest-first.\n\n        Documents with unsupported extensions\
+          \ are filtered out before any\n        downloads begin. Supported documents\
+          \ are downloaded concurrently via a\n        thread pool. Once all downloads\
+          \ complete, the local files are sorted by\n        size descending before\
+          \ being submitted to the process pool. This ensures\n        the heaviest\
+          \ documents are picked up by workers first, avoiding the\n        straggler\
+          \ problem where one slow document blocks completion while other\n      \
+          \  workers sit idle.\n\n        Args:\n            docs: List of document\
+          \ descriptor dicts from the documents_descriptor JSON.\n            download_path:\
+          \ Local temporary directory where downloaded files are stored.\n       \
+          \     process_pool: Active multiprocessing Pool to submit extraction tasks\
+          \ to.\n            out_dir: Directory where extracted Markdown files will\
+          \ be written.\n\n        Returns:\n            - List of (local_file_path_str,\
+          \ AsyncResult) pairs, one per successfully\n              downloaded and\
+          \ submitted document, ordered largest-first.\n            - List of download\
+          \ error dicts, each containing 'file' (S3 key) and\n              'traceback'\
+          \ (full exception traceback string).\n        \"\"\"\n        download_error_details\
+          \ = []\n        downloaded_paths = []\n        skipped_docs = [doc for doc\
+          \ in docs if Path(doc[\"key\"]).suffix.lower() not in SUPPORTED_EXTENSIONS]\n\
+          \        supported = [doc for doc in docs if Path(doc[\"key\"]).suffix.lower()\
+          \ in SUPPORTED_EXTENSIONS]\n        if skipped_docs:\n            skipped_keys\
+          \ = \", \".join(doc[\"key\"] for doc in skipped_docs)\n            logger.warning(\"\
+          Skipping %d document(s) with unsupported extensions: %s\", len(skipped_docs),\
+          \ skipped_keys)\n\n        with ThreadPoolExecutor(max_workers=DOWNLOAD_MAX_THREADS)\
+          \ as dl_pool:\n            dl_futures = {dl_pool.submit(download_document,\
+          \ doc, download_path): doc for doc in supported}\n            for dl_future\
+          \ in as_completed(dl_futures):\n                doc = dl_futures[dl_future]\n\
+          \                key = doc.get(\"key\", \"?\") if isinstance(doc, dict)\
+          \ else \"?\"\n                try:\n                    local_path = dl_future.result()\n\
+          \                except Exception as exc:\n                    exception_traceback\
+          \ = \"\".join(traceback.format_exception(type(exc), exc, exc.__traceback__))\n\
+          \                    logger.warning(\"Download failed for key=%s: %s\",\
+          \ key, exc)\n                    download_error_details.append({\"file\"\
+          : key, \"traceback\": exception_traceback})\n                    continue\n\
+          \                downloaded_paths.append(local_path)\n\n        downloaded_paths.sort(key=lambda\
+          \ p: p.stat().st_size, reverse=True)\n        extraction_tasks = [\n   \
+          \         (str(local_path), process_pool.apply_async(worker_process_document,\
+          \ (str(local_path), str(out_dir))))\n            for local_path in downloaded_paths\n\
+          \        ]\n        return extraction_tasks, download_error_details\n\n\
+          \    def raise_if_threshold_exceeded(error_details: list, total_docs: int,\
+          \ tolerance: Optional[float]) -> None:\n        \"\"\"Check whether the\
+          \ error count exceeds the allowed tolerance.\n\n        Called twice during\
+          \ the pipeline run: once after downloads complete\n        (to abort before\
+          \ extraction starts if too many files failed to\n        download) and once\
+          \ after all extraction tasks finish (to report\n        the combined total).\n\
+          \n        Args:\n            error_details: List of error dicts accumulated\
+          \ so far, each with\n                'file' and 'traceback' keys.\n    \
+          \        total_docs: Total number of documents in the original input, used\n\
+          \                to compute the failure percentage.\n            tolerance:\
+          \ Fraction of total_docs (0.0\u20131.0) that may fail without\n        \
+          \        raising. None means zero tolerance \u2014 any error raises.\n\n\
+          \        Raises:\n            RuntimeError: When the number of errors exceeds\
+          \ the allowed count.\n        \"\"\"\n        n_errors = len(error_details)\n\
+          \        if n_errors == 0:\n            return\n        allowed = 0 if tolerance\
+          \ is None else int(tolerance * total_docs)\n        if n_errors <= allowed:\n\
+          \            return\n        tolerance_str = \"0 (none allowed)\" if tolerance\
+          \ is None else f\"{tolerance:.0%} of {total_docs}\"\n        shown = error_details[:10]\n\
+          \        lines = [\n            f\"Text extraction failed: {n_errors}/{total_docs}\
+          \ document(s) failed (tolerance: {tolerance_str}).\",\n            f\"Showing\
+          \ {len(shown)} of {n_errors} error(s):\",\n        ]\n        for i, err\
+          \ in enumerate(shown, 1):\n            tb_lines = err[\"traceback\"].strip().splitlines()\n\
+          \            snippet = \"\\n    \".join(tb_lines[-5:])\n            lines.append(f\"\
+          \\n  [{i}] {err['file']}\\n    {snippet}\")\n        raise RuntimeError(\"\
+          \\n\".join(lines))\n\n    import importlib.util\n\n    _embedded_path =\
+          \ Path(embedded_artifact.path)\n    _module_path = _embedded_path if _embedded_path.is_file()\
+          \ else _embedded_path / \"component_status.py\"\n    _spec = importlib.util.spec_from_file_location(\"\
+          _autorag_component_status\", _module_path)\n    if _spec is None or _spec.loader\
+          \ is None:\n        raise ValueError(f\"Cannot load embedded module from\
+          \ {_module_path}\")\n    _status_module = importlib.util.module_from_spec(_spec)\n\
+          \    _spec.loader.exec_module(_status_module)\n    status = _status_module.bootstrap_status_tracker(embedded_artifact,\
+          \ component_status, \"text_extraction\")\n    with status:\n        status.set_metadata(display_name=\"\
+          Text Extraction Status\")\n        component_status.metadata[\"display_name\"\
+          ] = \"Text Extraction Status\"\n        descriptor_path = Path(documents_descriptor.path)\
+          \ / DOCUMENTS_DESCRIPTOR_FILENAME\n\n        with status.stage(\"extract_documents\"\
+          ):\n            if not descriptor_path.exists():\n                raise\
+          \ FileNotFoundError(f\"documents_descriptor.json not found at {descriptor_path}\"\
+          )\n\n            s3_creds = {k: os.environ.get(k) for k in [\"AWS_ACCESS_KEY_ID\"\
+          , \"AWS_SECRET_ACCESS_KEY\", \"AWS_S3_ENDPOINT\"]}\n            for k, v\
+          \ in s3_creds.items():\n                if v is None:\n                \
+          \    raise ValueError(\n                        f\"{k} environment variable\
+          \ not set. Check if kubernetes secret was configured properly.\"\n     \
+          \               )\n            s3_creds[\"AWS_DEFAULT_REGION\"] = os.environ.get(\"\
+          AWS_DEFAULT_REGION\")\n\n            logger = logging.getLogger(\"Text Extraction\
+          \ component logger\")\n            logger.setLevel(logging.INFO)\n     \
+          \       logger.propagate = False\n            if not logger.handlers:\n\
+          \                handler = logging.StreamHandler(sys.stdout)\n         \
+          \       logger.addHandler(handler)\n\n            output_dir = Path(extracted_text.path)\n\
+          \            output_dir.mkdir(parents=True, exist_ok=True)\n\n         \
+          \   with open(descriptor_path) as f:\n                descriptor = json.load(f)\n\
+          \            bucket = descriptor[\"bucket\"]\n            documents = descriptor[\"\
+          documents\"]\n\n            if not documents:\n                logger.info(\"\
+          No documents to process.\")\n                return\n\n            documents\
+          \ = sorted(documents, key=lambda d: d.get(\"size_bytes\", 0), reverse=True)\n\
+          \n            if max_extraction_workers is not None:\n                effective_workers\
+          \ = max(1, max_extraction_workers)\n            else:\n                effective_workers\
+          \ = min(max(1, (os.cpu_count() or 1) // 2), 8)\n            logger.info(\n\
+          \                \"Starting text extraction for %d documents. extraction_workers=%d,\
+          \ download_threads=%d.\",\n                len(documents),\n           \
+          \     effective_workers,\n                DOWNLOAD_MAX_THREADS,\n      \
+          \      )\n\n            if _docling_artifacts_path() is not None:\n    \
+          \            os.environ.setdefault(\"HF_HUB_OFFLINE\", \"1\")\n\n      \
+          \      multiprocessing_context = multiprocessing.get_context(\"spawn\")\n\
+          \            with (\n                tempfile.TemporaryDirectory() as download_dir,\n\
+          \                multiprocessing_context.Pool(\n                    processes=effective_workers,\n\
+          \                    initializer=_text_extraction_pool_initializer,\n  \
+          \              ) as process_pool,\n            ):\n                download_start_time\
+          \ = time.perf_counter()\n                extraction_tasks, download_error_details\
+          \ = download_and_submit(\n                    documents, Path(download_dir),\
+          \ process_pool, output_dir\n                )\n                logger.info(\n\
+          \                    \"Downloads finished in %.1fs; %d file(s) queued for\
+          \ extraction, %d download error(s).\",\n                    time.perf_counter()\
+          \ - download_start_time,\n                    len(extraction_tasks),\n \
+          \                   len(download_error_details),\n                )\n  \
+          \              raise_if_threshold_exceeded(download_error_details, len(documents),\
+          \ error_tolerance)\n\n                extraction_error_details = []\n  \
+          \              processed_count = 0\n                pending = list(extraction_tasks)\n\
+          \                completed = 0\n                while pending:\n       \
+          \             still_pending = []\n                    for file_path, task\
+          \ in pending:\n                        if task.ready():\n              \
+          \              completed += 1\n                            try:\n      \
+          \                          success, tb = task.get()\n                  \
+          \          except Exception:\n                                tb = traceback.format_exc()\n\
+          \                                logger.error(\"Worker crashed for %s:\\\
+          n%s\", file_path, tb)\n                                success = False\n\
+          \                            Path(file_path).unlink(missing_ok=True)\n \
+          \                           if success:\n                              \
+          \  processed_count += 1\n                            else:\n           \
+          \                     extraction_error_details.append({\"file\": file_path,\
+          \ \"traceback\": tb})\n                            logger.info(\"Extraction\
+          \ progress %d/%d\", completed, len(extraction_tasks))\n                \
+          \        else:\n                            still_pending.append((file_path,\
+          \ task))\n                    pending = still_pending\n                \
+          \    if pending:\n                        time.sleep(0.01)\n\n         \
+          \   all_error_details = download_error_details + extraction_error_details\n\
+          \            total_errors = len(all_error_details)\n            total_docs\
+          \ = len(documents)\n            logger.info(\n                \"Text extraction\
+          \ completed. Total processed: %d/%d, Errors: %d\",\n                processed_count,\n\
+          \                total_docs,\n                total_errors,\n          \
+          \  )\n            raise_if_threshold_exceeded(all_error_details, total_docs,\
+          \ error_tolerance)\n\n"
+        image: quay.io/opendatahub/odh-autorag:odh-stable
+pipelineInfo:
+  description: AutoRAG pipeline for preparing a high-quality knowledge base for accurate
+    RAG retrieval. It transforms unstructured documents into optimized vector indexes
+    for semantic search and downstream RAG workflows. Delivers production-grade embeddings,
+    flexible indexing controls, and a reliable foundation for scalable RAG applications.
+  name: autorag-documents-indexing-pipeline
+root:
+  dag:
+    tasks:
+      documents-discovery:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-documents-discovery
+        inputs:
+          parameters:
+            input_data_bucket_name:
+              componentInputParameter: input_data_bucket_name
+            input_data_path:
+              componentInputParameter: input_data_key
+            sampling_enabled:
+              runtimeValue:
+                constant: false
+        taskInfo:
+          name: documents-discovery
+      documents-indexing:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-documents-indexing
+        dependentTasks:
+        - text-extraction
+        inputs:
+          artifacts:
+            extracted_text:
+              taskOutputArtifact:
+                outputArtifactKey: extracted_text
+                producerTask: text-extraction
+          parameters:
+            batch_size:
+              componentInputParameter: batch_size
+            chunk_overlap:
+              componentInputParameter: chunk_overlap
+            chunk_size:
+              componentInputParameter: chunk_size
+            chunking_method:
+              componentInputParameter: chunking_method
+            collection_name:
+              componentInputParameter: collection_name
+            distance_metric:
+              componentInputParameter: distance_metric
+            embedding_model_id:
+              componentInputParameter: embedding_model_id
+            embedding_params:
+              componentInputParameter: embedding_params
+            pattern_name:
+              componentInputParameter: pattern_name
+            vector_io_provider_id:
+              componentInputParameter: vector_io_provider_id
+            vector_store_type:
+              componentInputParameter: vector_store_type
+        taskInfo:
+          name: documents-indexing
+      text-extraction:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-text-extraction
+        dependentTasks:
+        - documents-discovery
+        inputs:
+          artifacts:
+            documents_descriptor:
+              taskOutputArtifact:
+                outputArtifactKey: discovered_documents
+                producerTask: documents-discovery
+        taskInfo:
+          name: text-extraction
+  inputDefinitions:
+    parameters:
+      batch_size:
+        defaultValue: 20.0
+        description: Number of documents per batch (0 = process all at once).
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      chunk_overlap:
+        defaultValue: 0.0
+        description: Chunk overlap in characters.
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      chunk_size:
+        defaultValue: 1024.0
+        description: Chunk size in characters.
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      chunking_method:
+        defaultValue: recursive
+        description: Chunking method (e.g. "recursive").
+        isOptional: true
+        parameterType: STRING
+      collection_name:
+        description: Optional name of the collection to reuse; omit to create a new
+          one.
+        isOptional: true
+        parameterType: STRING
+      distance_metric:
+        defaultValue: cosine
+        description: Vector distance metric (e.g. "cosine").
+        isOptional: true
+        parameterType: STRING
+      embedding_model_id:
+        description: Embedding model ID for the vector store.
+        parameterType: STRING
+      embedding_params:
+        description: 'Dict passed to OGXEmbeddingParams (default: {}).'
+        isOptional: true
+        parameterType: STRUCT
+      input_data_bucket_name:
+        description: Name of the S3 bucket containing input data.
+        parameterType: STRING
+      input_data_key:
+        description: Path to folder with input documents within bucket.
+        isOptional: true
+        parameterType: STRING
+      input_data_secret_name:
+        description: 'Name of the secret with S3 credentials for input data
+
+          ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION").'
+        parameterType: STRING
+      ogx_secret_name:
+        description: 'Name of the secret with OGX credentials
+
+          ("OGX_CLIENT_BASE_URL", "OGX_CLIENT_API_KEY").'
+        parameterType: STRING
+      pattern_name:
+        description: Optional RAG pattern name for indexing run metadata.
+        isOptional: true
+        parameterType: STRING
+      vector_io_provider_id:
+        description: Optional OGX provider ID.
+        parameterType: STRING
+      vector_store_type:
+        description: Optional vector store provider type for indexing statistics.
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.16.1
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-documents-discovery:
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: AWS_ACCESS_KEY_ID
+              secretKey: AWS_ACCESS_KEY_ID
+            - envVar: AWS_SECRET_ACCESS_KEY
+              secretKey: AWS_SECRET_ACCESS_KEY
+            - envVar: AWS_S3_ENDPOINT
+              secretKey: AWS_S3_ENDPOINT
+            - envVar: AWS_DEFAULT_REGION
+              secretKey: AWS_DEFAULT_REGION
+            optional: false
+            secretNameParameter:
+              componentInputParameter: input_data_secret_name
+        exec-documents-indexing:
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: OGX_CLIENT_BASE_URL
+              secretKey: OGX_CLIENT_BASE_URL
+            - envVar: OGX_CLIENT_API_KEY
+              secretKey: OGX_CLIENT_API_KEY
+            optional: false
+            secretNameParameter:
+              componentInputParameter: ogx_secret_name
+        exec-text-extraction:
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: AWS_ACCESS_KEY_ID
+              secretKey: AWS_ACCESS_KEY_ID
+            - envVar: AWS_SECRET_ACCESS_KEY
+              secretKey: AWS_SECRET_ACCESS_KEY
+            - envVar: AWS_S3_ENDPOINT
+              secretKey: AWS_S3_ENDPOINT
+            - envVar: AWS_DEFAULT_REGION
+              secretKey: AWS_DEFAULT_REGION
+            optional: false
+            secretNameParameter:
+              componentInputParameter: input_data_secret_name

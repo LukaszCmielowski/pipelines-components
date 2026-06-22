@@ -8,6 +8,7 @@ import types
 from unittest import mock
 
 import pytest
+import yaml as real_yaml
 
 from ..component import rag_templates_optimization
 
@@ -101,10 +102,7 @@ def _make_all_mocks():
     httpx_mod = _make_httpx_module()
     mocks["httpx"] = httpx_mod
 
-    # yaml needs safe_load to return a dict with .items()
-    mock_yaml = mock.MagicMock()
-    mock_yaml.safe_load.return_value = {}
-    mocks["yaml"] = mock_yaml
+    mocks["yaml"] = real_yaml
 
     return mocks
 
@@ -724,6 +722,8 @@ class TestOptimizeTemplatesStatus:
         assert run_stage["status"] == "completed"
         assert run_stage["max_rag_patterns"] == 8
         assert run_stage["selected_patterns"] == ["pattern_alpha", "pattern_beta"]
+        assert (rag_patterns_dir / "pattern_alpha" / "indexing_pipeline.yaml").is_file()
+        assert (rag_patterns_dir / "pattern_beta" / "indexing_pipeline.yaml").is_file()
         assert run_stage["steps"] == [
             "chunking",
             "embedding",

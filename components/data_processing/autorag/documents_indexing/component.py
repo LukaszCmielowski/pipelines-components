@@ -11,6 +11,7 @@ def documents_indexing(
     embedding_model_id: str,
     extracted_text: dsl.Input[dsl.Artifact],
     vector_io_provider_id: str,
+    indexing_stats: dsl.Output[dsl.Artifact],
     embedding_params: Optional[dict] = None,
     distance_metric: str = "cosine",
     chunking_method: str = "recursive",
@@ -18,6 +19,8 @@ def documents_indexing(
     chunk_overlap: int = 0,
     batch_size: int = 20,
     collection_name: Optional[str] = None,
+    pattern_name: Optional[str] = None,
+    vector_store_type: Optional[str] = None,
 ):
     """Index extracted text into a vector store with optional batch processing.
 
@@ -36,11 +39,18 @@ def documents_indexing(
         chunk_overlap: Chunk overlap in characters.
         batch_size: Number of documents per batch; 0 means process all in one batch.
         collection_name: Optional name of the collection to reuse; omit to create a new one.
+        indexing_stats: Output artifact directory containing vector_store_stats.json and
+            indexing_run_metadata.json.
+        pattern_name: Optional RAG pattern identifier for run metadata.
+        vector_store_type: Optional vector store provider type (e.g. milvus) for statistics.
     """
+    import json
     import logging
     import os
     import ssl
     import sys
+    import time
+    from datetime import datetime, timezone
     from pathlib import Path
 
     import httpx
@@ -132,18 +142,92 @@ def documents_indexing(
     if missing:
         raise RuntimeError(f"Required environment variable(s) not set: {', '.join(missing)}")
 
+    def _write_indexing_artifacts(
+        *,
+        indexing_stats_path: Path,
+        started_at: datetime,
+        duration_seconds: float,
+        pattern_name: str | None,
+        vector_store_type: str | None,
+        collection_name: str | None,
+        vector_io_provider_id: str,
+        embedding_model_id: str,
+        embedding_params: dict,
+        distance_metric: str,
+        document_count: int,
+        chunk_count: int,
+    ) -> None:
+        indexing_stats_path.mkdir(parents=True, exist_ok=True)
+        completed_at = datetime.now(timezone.utc)
+        embedding_dimension = (
+            embedding_params.get("embedding_dimension") if isinstance(embedding_params, dict) else None
+        )
+
+        vector_store_stats = {
+            "collection_name": collection_name,
+            "vector_store_type": vector_store_type or vector_io_provider_id,
+            "document_count": document_count,
+            "chunk_count": chunk_count,
+            "embedding_model": embedding_model_id,
+            "embedding_dimension": embedding_dimension,
+            "distance_metric": distance_metric,
+            "indexing_duration_seconds": round(duration_seconds, 3),
+            "created_at": completed_at.isoformat().replace("+00:00", "Z"),
+            "pattern_id": pattern_name or "",
+        }
+        run_metadata = {
+            "pattern_id": pattern_name or "",
+            "started_at": started_at.isoformat().replace("+00:00", "Z"),
+            "completed_at": completed_at.isoformat().replace("+00:00", "Z"),
+            "duration_seconds": round(duration_seconds, 3),
+            "document_count": document_count,
+            "chunk_count": chunk_count,
+            "embedding_model_id": embedding_model_id,
+            "vector_io_provider_id": vector_io_provider_id,
+            "collection_name": collection_name,
+        }
+
+        (indexing_stats_path / "vector_store_stats.json").write_text(
+            json.dumps(vector_store_stats, indent=2),
+            encoding="utf-8",
+        )
+        (indexing_stats_path / "indexing_run_metadata.json").write_text(
+            json.dumps(run_metadata, indent=2),
+            encoding="utf-8",
+        )
+
     client = _create_ogx_client(
         base_url=ogx_base_url,
         api_key=ogx_api_key,
     )
+
+    started_at = datetime.now(timezone.utc)
+    start_monotonic = time.monotonic()
 
     base = Path(extracted_text.path)
     paths = sorted(p for p in base.iterdir() if p.is_file() and p.suffix.lower() == ".md")
     total_documents = len(paths)
     logger.info("Found %s documents to index", total_documents)
 
+    resolved_collection_name = collection_name
+    total_chunks = 0
+
     if total_documents == 0:
         logger.warning("No documents found in %s", extracted_text.path)
+        _write_indexing_artifacts(
+            indexing_stats_path=Path(indexing_stats.path),
+            started_at=started_at,
+            duration_seconds=time.monotonic() - start_monotonic,
+            pattern_name=pattern_name,
+            vector_store_type=vector_store_type,
+            collection_name=resolved_collection_name,
+            vector_io_provider_id=vector_io_provider_id,
+            embedding_model_id=embedding_model_id,
+            embedding_params=embedding_params,
+            distance_metric=distance_metric,
+            document_count=0,
+            chunk_count=0,
+        )
         return
 
     chunker = LangChainChunker(method=chunking_method, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
@@ -159,7 +243,6 @@ def documents_indexing(
     )
 
     effective_batch_size = batch_size if batch_size > 0 else total_documents
-    total_chunks = 0
 
     for start in range(0, total_documents, effective_batch_size):
         batch_paths = paths[start : start + effective_batch_size]
@@ -188,4 +271,35 @@ def documents_indexing(
         "Documents indexing finished: %s documents, %s chunks",
         total_documents,
         total_chunks,
+    )
+
+    if resolved_collection_name is None:
+        vs_collection = getattr(ogx_vectorstore, "collection_name", None)
+        if isinstance(vs_collection, str) and vs_collection:
+            resolved_collection_name = vs_collection
+            logger.info("Resolved collection name from vector store: %s", vs_collection)
+        elif vs_collection is not None:
+            logger.warning(
+                "Vector store collection_name has unexpected type %s; omitting from indexing stats.",
+                type(vs_collection).__name__,
+            )
+        else:
+            logger.warning(
+                "Collection name was not provided and could not be resolved from the vector store; "
+                "indexing stats will omit collection_name."
+            )
+
+    _write_indexing_artifacts(
+        indexing_stats_path=Path(indexing_stats.path),
+        started_at=started_at,
+        duration_seconds=time.monotonic() - start_monotonic,
+        pattern_name=pattern_name,
+        vector_store_type=vector_store_type,
+        collection_name=resolved_collection_name,
+        vector_io_provider_id=vector_io_provider_id,
+        embedding_model_id=embedding_model_id,
+        embedding_params=embedding_params,
+        distance_metric=distance_metric,
+        document_count=total_documents,
+        chunk_count=total_chunks,
     )

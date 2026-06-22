@@ -52,7 +52,7 @@ def rag_templates_optimization(
 
     Returns:
         rag_patterns: Folder containing all generated RAG patterns (each subdir: pattern.json,
-            indexing_notebook.ipynb, inference_notebook.ipynb).
+            indexing_notebook.ipynb, inference_notebook.ipynb, indexing_pipeline.yaml).
     """
     # ChromaDB (via ai4rag) requires sqlite3 >= 3.35; RHEL9 base image has older sqlite.
     # Patch stdlib sqlite3 with pysqlite3-binary before any ai4rag import.
@@ -431,9 +431,10 @@ def rag_templates_optimization(
         mapping["EMBEDDING_PARAMS"] = em.get("embedding_params", {"embedding_dimension": 768})
         mapping["DISTANCE_METRIC"] = em.get("distance_metric", "")
 
-        vs = settings.get("vector_store", {})
-        mapping["PROVIDER_ID"] = vs.get("datasource_type", "")
-        mapping["COLLECTION_NAME"] = vs.get("collection_name", "")
+        vs_binding = settings.get("vector_store_binding", {})
+        vs_legacy = settings.get("vector_store", {})
+        mapping["PROVIDER_ID"] = vs_binding.get("provider_id") or vs_legacy.get("datasource_type", "")
+        mapping["COLLECTION_NAME"] = vs_binding.get("vector_store_id") or vs_legacy.get("collection_name", "")
 
         ret = settings.get("retrieval", {})
         mapping["RETRIEVAL_METHOD"] = ret.get("method", "")
@@ -538,6 +539,16 @@ def rag_templates_optimization(
     _status_module = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_status_module)
     status = _status_module.bootstrap_status_tracker(embedded_artifact, component_status, "rag_templates_optimization")
+
+    _compile_spec = importlib.util.spec_from_file_location(
+        "_autorag_pipeline_compile",
+        import_root / "pipeline_compile.py",
+    )
+    if _compile_spec is None or _compile_spec.loader is None:
+        raise ValueError(f"Cannot load pipeline_compile from {import_root / 'pipeline_compile.py'}")
+    _compile_module = importlib.util.module_from_spec(_compile_spec)
+    _compile_spec.loader.exec_module(_compile_module)
+
     optimize_templates_steps = ["chunking", "embedding", "retrieval", "generation", "evaluation"]
 
     class OptimizationEventHandler(BaseEventHandler):
@@ -868,6 +879,13 @@ def rag_templates_optimization(
                 rag_patterns.metadata["metadata"]["patterns"].append(pattern_data)
                 with (patt_dir / "pattern.json").open("w+", encoding="utf-8") as pattern_details:
                     json_dump(pattern_data, pattern_details, indent=2)
+
+                _compile_module.compile_indexing_pipeline_yaml(
+                    pattern=pattern_data,
+                    output_path=patt_dir / "indexing_pipeline.yaml",
+                    base_template_path=_compile_module.default_base_template_path(import_root),
+                    input_data_key=input_data_key or "",
+                )
 
                 template_context = {
                     "responses_template": pattern_data["settings"]["responses_template"],

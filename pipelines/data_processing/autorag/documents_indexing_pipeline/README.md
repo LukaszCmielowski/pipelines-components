@@ -23,6 +23,8 @@ Defines a pipeline to load, sample, extract text, and index documents for AutoRA
 | `chunk_size` | `int` | `1024` | Chunk size in characters. |
 | `chunk_overlap` | `int` | `0` | Chunk overlap in characters. |
 | `batch_size` | `int` | `20` | Number of documents per batch (0 = process all at once). |
+| `pattern_name` | `Optional[str]` | `None` | Optional RAG pattern name for indexing run metadata. |
+| `vector_store_type` | `Optional[str]` | `None` | Optional vector store provider type for indexing statistics. |
 
 ## Metadata 🗂️
 

@@ -1,8 +1,10 @@
 """Tests for the documents_indexing component."""
 
+import json
 import ssl
 import sys
 import types
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -60,6 +62,15 @@ def _make_all_mocks():
     return mocks
 
 
+def _make_indexing_stats(tmp_path):
+    """Return a mock KFP output artifact for indexing statistics."""
+    stats_dir = tmp_path / "indexing_stats"
+    stats_dir.mkdir(parents=True, exist_ok=True)
+    stats = mock.MagicMock()
+    stats.path = str(stats_dir)
+    return stats
+
+
 def _patch_indexing_dependencies():
     """Return modules dict to mock ai4rag/langchain/ogx imports."""
     mock_chunker_cls = mock.MagicMock()
@@ -113,6 +124,7 @@ class TestDocumentsIndexingUnitTests:
         assert "embedding_model_id" in params
         assert "extracted_text" in params
         assert "vector_io_provider_id" in params
+        assert "indexing_stats" in params
 
     def test_empty_vector_store_type_raises_value_error(self, tmp_path):
         """Empty vector_io_provider_id raises ValueError."""
@@ -124,6 +136,7 @@ class TestDocumentsIndexingUnitTests:
                     embedding_model_id="embed-model",
                     extracted_text=extracted,
                     vector_io_provider_id="",
+                    indexing_stats=_make_indexing_stats(tmp_path),
                 )
 
     def test_empty_embedding_model_id_raises_value_error(self, tmp_path):
@@ -136,6 +149,7 @@ class TestDocumentsIndexingUnitTests:
                     embedding_model_id="",
                     extracted_text=extracted,
                     vector_io_provider_id="milvus",
+                    indexing_stats=_make_indexing_stats(tmp_path),
                 )
 
     def test_invalid_chunk_size_type_raises_type_error(self, tmp_path):
@@ -148,6 +162,7 @@ class TestDocumentsIndexingUnitTests:
                     embedding_model_id="embed-model",
                     extracted_text=extracted,
                     vector_io_provider_id="milvus",
+                    indexing_stats=_make_indexing_stats(tmp_path),
                     chunk_size="1024",
                 )
 
@@ -197,6 +212,7 @@ class TestSSLFallbackDocumentsIndexing:
                 embedding_model_id="granite-embedding",
                 extracted_text=extracted_text,
                 vector_io_provider_id="milvus",
+                indexing_stats=_make_indexing_stats(tmp_path),
             )
 
         assert ogx_call_count == 2, "OgxClient should be instantiated twice (initial + SSL retry)"
@@ -250,6 +266,7 @@ class TestSSLFallbackDocumentsIndexing:
                 embedding_model_id="granite-embedding",
                 extracted_text=extracted_text,
                 vector_io_provider_id="milvus",
+                indexing_stats=_make_indexing_stats(tmp_path),
             )
 
         assert ogx_call_count == 2, "OgxClient should be instantiated twice (initial + SSL retry)"
@@ -281,6 +298,7 @@ class TestSSLFallbackDocumentsIndexing:
                     embedding_model_id="granite-embedding",
                     extracted_text=extracted_text,
                     vector_io_provider_id="milvus",
+                    indexing_stats=_make_indexing_stats(tmp_path),
                 )
 
     @mock.patch.dict(
@@ -311,6 +329,7 @@ class TestSSLFallbackDocumentsIndexing:
                     embedding_model_id="granite-embedding",
                     extracted_text=extracted_text,
                     vector_io_provider_id="milvus",
+                    indexing_stats=_make_indexing_stats(tmp_path),
                 )
 
     @mock.patch.dict(
@@ -338,6 +357,7 @@ class TestSSLFallbackDocumentsIndexing:
                 embedding_model_id="granite-embedding",
                 extracted_text=extracted_text,
                 vector_io_provider_id="milvus",
+                indexing_stats=_make_indexing_stats(tmp_path),
             )
 
         # OGXVectorStore.add_documents should never be called if no documents found
@@ -380,7 +400,49 @@ class TestSSLFallbackDocumentsIndexing:
                 embedding_model_id="granite-embedding",
                 extracted_text=extracted_text,
                 vector_io_provider_id="milvus",
+                indexing_stats=_make_indexing_stats(tmp_path),
                 batch_size=2,
             )
 
         assert mock_vectorstore.add_documents.call_count == 2, "Expected 2 batches for 3 docs with batch_size=2"
+
+
+class TestIndexingStatsArtifacts:
+    """Tests for indexing_stats JSON artifact output."""
+
+    @mock.patch.dict(
+        "os.environ",
+        {
+            "OGX_CLIENT_BASE_URL": "https://ogx.example.com",
+            "OGX_CLIENT_API_KEY": "test-api-key",
+        },
+    )
+    def test_indexing_stats_with_none_pattern_name_writes_empty_string(self, tmp_path):
+        """pattern_name=None is written as an empty string, not JSON null."""
+        mocks = _make_all_mocks()
+
+        mock_ogx_client = mock.MagicMock()
+        mock_ogx_client.models.list.return_value = []
+        mocks["ogx_client"].OgxClient.return_value = mock_ogx_client
+
+        extracted_text_dir = tmp_path / "extracted"
+        extracted_text_dir.mkdir()
+        extracted_text = mock.MagicMock()
+        extracted_text.path = str(extracted_text_dir)
+        indexing_stats = _make_indexing_stats(tmp_path)
+
+        with mock.patch.dict(sys.modules, mocks):
+            documents_indexing.python_func(
+                embedding_model_id="granite-embedding",
+                extracted_text=extracted_text,
+                vector_io_provider_id="milvus",
+                indexing_stats=indexing_stats,
+                pattern_name=None,
+            )
+
+        stats_path = Path(indexing_stats.path)
+        vector_store_stats = json.loads((stats_path / "vector_store_stats.json").read_text(encoding="utf-8"))
+        run_metadata = json.loads((stats_path / "indexing_run_metadata.json").read_text(encoding="utf-8"))
+
+        assert vector_store_stats["pattern_id"] == ""
+        assert run_metadata["pattern_id"] == ""

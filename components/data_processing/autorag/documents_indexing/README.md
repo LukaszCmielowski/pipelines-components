@@ -15,6 +15,7 @@ Reads markdown files from extracted_text, chunks them, embeds via OGX, and adds 
 | `embedding_model_id` | `str` | `None` | Embedding model ID used for the vector store. |
 | `extracted_text` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact (folder) containing .md files from text extraction. |
 | `vector_io_provider_id` | `str` | `None` | OGX provider ID for the vector database. |
+| `indexing_stats` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact directory containing vector_store_stats.json and indexing_run_metadata.json. |
 | `embedding_params` | `Optional[dict]` | `None` | Optional embedding parameters. |
 | `distance_metric` | `str` | `cosine` | Vector distance metric (e.g. "cosine"). |
 | `chunking_method` | `str` | `recursive` | Chunking method. |
@@ -22,6 +23,8 @@ Reads markdown files from extracted_text, chunks them, embeds via OGX, and adds 
 | `chunk_overlap` | `int` | `0` | Chunk overlap in characters. |
 | `batch_size` | `int` | `20` | Number of documents per batch; 0 means process all in one batch. |
 | `collection_name` | `Optional[str]` | `None` | Optional name of the collection to reuse; omit to create a new one. |
+| `pattern_name` | `Optional[str]` | `None` | Optional RAG pattern identifier for run metadata. |
+| `vector_store_type` | `Optional[str]` | `None` | Optional vector store provider type (e.g. milvus) for statistics. |
 
 ## Usage Examples 🧪
 

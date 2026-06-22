@@ -30,6 +30,8 @@ def documents_indexing_pipeline(
     chunk_size: int = 1024,
     chunk_overlap: int = 0,
     batch_size: int = 20,
+    pattern_name: Optional[str] = None,
+    vector_store_type: Optional[str] = None,
 ):
     """Defines a pipeline to load, sample, extract text, and index documents for AutoRAG.
 
@@ -49,10 +51,13 @@ def documents_indexing_pipeline(
         chunk_size: Chunk size in characters.
         chunk_overlap: Chunk overlap in characters.
         batch_size: Number of documents per batch (0 = process all at once).
+        pattern_name: Optional RAG pattern name for indexing run metadata.
+        vector_store_type: Optional vector store provider type for indexing statistics.
     """
     documents_discovery_task = documents_discovery(
         input_data_bucket_name=input_data_bucket_name,
         input_data_path=input_data_key,
+        sampling_enabled=False,
     )
 
     text_extraction_task = text_extraction(
@@ -70,6 +75,8 @@ def documents_indexing_pipeline(
         chunk_overlap=chunk_overlap,
         batch_size=batch_size,
         collection_name=collection_name,
+        pattern_name=pattern_name,
+        vector_store_type=vector_store_type,
     )
 
     def set_input_data_secrets(task, secret_name):
