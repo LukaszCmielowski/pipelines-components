@@ -314,6 +314,57 @@ def autogluon_timeseries_models_training(
                 cell["source"] = new_source
             return notebook
 
+        def _dtype_to_datatype(dtype) -> str:
+            name = str(dtype).lower()
+            if "bool" in name:
+                return "boolean"
+            if "int" in name:
+                return "integer"
+            if "float" in name:
+                return "number"
+            return "string"
+
+        def _build_timeseries_inference_block():
+            try:
+                instance_fields = [
+                    {"name": id_column, "datatype": "string", "role": "id", "required": True},
+                    {"name": timestamp_column, "datatype": "string", "role": "timestamp", "required": True},
+                    {"name": target, "datatype": "number", "role": "target", "required": True},
+                ]
+                sample_instance = {
+                    id_column: "<string>",
+                    timestamp_column: "<string>",
+                    target: "<number>",
+                }
+
+                schema = {
+                    "protocol": "v1_json",
+                    "prediction_length": prediction_length,
+                    "instances": {"required": True, "fields": instance_fields},
+                }
+                payload = {"instances": [sample_instance]}
+
+                covariates = known_covariates_names or []
+                if covariates:
+                    cov_fields = [
+                        {"name": id_column, "datatype": "string", "role": "id", "required": True},
+                        {"name": timestamp_column, "datatype": "string", "role": "timestamp", "required": True},
+                    ]
+                    sample_cov = {id_column: "<string>", timestamp_column: "<string>"}
+                    for col in covariates:
+                        dt = _dtype_to_datatype(full_train_ts_df[col].dtype) if col in full_train_ts_df.columns else "string"
+                        cov_fields.append({"name": col, "datatype": dt, "role": "known_covariate", "required": True})
+                        sample_cov[col] = f"<{dt}>"
+                    schema["known_covariates"] = {"required": True, "fields": cov_fields}
+                    payload["known_covariates"] = [sample_cov]
+
+                return {"input_data_schema": schema, "sample_payload": payload}
+            except Exception:
+                logger.warning("Could not build inference block; skipping.")
+                return None
+
+        ts_inference_block = _build_timeseries_inference_block()
+
         for model_name in top_models:
             try:
                 model_name_full = f"{model_name}_FULL"
@@ -435,6 +486,8 @@ def autogluon_timeseries_models_training(
                         "test_data": metrics_dict,
                     },
                 }
+                if ts_inference_block is not None:
+                    model_metadata["inference"] = ts_inference_block
                 with (output_path / "model.json").open("w", encoding="utf-8") as f:
                     json.dump(model_metadata, f, indent=2)
 
