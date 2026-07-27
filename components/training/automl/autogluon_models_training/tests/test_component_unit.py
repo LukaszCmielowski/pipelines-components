@@ -1885,23 +1885,31 @@ class TestInferenceBlock:
         mock_models_artifact.metadata = {}
 
         autogluon_models_training.python_func(
-            **_base_call_kwargs(
-                workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path
-            ),
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
         )
 
-        model_json = json.loads(
-            (Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text()
-        )
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
         assert "inference" in model_json
         schema = model_json["inference"]["input_data_schema"]
         assert schema["protocol"] == "v1_json"
         fields = schema["instances"]["fields"]
         assert schema["instances"]["required"] is True
         assert len(fields) == 3
-        assert fields[0] == {"name": "bedrooms", "datatype": "integer", "shape": [-1], "role": "feature", "required": True}
+        assert fields[0] == {
+            "name": "bedrooms",
+            "datatype": "integer",
+            "shape": [-1],
+            "role": "feature",
+            "required": True,
+        }
         assert fields[1] == {"name": "sqft", "datatype": "number", "shape": [-1], "role": "feature", "required": True}
-        assert fields[2] == {"name": "location", "datatype": "string", "shape": [-1], "role": "feature", "required": True}
+        assert fields[2] == {
+            "name": "location",
+            "datatype": "string",
+            "shape": [-1],
+            "role": "feature",
+            "required": True,
+        }
 
         payload = model_json["inference"]["sample_payload"]
         assert payload == {"instances": [{"bedrooms": ["<integer>"], "sqft": ["<number>"], "location": ["<string>"]}]}
@@ -1937,14 +1945,10 @@ class TestInferenceBlock:
         mock_models_artifact.metadata = {}
 
         autogluon_models_training.python_func(
-            **_base_call_kwargs(
-                workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path
-            ),
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
         )
 
-        model_json = json.loads(
-            (Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text()
-        )
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
         assert "inference" not in model_json
 
     @mock.patch("pandas.read_csv")
@@ -1975,14 +1979,10 @@ class TestInferenceBlock:
         mock_models_artifact.metadata = {}
 
         autogluon_models_training.python_func(
-            **_base_call_kwargs(
-                workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path
-            ),
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
         )
 
-        model_json = json.loads(
-            (Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text()
-        )
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
         fields = model_json["inference"]["input_data_schema"]["instances"]["fields"]
         assert fields[0]["datatype"] == "boolean"
         assert fields[1]["datatype"] == "string"

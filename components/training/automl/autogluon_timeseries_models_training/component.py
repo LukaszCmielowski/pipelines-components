@@ -352,7 +352,11 @@ def autogluon_timeseries_models_training(
                     ]
                     sample_cov = {id_column: "<string>", timestamp_column: "<string>"}
                     for col in covariates:
-                        dt = _dtype_to_datatype(full_train_ts_df[col].dtype) if col in full_train_ts_df.columns else "string"
+                        dt = (
+                            _dtype_to_datatype(full_train_ts_df[col].dtype)
+                            if col in full_train_ts_df.columns
+                            else "string"
+                        )
                         cov_fields.append({"name": col, "datatype": dt, "role": "known_covariate", "required": True})
                         sample_cov[col] = f"<{dt}>"
                     schema["known_covariates"] = {"required": True, "fields": cov_fields}

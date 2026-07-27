@@ -372,9 +372,7 @@ def autogluon_models_training(
             sample_row: dict[str, list[str]] = {}
             for feat in features:
                 dt = _ag_type_to_datatype(type_map.get(feat, "object"))
-                fields.append(
-                    {"name": feat, "datatype": dt, "shape": [-1], "role": "feature", "required": True}
-                )
+                fields.append({"name": feat, "datatype": dt, "shape": [-1], "role": "feature", "required": True})
                 sample_row[feat] = [f"<{dt}>"]
 
             return {

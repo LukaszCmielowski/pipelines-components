@@ -1334,7 +1334,12 @@ class TestTimeseriesInferenceBlock:
         assert cov_fields[0] == {"name": "product_id", "datatype": "string", "role": "id", "required": True}
         assert cov_fields[1] == {"name": "date", "datatype": "string", "role": "timestamp", "required": True}
         assert cov_fields[2] == {"name": "promo", "datatype": "integer", "role": "known_covariate", "required": True}
-        assert cov_fields[3] == {"name": "temperature", "datatype": "number", "role": "known_covariate", "required": True}
+        assert cov_fields[3] == {
+            "name": "temperature",
+            "datatype": "number",
+            "role": "known_covariate",
+            "required": True,
+        }
 
         payload = model_json["inference"]["sample_payload"]
         assert "known_covariates" in payload
