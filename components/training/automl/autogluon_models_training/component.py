@@ -362,8 +362,10 @@ def autogluon_models_training(
 
         def _build_tabular_inference_block(pred) -> dict[str, Any] | None:
             try:
+                # features() / feature_metadata_in describe original predict-time
+                # columns. feature_metadata is post-FE and can omit or rename them.
                 features = pred.features()
-                type_map = pred.feature_metadata.type_map_raw
+                type_map = pred.feature_metadata_in.type_map_raw
             except Exception:
                 logger.warning("Could not read predictor features/metadata; skipping inference block.")
                 return None

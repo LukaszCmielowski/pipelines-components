@@ -1869,7 +1869,7 @@ class TestInferenceBlock:
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f1": 0.5})
         mock_predictor_clone.predict.return_value = mock.MagicMock()
         mock_predictor_clone.features.return_value = ["bedrooms", "sqft", "location"]
-        mock_predictor_clone.feature_metadata.type_map_raw = {
+        mock_predictor_clone.feature_metadata_in.type_map_raw = {
             "bedrooms": "int64",
             "sqft": "float64",
             "location": "object",
@@ -1967,7 +1967,7 @@ class TestInferenceBlock:
         mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f": 0.1})
         mock_predictor_clone.predict.return_value = mock.MagicMock()
         mock_predictor_clone.features.return_value = ["flag", "cat_col"]
-        mock_predictor_clone.feature_metadata.type_map_raw = {"flag": "bool", "cat_col": "category"}
+        mock_predictor_clone.feature_metadata_in.type_map_raw = {"flag": "bool", "cat_col": "category"}
 
         mock_read_csv.side_effect = [_mock_csv_frame(), _mock_csv_frame(), _mock_csv_frame()]
         workspace_path = str(tmp_path / "ws")
