@@ -10,8 +10,7 @@ Expects pre-cleaned CSV data from the tabular data loader (infinite values repla
 
 This component combines the model selection and full-refit stages into a single step. It trains a TabularPredictor on sampled data, ranks all models on the test set, then refits each of the top N models on the full training data in a single ``refit_full`` call. Post-refit work (predict, evaluate,
 feature importance, confusion matrix (via evaluate_predictions detailed_report), classification curves, notebook generation) runs concurrently across all top-N models via ``ThreadPoolExecutor``. The deployment clone (``set_model_best`` + ``clone_for_deployment``) is serialized afterward because it
-mutates predictor state. All artifacts are written under a single output artifact so the pipeline does not require a ParallelFor loop. Each model directory contains a ``model.json`` file with model metadata (name, location, metrics,
-and an optional ``inference`` block for KServe scoring payloads).
+mutates predictor state. All artifacts are written under a single output artifact so the pipeline does not require a ParallelFor loop. Each model directory contains a ``model.json`` file with model metadata (name, location, metrics).
 
 ## Inputs 📥
 
@@ -247,6 +246,7 @@ Each entry in **`context.models`** contains:
 | `name` | `str` | Model name with `_FULL` suffix (e.g. `"LightGBM_BAG_L1_FULL"`). |
 | `location` | `dict` | Paths relative to `models_artifact.path`: `model_directory`, `predictor`, `notebook`, `metrics`. |
 | `metrics` | `dict` | `test_data` — evaluation results dict from `evaluate_predictions` (metric names → values). |
+| `inference` | `dict` (optional) | Same `input_data_schema` + `sample_payload` object as in that model’s `model.json`. Omitted when feature metadata cannot be read. |
 
 Example:
 
@@ -272,6 +272,20 @@ Example:
         },
         "metrics": {
           "test_data": {"root_mean_squared_error": 0.42, "r2": 0.85}
+        },
+        "inference": {
+          "input_data_schema": {
+            "protocol": "v1_json",
+            "instances": {
+              "required": true,
+              "fields": [
+                {"name": "bedrooms", "datatype": "integer", "shape": [-1], "role": "feature", "required": true}
+              ]
+            }
+          },
+          "sample_payload": {
+            "instances": [{"bedrooms": ["<integer>"]}]
+          }
         }
       },
       {

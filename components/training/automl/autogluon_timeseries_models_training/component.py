@@ -363,8 +363,8 @@ def autogluon_timeseries_models_training(
                     payload["known_covariates"] = [sample_cov]
 
                 return {"input_data_schema": schema, "sample_payload": payload}
-            except Exception:
-                logger.warning("Could not build inference block; skipping.")
+            except Exception as e:
+                logger.warning("Could not build inference block; skipping: %s", e)
                 return None
 
         ts_inference_block = _build_timeseries_inference_block()

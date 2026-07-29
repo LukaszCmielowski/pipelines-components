@@ -141,9 +141,9 @@ Each refitted model directory includes ``model.json``. When schema construction 
 | ----- | ------- |
 | `protocol: v1_json` | Use `POST /v1/models/{name}:predict`. |
 | `prediction_length` | Forecast horizon; size known-covariate horizon rows accordingly. |
-| `instances.fields` | History rows as **objects with scalar values** (long format): id, timestamp, target (+ history covariates when trained). |
-| `known_covariates` | Present only if the model was trained with known covariates; horizon rows with id, timestamp, and covariate columns. |
-| `sample_payload` | Template request. Replace `"<string>"` / `"<number>"` placeholders with real values. |
+| `instances.fields` | Always exactly three history fields: id, timestamp, and target (roles `id` / `timestamp` / `target`). History rows are **objects with scalar values** (long format). Known covariates are **not** included here. |
+| `known_covariates` | Present only if the model was trained with known covariates. Horizon rows with id, timestamp, and one field per covariate (`role: known_covariate`). Covariate `datatype` is inferred from training dtypes (`integer` / `number` / `boolean` / `string`). |
+| `sample_payload` | Template request. Replace placeholders such as `"<string>"`, `"<number>"`, `"<integer>"`, or `"<boolean>"` with real values (datatype-dependent for covariates). |
 
 ### Model insight artifacts (per refitted model)
 

@@ -366,8 +366,8 @@ def autogluon_models_training(
                 # columns. feature_metadata is post-FE and can omit or rename them.
                 features = pred.features()
                 type_map = pred.feature_metadata_in.type_map_raw
-            except Exception:
-                logger.warning("Could not read predictor features/metadata; skipping inference block.")
+            except Exception as e:
+                logger.warning("Could not read predictor features/metadata; skipping inference block: %s", e)
                 return None
 
             fields = []
