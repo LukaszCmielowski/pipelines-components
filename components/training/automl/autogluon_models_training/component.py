@@ -374,6 +374,9 @@ def autogluon_models_training(
             sample_row: dict[str, list[str]] = {}
             for feat in features:
                 dt = _ag_type_to_datatype(type_map.get(feat, "object"))
+                # shape [-1] = variable batch size for this feature's value list.
+                # Matches KServe AutoGluonServer v1 columnar instances and v2 per-feature
+                # tensor metadata (shape [batch]). Do not treat -1 as a user placeholder.
                 fields.append({"name": feat, "datatype": dt, "shape": [-1], "role": "feature", "required": True})
                 sample_row[feat] = [f"<{dt}>"]
 

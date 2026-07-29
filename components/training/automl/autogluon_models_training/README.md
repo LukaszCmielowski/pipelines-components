@@ -10,7 +10,8 @@ Expects pre-cleaned CSV data from the tabular data loader (infinite values repla
 
 This component combines the model selection and full-refit stages into a single step. It trains a TabularPredictor on sampled data, ranks all models on the test set, then refits each of the top N models on the full training data in a single ``refit_full`` call. Post-refit work (predict, evaluate,
 feature importance, confusion matrix (via evaluate_predictions detailed_report), classification curves, notebook generation) runs concurrently across all top-N models via ``ThreadPoolExecutor``. The deployment clone (``set_model_best`` + ``clone_for_deployment``) is serialized afterward because it
-mutates predictor state. All artifacts are written under a single output artifact so the pipeline does not require a ParallelFor loop. Each model directory contains a ``model.json`` file with model metadata (name, location, metrics).
+mutates predictor state. All artifacts are written under a single output artifact so the pipeline does not require a ParallelFor loop. Each model directory contains a ``model.json`` file with model metadata (name, location, metrics,
+and an optional ``inference`` block for KServe scoring payloads).
 
 ## Inputs 📥
 
@@ -152,7 +153,7 @@ One `<ModelName>_FULL/` directory is created for each of the top N selected mode
 
 ### `model.json`
 
-Each model directory contains a `model.json` file with the model's metadata, matching the corresponding entry in `context.models`:
+Each model directory contains a `model.json` file with the model's metadata, matching the corresponding entry in `context.models`. When predictor feature metadata is available, an ``inference`` block is also written so consumers can build KServe AutoGluon ``:predict`` bodies without loading AutoGluon:
 
 ```json
 {
@@ -165,11 +166,60 @@ Each model directory contains a `model.json` file with the model's metadata, mat
   },
   "metrics": {
     "test_data": {"root_mean_squared_error": 0.42, "r2": 0.85}
+  },
+  "inference": {
+    "input_data_schema": {
+      "protocol": "v1_json",
+      "instances": {
+        "required": true,
+        "fields": [
+          {"name": "bedrooms", "datatype": "integer", "shape": [-1], "role": "feature", "required": true},
+          {"name": "sqft", "datatype": "number", "shape": [-1], "role": "feature", "required": true},
+          {"name": "location", "datatype": "string", "shape": [-1], "role": "feature", "required": true}
+        ]
+      }
+    },
+    "sample_payload": {
+      "instances": [
+        {
+          "bedrooms": ["<integer>"],
+          "sqft": ["<number>"],
+          "location": ["<string>"]
+        }
+      ]
+    }
   }
 }
 ```
 
 This file allows downstream consumers to read model metadata directly from the filesystem without relying on artifact metadata propagation.
+
+#### `inference` block (KServe AutoGluon tabular)
+
+Aligned with the [KServe AutoGluon server](https://github.com/kserve/kserve/tree/master/python/autogluonserver) tabular path (`modelFormat: autogluon`):
+
+| Field | Meaning |
+| ----- | ------- |
+| `protocol: v1_json` | Use `POST /v1/models/{name}:predict` with a JSON body. |
+| `instances` fields | One named feature per column; values are **lists** (columnar batch), not row-wise scalars. |
+| `shape: [-1]` | **Variable batch size** for that feature’s list length. Same convention as AutoGluonServer v2 model metadata (`shape: [-1]` per feature). **Not a placeholder** — leave it as `-1`; do not replace it when scoring. |
+| `sample_payload` | Template for `:predict`. Replace `"<integer>"` / `"<number>"` / `"<string>"` / `"<boolean>"` with real values. Extend each feature list to the same length for multi-row batches. |
+
+Example real request body derived from `sample_payload`:
+
+```json
+{
+  "instances": [
+    {
+      "bedrooms": [3, 4],
+      "sqft": [1200.0, 1500.0],
+      "location": ["urban", "suburban"]
+    }
+  ]
+}
+```
+
+If feature metadata cannot be read, `inference` is omitted (training still succeeds).
 
 ### `models_artifact` metadata fields
 
