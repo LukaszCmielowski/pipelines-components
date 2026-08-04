@@ -1850,6 +1850,144 @@ class TestAutogluonModelsTrainingUnitTests:
         assert context["best_model_name"] == "LightGBM_BAG_L1_FULL"
 
 
+class TestInferenceBlock:
+    """Verify model.json includes inference.input_data_schema and sample_payload."""
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("autogluon.tabular.TabularPredictor")
+    def test_model_json_includes_inference_block(self, mock_predictor_class, mock_read_csv, tmp_path):
+        """Regression model.json contains inference with correct fields from feature metadata."""
+        mock_predictor = mock.MagicMock()
+        mock_predictor_clone = mock.MagicMock()
+        mock_predictor_class.return_value.fit.return_value = mock_predictor
+        mock_predictor.clone.return_value = mock_predictor_clone
+        mock_predictor.problem_type = "regression"
+        mock_predictor.label = "target"
+        mock_predictor.eval_metric = "r2"
+        _mock_leaderboard_top_models(mock_predictor, ["LightGBM_BAG_L1"])
+        mock_predictor_clone.evaluate_predictions.return_value = {"r2": 0.9}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f1": 0.5})
+        mock_predictor_clone.predict.return_value = mock.MagicMock()
+        mock_predictor_clone.features.return_value = ["bedrooms", "sqft", "location"]
+        mock_predictor_clone.feature_metadata_in.type_map_raw = {
+            "bedrooms": "int64",
+            "sqft": "float64",
+            "location": "object",
+        }
+
+        mock_read_csv.side_effect = [_mock_csv_frame(), _mock_csv_frame(), _mock_csv_frame()]
+        workspace_path = str(tmp_path / "ws")
+        Path(workspace_path).mkdir()
+        models_output_dir = str(tmp_path / "out")
+        Path(models_output_dir).mkdir()
+        mock_models_artifact = mock.MagicMock()
+        mock_models_artifact.path = models_output_dir
+        mock_models_artifact.metadata = {}
+
+        autogluon_models_training.python_func(
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
+        )
+
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
+        assert "inference" in model_json
+        schema = model_json["inference"]["input_data_schema"]
+        assert schema["protocol"] == "v1_json"
+        fields = schema["instances"]["fields"]
+        assert schema["instances"]["required"] is True
+        assert len(fields) == 3
+        assert fields[0] == {
+            "name": "bedrooms",
+            "datatype": "integer",
+            "shape": [-1],
+            "role": "feature",
+            "required": True,
+        }
+        assert fields[1] == {"name": "sqft", "datatype": "number", "shape": [-1], "role": "feature", "required": True}
+        assert fields[2] == {
+            "name": "location",
+            "datatype": "string",
+            "shape": [-1],
+            "role": "feature",
+            "required": True,
+        }
+
+        payload = model_json["inference"]["sample_payload"]
+        assert payload == {"instances": [{"bedrooms": ["<integer>"], "sqft": ["<number>"], "location": ["<string>"]}]}
+
+        # inference block also present in context["models"]
+        context_model = mock_models_artifact.metadata["context"]["models"][0]
+        assert context_model["inference"] == model_json["inference"]
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("autogluon.tabular.TabularPredictor")
+    def test_inference_block_skipped_on_missing_metadata(self, mock_predictor_class, mock_read_csv, tmp_path):
+        """model.json omits inference when predictor metadata is unavailable."""
+        mock_predictor = mock.MagicMock()
+        mock_predictor_clone = mock.MagicMock()
+        mock_predictor_class.return_value.fit.return_value = mock_predictor
+        mock_predictor.clone.return_value = mock_predictor_clone
+        mock_predictor.problem_type = "regression"
+        mock_predictor.label = "target"
+        mock_predictor.eval_metric = "r2"
+        _mock_leaderboard_top_models(mock_predictor, ["LightGBM_BAG_L1"])
+        mock_predictor_clone.evaluate_predictions.return_value = {"r2": 0.9}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f": 0.1})
+        mock_predictor_clone.predict.return_value = mock.MagicMock()
+        mock_predictor_clone.features.side_effect = AttributeError("no features")
+
+        mock_read_csv.side_effect = [_mock_csv_frame(), _mock_csv_frame(), _mock_csv_frame()]
+        workspace_path = str(tmp_path / "ws")
+        Path(workspace_path).mkdir()
+        models_output_dir = str(tmp_path / "out")
+        Path(models_output_dir).mkdir()
+        mock_models_artifact = mock.MagicMock()
+        mock_models_artifact.path = models_output_dir
+        mock_models_artifact.metadata = {}
+
+        autogluon_models_training.python_func(
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
+        )
+
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
+        assert "inference" not in model_json
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("autogluon.tabular.TabularPredictor")
+    def test_inference_boolean_type_mapping(self, mock_predictor_class, mock_read_csv, tmp_path):
+        """Boolean AutoGluon types map to 'boolean' schema datatype."""
+        mock_predictor = mock.MagicMock()
+        mock_predictor_clone = mock.MagicMock()
+        mock_predictor_class.return_value.fit.return_value = mock_predictor
+        mock_predictor.clone.return_value = mock_predictor_clone
+        mock_predictor.problem_type = "regression"
+        mock_predictor.label = "target"
+        mock_predictor.eval_metric = "r2"
+        _mock_leaderboard_top_models(mock_predictor, ["LightGBM_BAG_L1"])
+        mock_predictor_clone.evaluate_predictions.return_value = {"r2": 0.9}
+        mock_predictor_clone.feature_importance.return_value = mock.MagicMock(to_dict=lambda: {"f": 0.1})
+        mock_predictor_clone.predict.return_value = mock.MagicMock()
+        mock_predictor_clone.features.return_value = ["flag", "cat_col"]
+        mock_predictor_clone.feature_metadata_in.type_map_raw = {"flag": "bool", "cat_col": "category"}
+
+        mock_read_csv.side_effect = [_mock_csv_frame(), _mock_csv_frame(), _mock_csv_frame()]
+        workspace_path = str(tmp_path / "ws")
+        Path(workspace_path).mkdir()
+        models_output_dir = str(tmp_path / "out")
+        Path(models_output_dir).mkdir()
+        mock_models_artifact = mock.MagicMock()
+        mock_models_artifact.path = models_output_dir
+        mock_models_artifact.metadata = {}
+
+        autogluon_models_training.python_func(
+            **_base_call_kwargs(workspace_path, mock_models_artifact, mock.MagicMock(path="/tmp/test.csv"), tmp_path),
+        )
+
+        model_json = json.loads((Path(models_output_dir) / "LightGBM_BAG_L1_FULL" / "model.json").read_text())
+        fields = model_json["inference"]["input_data_schema"]["instances"]["fields"]
+        assert fields[0]["datatype"] == "boolean"
+        assert fields[1]["datatype"] == "string"
+
+
 class TestComponentStatusOutput:
     """Verify the component writes meaningful component_status.json content."""
 

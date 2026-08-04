@@ -345,6 +345,51 @@ def autogluon_models_training(
                 return confusion_matrix_res
             raise TypeError(f"Unexpected confusion_matrix type: {type(confusion_matrix_res)!r}")
 
+        _AG_TYPE_TO_DATATYPE: dict[str, str] = {
+            "bool": "boolean",
+            "boolean": "boolean",
+        }
+
+        def _ag_type_to_datatype(ag_type: str) -> str:
+            t = ag_type.lower()
+            match t:
+                case _ if t in _AG_TYPE_TO_DATATYPE:
+                    return _AG_TYPE_TO_DATATYPE[t]
+                case _ if "int" in t:
+                    return "integer"
+                case _ if "float" in t:
+                    return "number"
+                case _:
+                    return "string"
+
+        def _build_tabular_inference_block(pred) -> dict[str, Any] | None:
+            try:
+                # features() / feature_metadata_in describe original predict-time
+                # columns. feature_metadata is post-FE and can omit or rename them.
+                features = pred.features()
+                type_map = pred.feature_metadata_in.type_map_raw
+            except Exception as e:
+                logger.warning("Could not read predictor features/metadata; skipping inference block: %s", e)
+                return None
+
+            fields = []
+            sample_row: dict[str, list[str]] = {}
+            for feat in features:
+                dt = _ag_type_to_datatype(type_map.get(feat, "object"))
+                # shape [-1] = variable batch size for this feature's value list.
+                # Matches KServe AutoGluonServer v1 columnar instances and v2 per-feature
+                # tensor metadata (shape [batch]). Do not treat -1 as a user placeholder.
+                fields.append({"name": feat, "datatype": dt, "shape": [-1], "role": "feature", "required": True})
+                sample_row[feat] = [f"<{dt}>"]
+
+            return {
+                "input_data_schema": {
+                    "protocol": "v1_json",
+                    "instances": {"required": True, "fields": fields},
+                },
+                "sample_payload": {"instances": [sample_row]},
+            }
+
         def _serialize_curve_array(values: Any) -> list[float]:
             return [float(v) for v in np.asarray(values).tolist()]
 
@@ -632,6 +677,7 @@ def autogluon_models_training(
         shutil.rmtree(work_path, ignore_errors=True)
 
         # Build ordered models_metadata (preserves top-N ranking order).
+        inference_block = _build_tabular_inference_block(predictor_clone)
         models_metadata = []
         for model_name_full in model_names_full:
             eval_results = eval_results_by_model[model_name_full]
@@ -647,6 +693,8 @@ def autogluon_models_training(
                     "test_data": eval_results,
                 },
             }
+            if inference_block is not None:
+                model_metadata["inference"] = inference_block
             models_metadata.append(model_metadata)
             with (Path(models_artifact.path) / model_name_full / "model.json").open("w", encoding="utf-8") as f:
                 json.dump(model_metadata, f, indent=2)
