@@ -1306,3 +1306,239 @@ class TestPredictorMetadata:
         metadata_path = Path(models_artifact.path) / "DeepAR_FULL" / "predictor" / "predictor_metadata.json"
         metadata = json.loads(metadata_path.read_text())
         assert metadata["known_covariates_names"] == ["promo", "temperature"]
+
+
+class TestTimeseriesInferenceBlock:
+    """Verify model.json includes inference.input_data_schema and sample_payload."""
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("pandas.concat")
+    @mock.patch("autogluon.timeseries.TimeSeriesDataFrame")
+    @mock.patch("autogluon.timeseries.TimeSeriesPredictor")
+    def test_model_json_includes_inference_block(
+        self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
+    ):
+        """model.json contains inference with instances fields for id, timestamp, target."""
+        models_artifact, extra_train_path, html_artifact = mock_artifacts
+
+        mock_predictor = mock.MagicMock()
+        mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
+        mock_predictor.fit_summary.return_value = {"model_hyperparams": {"DeepAR": {}}}
+        mock_predictor._trainer.get_model_attribute.return_value = mock.MagicMock
+
+        mock_refit_predictor = mock.MagicMock()
+        mock_refit_predictor.evaluate.return_value = {"MASE": 0.5}
+
+        mock_predictor_cls.side_effect = [mock_predictor, mock_refit_predictor]
+
+        full_train_ts = _mock_ts_df()
+        full_train_ts.columns = ["sales"]
+        mock_ts_df_cls.from_data_frame.return_value = _mock_ts_df()
+        mock_ts_df_cls.from_path.return_value = _mock_ts_df()
+        mock_ts_df_cls.return_value = full_train_ts
+        mock_concat.return_value = mock.MagicMock()
+        mock_read_csv.side_effect = [mock.MagicMock(), mock.MagicMock()]
+
+        test_data = mock.MagicMock()
+        test_data.path = "/tmp/test.csv"
+
+        autogluon_timeseries_models_training.python_func(
+            target="sales",
+            id_column="product_id",
+            timestamp_column="date",
+            train_data_path="/tmp/train.csv",
+            test_data=test_data,
+            top_n=1,
+            workspace_path="/tmp/workspace",
+            pipeline_name="ts-pipeline-123",
+            run_id="run-123",
+            models_artifact=models_artifact,
+            extra_train_data_path=extra_train_path,
+            prediction_length=7,
+            html_artifact=html_artifact,
+            component_status=_DEFAULT_COMPONENT_STATUS,
+        )
+
+        model_json_path = Path(models_artifact.path) / "DeepAR_FULL" / "model.json"
+        assert model_json_path.exists()
+        model_json = json.loads(model_json_path.read_text())
+
+        assert "inference" in model_json
+        schema = model_json["inference"]["input_data_schema"]
+        assert schema["protocol"] == "v1_json"
+        assert schema["prediction_length"] == 7
+        assert schema["instances"]["required"] is True
+
+        fields = schema["instances"]["fields"]
+        assert len(fields) == 3
+        assert fields[0] == {"name": "product_id", "datatype": "string", "role": "id", "required": True}
+        assert fields[1] == {"name": "date", "datatype": "string", "role": "timestamp", "required": True}
+        assert fields[2] == {"name": "sales", "datatype": "number", "role": "target", "required": True}
+
+        assert "known_covariates" not in schema
+
+        payload = model_json["inference"]["sample_payload"]
+        assert payload == {"instances": [{"product_id": "<string>", "date": "<string>", "sales": "<number>"}]}
+        assert "known_covariates" not in payload
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("pandas.concat")
+    @mock.patch("autogluon.timeseries.TimeSeriesDataFrame")
+    @mock.patch("autogluon.timeseries.TimeSeriesPredictor")
+    def test_inference_block_with_known_covariates(
+        self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
+    ):
+        """Inference block includes known_covariates when model has covariate columns."""
+        models_artifact, extra_train_path, html_artifact = mock_artifacts
+
+        mock_predictor = mock.MagicMock()
+        mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
+        mock_predictor.fit_summary.return_value = {"model_hyperparams": {"DeepAR": {}}}
+        mock_predictor._trainer.get_model_attribute.return_value = mock.MagicMock
+
+        mock_refit_predictor = mock.MagicMock()
+        mock_refit_predictor.evaluate.return_value = {"MASE": 0.5}
+
+        mock_predictor_cls.side_effect = [mock_predictor, mock_refit_predictor]
+
+        full_train_ts = _mock_ts_df()
+        full_train_ts.columns = ["sales", "promo", "temperature"]
+        promo_col = mock.MagicMock()
+        promo_col.dtype = "int64"
+        temp_col = mock.MagicMock()
+        temp_col.dtype = "float64"
+        full_train_ts.__getitem__ = lambda self, key: promo_col if key == "promo" else temp_col
+        full_train_ts.__contains__ = lambda self, key: key in ("promo", "temperature", "sales")
+        mock_ts_df_cls.from_data_frame.return_value = _mock_ts_df()
+        mock_ts_df_cls.from_path.return_value = _mock_ts_df()
+        mock_ts_df_cls.return_value = full_train_ts
+        mock_concat.return_value = mock.MagicMock()
+        mock_read_csv.side_effect = [mock.MagicMock(), mock.MagicMock()]
+
+        test_data = mock.MagicMock()
+        test_data.path = "/tmp/test.csv"
+
+        autogluon_timeseries_models_training.python_func(
+            target="sales",
+            id_column="product_id",
+            timestamp_column="date",
+            train_data_path="/tmp/train.csv",
+            test_data=test_data,
+            top_n=1,
+            workspace_path="/tmp/workspace",
+            pipeline_name="ts-pipeline-123",
+            run_id="run-123",
+            models_artifact=models_artifact,
+            extra_train_data_path=extra_train_path,
+            prediction_length=7,
+            known_covariates_names=["promo", "temperature"],
+            html_artifact=html_artifact,
+            component_status=_DEFAULT_COMPONENT_STATUS,
+        )
+
+        model_json_path = Path(models_artifact.path) / "DeepAR_FULL" / "model.json"
+        model_json = json.loads(model_json_path.read_text())
+
+        schema = model_json["inference"]["input_data_schema"]
+
+        # Covariate columns must also be present in the historical instances.
+        instance_fields = schema["instances"]["fields"]
+        assert len(instance_fields) == 5
+        assert instance_fields[3] == {
+            "name": "promo",
+            "datatype": "integer",
+            "role": "known_covariate",
+            "required": True,
+        }
+        assert instance_fields[4] == {
+            "name": "temperature",
+            "datatype": "number",
+            "role": "known_covariate",
+            "required": True,
+        }
+        assert model_json["inference"]["sample_payload"]["instances"] == [
+            {
+                "product_id": "<string>",
+                "date": "<string>",
+                "sales": "<number>",
+                "promo": "<integer>",
+                "temperature": "<number>",
+            }
+        ]
+
+        assert "known_covariates" in schema
+        cov = schema["known_covariates"]
+        assert cov["required"] is True
+        cov_fields = cov["fields"]
+        assert len(cov_fields) == 4
+        assert cov_fields[0] == {"name": "product_id", "datatype": "string", "role": "id", "required": True}
+        assert cov_fields[1] == {"name": "date", "datatype": "string", "role": "timestamp", "required": True}
+        assert cov_fields[2] == {"name": "promo", "datatype": "integer", "role": "known_covariate", "required": True}
+        assert cov_fields[3] == {
+            "name": "temperature",
+            "datatype": "number",
+            "role": "known_covariate",
+            "required": True,
+        }
+
+        payload = model_json["inference"]["sample_payload"]
+        assert "known_covariates" in payload
+        assert payload["known_covariates"] == [
+            {"product_id": "<string>", "date": "<string>", "promo": "<integer>", "temperature": "<number>"}
+        ]
+
+    @mock.patch("pandas.read_csv")
+    @mock.patch("pandas.concat")
+    @mock.patch("autogluon.timeseries.TimeSeriesDataFrame")
+    @mock.patch("autogluon.timeseries.TimeSeriesPredictor")
+    def test_inference_block_skipped_on_metadata_failure(
+        self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
+    ):
+        """model.json omits inference when covariate dtype lookup fails during schema build."""
+        models_artifact, extra_train_path, html_artifact = mock_artifacts
+
+        mock_predictor = mock.MagicMock()
+        mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
+        mock_predictor.fit_summary.return_value = {"model_hyperparams": {"DeepAR": {}}}
+        mock_predictor._trainer.get_model_attribute.return_value = mock.MagicMock
+
+        mock_refit_predictor = mock.MagicMock()
+        mock_refit_predictor.evaluate.return_value = {"MASE": 0.5}
+
+        mock_predictor_cls.side_effect = [mock_predictor, mock_refit_predictor]
+
+        full_train_ts = _mock_ts_df()
+        full_train_ts.columns = ["sales", "promo"]
+        full_train_ts.__getitem__ = mock.MagicMock(side_effect=RuntimeError("dtype lookup failed"))
+        mock_ts_df_cls.from_data_frame.return_value = _mock_ts_df()
+        mock_ts_df_cls.from_path.return_value = _mock_ts_df()
+        mock_ts_df_cls.return_value = full_train_ts
+        mock_concat.return_value = mock.MagicMock()
+        mock_read_csv.side_effect = [mock.MagicMock(), mock.MagicMock()]
+
+        test_data = mock.MagicMock()
+        test_data.path = "/tmp/test.csv"
+
+        autogluon_timeseries_models_training.python_func(
+            target="sales",
+            id_column="product_id",
+            timestamp_column="date",
+            train_data_path="/tmp/train.csv",
+            test_data=test_data,
+            top_n=1,
+            workspace_path="/tmp/workspace",
+            pipeline_name="ts-pipeline-123",
+            run_id="run-123",
+            models_artifact=models_artifact,
+            extra_train_data_path=extra_train_path,
+            prediction_length=7,
+            known_covariates_names=["promo"],
+            html_artifact=html_artifact,
+            component_status=_DEFAULT_COMPONENT_STATUS,
+        )
+
+        model_json_path = Path(models_artifact.path) / "DeepAR_FULL" / "model.json"
+        assert model_json_path.exists()
+        model_json = json.loads(model_json_path.read_text())
+        assert "inference" not in model_json
+        assert model_json["name"] == "DeepAR_FULL"

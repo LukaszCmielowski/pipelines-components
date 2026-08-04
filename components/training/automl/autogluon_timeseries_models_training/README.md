@@ -133,6 +133,18 @@ Artifact metadata display name: **Timeseries Models Training Status**.
 
 Inference notebooks are loaded from ``shared/notebook_templates/timeseries_notebook.ipynb`` at runtime (same shared package data as tabular training).
 
+### `model.json` inference block (KServe AutoGluon time series)
+
+Each refitted model directory includes ``model.json``. When schema construction succeeds, an ``inference`` block is added for the [KServe AutoGluon server](https://github.com/kserve/kserve/tree/master/python/autogluonserver) time-series path (**REST v1 JSON only**):
+
+| Field | Meaning |
+| ----- | ------- |
+| `protocol: v1_json` | Use `POST /v1/models/{name}:predict`. |
+| `prediction_length` | Forecast horizon; size known-covariate horizon rows accordingly. |
+| `instances.fields` | History fields include id, timestamp, target, and each configured known covariate. History rows are **objects with scalar values** (long format). |
+| `known_covariates` | Present only if the model was trained with known covariates. Horizon rows with id, timestamp, and one field per covariate (`role: known_covariate`). Covariate `datatype` is inferred from training dtypes (`integer` / `number` / `boolean` / `string`). |
+| `sample_payload` | Template request. Replace placeholders such as `"<string>"`, `"<number>"`, `"<integer>"`, or `"<boolean>"` with real values (datatype-dependent for covariates). |
+
 ### Model insight artifacts (per refitted model)
 
 Under each ``{model_name}_FULL/metrics/`` directory:
