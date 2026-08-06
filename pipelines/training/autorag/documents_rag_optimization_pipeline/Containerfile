@@ -12,6 +12,13 @@ COPY pipelines/training/autorag/documents_rag_optimization_pipeline/requirements
 
 ## TODO: Ensure build isolation
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# Temporary: register epub MIME type until docling-core releases
+# https://github.com/docling-project/docling-core/pull/692
+# All other types (docx, odt, asciidoc, etc.) are already in docling-core's _extra_mimetypes.
+RUN python3 -c "\
+import site, pathlib; \
+pth = pathlib.Path(site.getsitepackages()[0]) / 'docling_mimetypes.pth'; \
+pth.write_text('import mimetypes; mimetypes.add_type(\"application/epub+zip\",\".epub\")\n')"
 
 # Docling models for offline text extraction (RHAI modelcar images; /models/ -> docling-project--* layout).
 # Must match DOCLING_ARTIFACTS_PATH. Do not use /opt/docling-artifacts on aipcc: non-root RUN cannot mkdir there.
