@@ -65,6 +65,12 @@ class ValidateMetadataTestDir:
         ValidateMetadataTestFile(
             file_name="custom_links_category.yaml", expected_exception=None, expected_exception_msg=None
         ),
+        ValidateMetadataTestFile(
+            file_name="including_managed.yaml", expected_exception=None, expected_exception_msg=None
+        ),
+        ValidateMetadataTestFile(
+            file_name="including_description.yaml", expected_exception=None, expected_exception_msg=None
+        ),
     ],
 )
 def test_validate_metadata_yaml_success(test_data):
