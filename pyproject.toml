@@ -27,7 +27,6 @@ test = [
     "docstring-parser",
     "jinja2",
     "packaging",
-    "pyyaml",
     "pip",
     "pyyaml",
     "pytest",
