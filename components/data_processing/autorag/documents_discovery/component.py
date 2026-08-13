@@ -14,34 +14,51 @@ _AUTORAG_SHARED = Path(__file__).parents[3] / "training" / "autorag" / "shared"
 def documents_discovery(
     input_data_bucket_name: str,
     input_data_path: str = "",
-    test_data: dsl.Input[dsl.Artifact] = None,
+    test_data_bucket_name: str = "",
+    test_data_path_key: str = "",
+    benchmark_sample_size: int = 25,
     sampling_enabled: bool = True,
     sampling_max_size: float = 1,
     discovered_documents: dsl.Output[dsl.Artifact] = None,
+    test_data: dsl.Output[dsl.Artifact] = None,
     component_status: dsl.Output[dsl.Artifact] = None,
     embedded_artifact: dsl.EmbeddedInput[dsl.Dataset] = None,
 ):
-    """Documents discovery component.
+    """Documents discovery component with optional benchmark test data loading.
 
-    Thin wrapper that delegates to ``ai4rag.components.data.documents_discovery.discover_documents``.
+    Discovers input documents in S3 and optionally downloads benchmark test data
+    for document-prioritised sampling.  When ``test_data_bucket_name`` is provided,
+    the component first downloads and samples the benchmark JSON, then uses the
+    referenced document IDs to prioritise discovery.
 
     Args:
-        input_data_bucket_name: S3 (or compatible) bucket containing input data.
+        input_data_bucket_name: S3 (or compatible) bucket containing input documents.
         input_data_path: Path to folder with input documents within the bucket.
-        test_data: Optional input artifact containing test data for sampling.
-        sampling_enabled: Whether to enable sampling or not.
+        test_data_bucket_name: S3 bucket containing the test data file.  Leave empty
+            to skip test data loading (e.g. for the indexing pipeline).
+        test_data_path_key: S3 object key to the JSON test data file.
+        benchmark_sample_size: Maximum number of benchmark records to keep.
+            When the dataset exceeds this limit, a reproducible random sample is
+            drawn (seed 42). Set to 0 to disable sampling.
+        sampling_enabled: Whether to enable document size-based sampling.
         sampling_max_size: Maximum size of sampled documents (in gigabytes).
         discovered_documents: Output artifact containing the documents descriptor JSON file.
+        test_data: Output artifact containing the (possibly sampled) test data JSON.
+            Empty when test data loading is skipped.
         component_status: Output artifact containing stage-level progress tracking.
         embedded_artifact: Embedded ``autorag.shared`` helpers injected by KFP at runtime.
 
     Environment variables (required when run with pipeline secret injection):
-        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT.
-        AWS_DEFAULT_REGION is optional.
+        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT for input documents
+        (or INPUT_DATA_AWS_* prefixed variants when both secrets are injected).
+        TEST_DATA_AWS_ACCESS_KEY_ID, TEST_DATA_AWS_SECRET_ACCESS_KEY,
+        TEST_DATA_AWS_S3_ENDPOINT for test data (only when test_data_bucket_name is set).
+        AWS_DEFAULT_REGION / *_DEFAULT_REGION variants are optional.
     """
     import importlib.util
     import json
     import logging
+    import os
     from pathlib import Path
 
     from ai4rag.components.data.documents_discovery import discover_documents
@@ -68,16 +85,46 @@ def documents_discovery(
         if component_status is not None:
             status.set_metadata(display_name="Documents Discovery Status")
             component_status.metadata["display_name"] = "Documents Discovery Status"
-        with status.stage("discover_documents"):
-            test_data_doc_names = None
-            if test_data:
-                with open(test_data.path, "r", encoding="utf-8") as f:
-                    records = json.load(f)
-                test_data_doc_names = list(
-                    {doc_id for r in records for doc_id in r.get("correct_answer_document_ids", [])}
+
+        test_data_doc_names = None
+        load_benchmark = bool(test_data_bucket_name and test_data_path_key)
+
+        if load_benchmark:
+            from ai4rag.components.data.test_data_loader import load_test_data
+
+            with status.stage("load_benchmark"):
+                test_data_s3_client = create_s3_client(
+                    endpoint_url=os.environ.get("TEST_DATA_AWS_S3_ENDPOINT"),
+                    access_key_id=os.environ.get("TEST_DATA_AWS_ACCESS_KEY_ID"),
+                    secret_access_key=os.environ.get("TEST_DATA_AWS_SECRET_ACCESS_KEY"),
+                    region_name=os.environ.get("TEST_DATA_AWS_DEFAULT_REGION"),
                 )
 
-            s3_client = create_s3_client()
+                test_data_result = load_test_data(
+                    bucket_name=test_data_bucket_name,
+                    key=test_data_path_key,
+                    benchmark_sample_size=benchmark_sample_size,
+                    s3_client=test_data_s3_client,
+                )
+
+                with open(test_data.path, "w", encoding="utf-8") as f:
+                    json.dump(test_data_result.data, f, indent=2, ensure_ascii=False)
+
+                test_data_doc_names = list(
+                    {doc_id for r in test_data_result.data for doc_id in r.get("correct_answer_document_ids", [])}
+                )
+
+        with status.stage("discover_documents"):
+            input_endpoint = os.environ.get("INPUT_DATA_AWS_S3_ENDPOINT")
+            if input_endpoint:
+                input_s3_client = create_s3_client(
+                    endpoint_url=input_endpoint,
+                    access_key_id=os.environ.get("INPUT_DATA_AWS_ACCESS_KEY_ID"),
+                    secret_access_key=os.environ.get("INPUT_DATA_AWS_SECRET_ACCESS_KEY"),
+                    region_name=os.environ.get("INPUT_DATA_AWS_DEFAULT_REGION"),
+                )
+            else:
+                input_s3_client = create_s3_client()
 
             result = discover_documents(
                 bucket_name=input_data_bucket_name,
@@ -85,7 +132,7 @@ def documents_discovery(
                 test_data_doc_names=test_data_doc_names,
                 sampling_enabled=sampling_enabled,
                 sampling_max_size_gb=sampling_max_size,
-                s3_client=s3_client,
+                s3_client=input_s3_client,
             )
 
             output_dir = Path(discovered_documents.path)
