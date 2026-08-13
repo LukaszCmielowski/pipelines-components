@@ -8,7 +8,6 @@ HEAVY_RESOURCES = ExecutorResources("4", "16Gi", "32", "64Gi")
 
 AUTORAG_OPTIMIZATION_EXECUTOR_RESOURCES = {
     "publish-component-stage-map": STAGE_MAP_RESOURCES,
-    "test-data-loader": STANDARD_RESOURCES,
     "documents-discovery": STANDARD_RESOURCES,
     "text-extraction": HEAVY_RESOURCES,
     "search-space-preparation": STANDARD_RESOURCES,

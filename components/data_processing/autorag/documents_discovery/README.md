@@ -4,20 +4,23 @@
 
 ## Overview 🧾
 
-Documents discovery component.
+Documents discovery component with optional benchmark test data loading.
 
-Thin wrapper that delegates to ``ai4rag.components.data.documents_discovery.discover_documents``.
+Discovers input documents in S3 and optionally downloads benchmark test data for document-prioritised sampling. When ``test_data_bucket_name`` is provided, the component first downloads and samples the benchmark JSON, then uses the referenced document IDs to prioritise discovery.
 
 ## Inputs 📥
 
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
-| `input_data_bucket_name` | `str` | `None` | S3 (or compatible) bucket containing input data. |
+| `input_data_bucket_name` | `str` | `None` | S3 (or compatible) bucket containing input documents. |
 | `input_data_path` | `str` | `""` | Path to folder with input documents within the bucket. |
-| `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Optional input artifact containing test data for sampling. |
-| `sampling_enabled` | `bool` | `True` | Whether to enable sampling or not. |
+| `test_data_bucket_name` | `str` | `""` | S3 bucket containing the test data file.  Leave empty to skip test data loading (e.g. for the indexing pipeline). |
+| `test_data_path_key` | `str` | `""` | S3 object key to the JSON test data file. |
+| `benchmark_sample_size` | `int` | `25` | Maximum number of benchmark records to keep. When the dataset exceeds this limit, a reproducible random sample is drawn (seed 42). Set to 0 to disable sampling. |
+| `sampling_enabled` | `bool` | `True` | Whether to enable document size-based sampling. |
 | `sampling_max_size` | `float` | `1` | Maximum size of sampled documents (in gigabytes). |
 | `discovered_documents` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the documents descriptor JSON file. |
+| `test_data` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing the (possibly sampled) test data JSON. Empty when test data loading is skipped. |
 | `component_status` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing stage-level progress tracking. |
 | `embedded_artifact` | `dsl.EmbeddedInput[dsl.Dataset]` | `None` | Embedded ``autorag.shared`` helpers injected by KFP at runtime. |
 

@@ -5,9 +5,6 @@ from kfp.kubernetes import use_secret_as_env
 from kfp_components.components.data_processing.autorag.documents_discovery import (
     documents_discovery,
 )
-from kfp_components.components.data_processing.autorag.test_data_loader import (
-    test_data_loader,
-)
 from kfp_components.components.data_processing.autorag.text_extraction import (
     text_extraction,
 )
@@ -110,22 +107,13 @@ def documents_rag_optimization_pipeline(
         "1Gi"
     )
 
-    test_data_loader_task = test_data_loader(
-        test_data_bucket_name=test_data_bucket_name,
-        test_data_path=test_data_key,
-    )
-    test_data_loader_task.after(component_stage_map_task)
-
-    test_data_loader_task.set_caching_options(False)
-    test_data_loader_task.set_cpu_request("2").set_memory_request("8Gi").set_cpu_limit(MAX_CPUS).set_memory_limit(
-        MAX_MEMORY
-    )
-
     documents_discovery_task = documents_discovery(
         input_data_bucket_name=input_data_bucket_name,
+        test_data_bucket_name=test_data_bucket_name,
+        test_data_path_key=test_data_key,
         input_data_path=input_data_key,
-        test_data=test_data_loader_task.outputs["test_data"],
     )
+    documents_discovery_task.after(component_stage_map_task)
 
     documents_discovery_task.set_caching_options(False)
     documents_discovery_task.set_cpu_request("2").set_memory_request("8Gi").set_cpu_limit(MAX_CPUS).set_memory_limit(
@@ -142,24 +130,42 @@ def documents_rag_optimization_pipeline(
         MAX_MEMORY
     )
 
-    for task, secret_name in zip(
-        [test_data_loader_task, documents_discovery_task, text_extraction_task],
-        [test_data_secret_name, input_data_secret_name, input_data_secret_name],
-    ):
-        use_secret_as_env(
-            task,
-            secret_name=secret_name,
-            secret_key_to_env={
-                "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
-                "AWS_S3_ENDPOINT": "AWS_S3_ENDPOINT",
-                "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
-            },
-            optional=True,
-        )
+    use_secret_as_env(
+        documents_discovery_task,
+        secret_name=input_data_secret_name,
+        secret_key_to_env={
+            "AWS_ACCESS_KEY_ID": "INPUT_DATA_AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY": "INPUT_DATA_AWS_SECRET_ACCESS_KEY",
+            "AWS_S3_ENDPOINT": "INPUT_DATA_AWS_S3_ENDPOINT",
+            "AWS_DEFAULT_REGION": "INPUT_DATA_AWS_DEFAULT_REGION",
+        },
+        optional=True,
+    )
+    use_secret_as_env(
+        documents_discovery_task,
+        secret_name=test_data_secret_name,
+        secret_key_to_env={
+            "AWS_ACCESS_KEY_ID": "TEST_DATA_AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY": "TEST_DATA_AWS_SECRET_ACCESS_KEY",
+            "AWS_S3_ENDPOINT": "TEST_DATA_AWS_S3_ENDPOINT",
+            "AWS_DEFAULT_REGION": "TEST_DATA_AWS_DEFAULT_REGION",
+        },
+        optional=True,
+    )
+    use_secret_as_env(
+        text_extraction_task,
+        secret_name=input_data_secret_name,
+        secret_key_to_env={
+            "AWS_ACCESS_KEY_ID": "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY": "AWS_SECRET_ACCESS_KEY",
+            "AWS_S3_ENDPOINT": "AWS_S3_ENDPOINT",
+            "AWS_DEFAULT_REGION": "AWS_DEFAULT_REGION",
+        },
+        optional=True,
+    )
 
     mps_task = search_space_preparation(
-        test_data=test_data_loader_task.outputs["test_data"],
+        test_data=documents_discovery_task.outputs["test_data"],
         extracted_text=text_extraction_task.outputs["extracted_text"],
         embedding_models=embedding_models,
         generation_models=generation_models,
@@ -171,7 +177,7 @@ def documents_rag_optimization_pipeline(
 
     hpo_task = rag_templates_optimization(
         extracted_text=text_extraction_task.outputs["extracted_text"],
-        test_data=test_data_loader_task.outputs["test_data"],
+        test_data=documents_discovery_task.outputs["test_data"],
         search_space_prep_report=mps_task.outputs["search_space_prep_report"],
         vector_io_provider_id=vector_io_provider_id,
         ogx_secret_name=ogx_secret_name,
