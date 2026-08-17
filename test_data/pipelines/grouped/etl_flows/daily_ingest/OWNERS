@@ -5,7 +5,6 @@
 # Approvers are responsible for approving code changes
 # These are the KFP maintainers who have write access
 approvers:
-  - nsingla
   - hbelmiro
 reviewers:
-  - nsingla
+  - hbelmiro
