@@ -37,7 +37,7 @@ Downloads the yoda_sentences dataset from HuggingFace, renames columns to match 
   - No Parent Owners: Yes
   - Approvers:
     - mprahl
-    - nsingla
+    - hbelmiro
     - HumairAK
 
 ## Additional Resources 📚
