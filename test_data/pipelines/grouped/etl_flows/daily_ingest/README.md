@@ -23,7 +23,6 @@ This pipeline orchestrates the daily ingestion of data from an external source i
   - subcategory
 - **Owners**:
   - Approvers:
-    - nsingla
     - hbelmiro
   - Reviewers:
-    - nsingla
+    - hbelmiro
