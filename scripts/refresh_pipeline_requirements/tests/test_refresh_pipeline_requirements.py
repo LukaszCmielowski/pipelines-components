@@ -150,7 +150,7 @@ class TestBuildContainerCommand:
     """Tests for build_container_command."""
 
     def test_builds_expected_podman_command(self, tmp_path: Path):
-        """Builds a verbose Podman command with Hermeto-compatible pip-compile flags."""
+        """Builds a verbose Podman command with Hermeto-compatible uv pip compile flags."""
         pipeline_dir = tmp_path / "pipeline"
         _write_requirements_in(pipeline_dir)
 
@@ -167,15 +167,13 @@ class TestBuildContainerCommand:
         assert "/bin/bash" in command
         assert "-lc" in command
         compile_command = command[command.index("-lc") + 1]
-        assert "python3 -u -m piptools compile requirements.in" in compile_command
-        assert "python3 -u -m pip install pip-tools" in compile_command
+        assert "python3 -u -m uv pip compile requirements.in" in compile_command
+        assert "python3 -u -m pip install uv" in compile_command
         assert "--generate-hashes" in compile_command
-        assert "--allow-unsafe" in compile_command
+        assert "--emit-index-url" in compile_command
         assert "--no-header" in compile_command
-        assert " -v" in compile_command
         assert "--upgrade" in compile_command
         assert "--output-file requirements.txt" in compile_command
-        assert "--dry-run" not in compile_command
         assert "--quiet" not in compile_command
 
     def test_no_upgrade_omits_upgrade_flag(self, tmp_path: Path):
@@ -228,12 +226,11 @@ class TestBuildContainerCommand:
         )
 
         compile_command = command[command.index("-lc") + 1]
-        assert " -v" not in compile_command
         assert "--quiet" in compile_command
-        assert "python3 -u -m piptools compile requirements.in" in compile_command
+        assert "python3 -u -m uv pip compile requirements.in" in compile_command
 
-    def test_includes_upgrade_and_dry_run_flags(self, tmp_path: Path):
-        """Passes upgrade and dry-run flags through to pip-compile."""
+    def test_dry_run_omits_output_file(self, tmp_path: Path):
+        """Emits to stdout (no --output-file) in dry-run mode, since uv has no --dry-run."""
         pipeline_dir = tmp_path / "pipeline"
         _write_requirements_in(pipeline_dir)
 
@@ -247,7 +244,7 @@ class TestBuildContainerCommand:
         )
 
         assert "--upgrade" in command[-1]
-        assert "--dry-run" in command[-1]
+        assert "--output-file" not in command[-1]
 
 
 class TestCompilePipelineRequirements:
@@ -273,7 +270,7 @@ class TestCompilePipelineRequirements:
         assert run_kwargs["stderr"] is subprocess.DEVNULL
 
     def test_runs_container_compile(self, tmp_path: Path):
-        """Invokes the container runtime to run pip-compile for a valid pipeline directory."""
+        """Invokes the container runtime to run uv pip compile for a valid pipeline directory."""
         pipeline_dir = tmp_path / "pipeline"
         _write_requirements_in(pipeline_dir, index_url="https://user:secret@example.com/simple")
 
@@ -290,7 +287,7 @@ class TestCompilePipelineRequirements:
         run_mock.assert_called_once()
         command = run_mock.call_args.args[0]
         assert command[0] == "docker"
-        assert "python3 -u -m piptools compile requirements.in" in command[-1]
+        assert "python3 -u -m uv pip compile requirements.in" in command[-1]
         printed = " ".join(str(call.args[0]) for call in print_mock.call_args_list)
         assert "user:secret" not in printed
         assert "https://example.com" in printed

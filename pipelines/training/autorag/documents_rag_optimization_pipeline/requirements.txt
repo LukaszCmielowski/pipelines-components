@@ -135,7 +135,7 @@ distro==1.9.0 \
 docling==2.107.0 \
     --hash=sha256:c8ac4187176ea475dfc9129ccefd3439ec07b76348a6429cae7999634ceb685e
     # via ai4rag
-docling-core[chunking]==2.84.0 \
+docling-core==2.84.0 \
     --hash=sha256:42958a59062a0cb30e17c676e4b72786f5badd4cb14ad52ee41c33875d896ae7
     # via
     #   ai4rag
@@ -151,7 +151,7 @@ docling-parse==7.0.0 \
     --hash=sha256:ae57b46827efa15ff89d5718fa033182a878ce9f66a9966a86e33d2ab9858a7b \
     --hash=sha256:c7fa94783a50aae413cece94c9c73ca47b33201b85ad9e4e98308292696b50fc
     # via docling-slim
-docling-slim[standard]==2.107.0 \
+docling-slim==2.107.0 \
     --hash=sha256:00c806485802a9f21dd98a94518d6d112441c3b9c9de38f610197e5933a7f000
     # via docling
 docstring-parser==0.18.0 \
@@ -192,7 +192,7 @@ frozenlist==1.8.0 \
     # via
     #   aiohttp
     #   aiosignal
-fsspec[http]==2026.4.0 \
+fsspec==2026.4.0 \
     --hash=sha256:ef0c6ca507776eab560612d5785f243e2e3f6cfe42468aacdce3609353366b5b
     # via
     #   datasets
@@ -386,7 +386,7 @@ mmh3==5.2.1 \
     --hash=sha256:cf4bc684dcc8e8d04585858d7d29d39b03b2b0f352949f62c4f4601687c96c37 \
     --hash=sha256:e4448c1a745cbf008bc1294a23c928e12955f9922816f8e2e10c8ffc03ba53be
     # via chromadb
-mpire[dill]==2.10.2 \
+mpire==2.10.2 \
     --hash=sha256:c63736615fb601645a93020d906bd4eccd0ca1f5d6a8547b73df8110b0dd0be6
     # via semchunk
 mpmath==1.3.0 \
@@ -764,7 +764,7 @@ rtree==1.4.1 \
 s3transfer==0.19.1 \
     --hash=sha256:3514b610ae555d9b8948879d13da86f116dc5fec2f93ef4e11f11234d639a7a4
     # via boto3
-safetensors[numpy,torch]==0.8.0 \
+safetensors==0.8.0 \
     --hash=sha256:23e3a3c88c19ad1a2d282a4eb04a84433aa406daeaa4e1d8f49b0123cafc9e62 \
     --hash=sha256:800d4a5cf3320f0c0b49dfb7b4ec6cfe9a5e735b33b8254a74d5a2e452dc4408 \
     --hash=sha256:ae8e482791a7348f972072ac995368904d8fe58ee62c7e410ec2b6b03cc76cab \
@@ -792,6 +792,9 @@ scipy==1.16.3 \
 semchunk==3.2.5 \
     --hash=sha256:492433c61f8de87000e7f7faecf765b7a324c635d0804401952333dc29ccb98b
     # via docling-core
+setuptools==81.0.0 \
+    --hash=sha256:f6e4d2e589c5fa14b5bbda3d170eac0db8852c7fe7a357f708d172726353778e
+    # via torch
 shapely==2.1.2 \
     --hash=sha256:3c824c33fc461af903326eb400f697b5ebdc74e7407adb31c2ac94abf5f9b909 \
     --hash=sha256:94220d057a2b101eb59cc69d352075ce1a6008a475b33f91d74e0214daedbea7 \
@@ -923,7 +926,7 @@ tree-sitter-typescript==0.23.2 \
     --hash=sha256:0fa0c96de9e44aad636ec2bdbfbd4fc8a14497aa0656ae60021a8a20fe611e41 \
     --hash=sha256:e3f6058625e88bb057a5aa1aee8fe2aa8e1758c912bb6aadb72720a61fae586e
     # via docling-core
-triton==3.6.0 ; platform_machine != "s390x" \
+triton==3.6.0 \
     --hash=sha256:1fd543ee4b888f749e186f87fb4c669894fd2f74849b820ffee3014a54e99d05 \
     --hash=sha256:669850f373cd9bd588b5a4d86c6849f16be98b3e8087130ad945082842ae631b \
     --hash=sha256:a64f6de7b2d45d0426474a980776161e626ccdcbb35e8b540686411fe204e0c9
@@ -992,7 +995,7 @@ uuid-utils==0.17.0 \
     # via
     #   langchain-core
     #   langsmith
-uvicorn[standard]==0.51.0 \
+uvicorn==0.51.0 \
     --hash=sha256:e510a18c6896c39d758bd41eeddb9f736034fe2fcb19c55d0b601762e34ac193
     # via chromadb
 uvloop==0.22.1 \
@@ -1050,8 +1053,3 @@ zstandard==0.25.0 \
     --hash=sha256:c734ffe543d7aaf7ff9848fb06fcc4c251e2c1670eab845b8983b6ff24f993fd \
     --hash=sha256:fdc7ec1d57af80b7b7d2cadb025366aae714533322e5f908acd8e2da2dc75bb4
     # via langsmith
-
-# The following packages are considered to be unsafe in a requirements file:
-setuptools==81.0.0 \
-    --hash=sha256:f6e4d2e589c5fa14b5bbda3d170eac0db8852c7fe7a357f708d172726353778e
-    # via torch

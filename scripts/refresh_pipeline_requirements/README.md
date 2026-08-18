@@ -3,8 +3,10 @@
 Refresh Hermeto-compatible `requirements.txt` lockfiles for RHOAI pipelines.
 
 The RHOAI PyPI index does not publish macOS-compatible wheels, so this script
-runs `pip-compile` inside a Linux container (`registry.access.redhat.com/ubi9/python-312:9.8`).
-Use Podman or Docker; the runtime is auto-detected (podman first, then docker).
+runs `uv pip compile` inside a Linux container (`registry.access.redhat.com/ubi9/python-312:9.8`).
+`uv` is used instead of `pip-compile` for a much faster resolve while producing an
+equivalent hashed lockfile. Use Podman or Docker; the runtime is auto-detected
+(podman first, then docker).
 
 ## Usage
 
@@ -60,7 +62,7 @@ uv run python -m scripts.refresh_pipeline_requirements.refresh_pipeline_requirem
 | `IMAGE` | image ref | Container image override |
 | `NO_UPGRADE` | `true` | Keep existing pins from `requirements.txt` |
 | `DRY_RUN` | `true` | Show changes without writing `requirements.txt` |
-| `QUIET` | `true` | Suppress live pip-compile progress output |
+| `QUIET` | `true` | Suppress live uv pip compile progress output |
 
 ## Defaults
 

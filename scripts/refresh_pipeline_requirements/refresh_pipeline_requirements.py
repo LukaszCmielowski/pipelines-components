@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Refresh Hermeto-compatible requirements.txt lockfiles for RHOAI pipelines.
 
-Compiles ``requirements.in`` into ``requirements.txt`` using ``pip-compile``
+Compiles ``requirements.in`` into ``requirements.txt`` using ``uv pip compile``
 with ``--generate-hashes`` inside a container (Podman or Docker). The RHOAI PyPI
 index does not publish macOS-compatible wheels, so compilation must run on Linux
-(UBI9 Python 3.12).
+(UBI9 Python 3.12). ``uv`` is used instead of ``pip-compile`` because its resolver
+is dramatically faster while producing an equivalent hashed lockfile.
 
 See: https://hermetoproject.github.io/hermeto/pip/#requirementstxt
 """
@@ -118,27 +119,24 @@ def build_container_command(
     dry_run: bool,
     verbose: bool,
 ) -> list[str]:
-    """Build the container command that runs pip-compile."""
+    """Build the container command that runs uv pip compile."""
     python_bin = "python3 -u"
     compile_flags = [
-        f"{python_bin} -m piptools compile",
+        f"{python_bin} -m uv pip compile",
         _REQUIREMENTS_IN,
         "--generate-hashes",
         "--emit-index-url",
-        "--allow-unsafe",
         "--no-header",
-        f"--output-file {_REQUIREMENTS_TXT}",
     ]
+    # uv pip compile has no --dry-run; emit to stdout instead of writing the lockfile.
+    if not dry_run:
+        compile_flags.append(f"--output-file {_REQUIREMENTS_TXT}")
     if upgrade:
         compile_flags.append("--upgrade")
-    if dry_run:
-        compile_flags.append("--dry-run")
-    if verbose:
-        compile_flags.append("-v")
+    if not verbose:
+        compile_flags.append("--quiet")
 
-    pip_install = (
-        f"{python_bin} -m pip install pip-tools" if verbose else f"{python_bin} -m pip install --quiet pip-tools"
-    )
+    pip_install = f"{python_bin} -m pip install uv" if verbose else f"{python_bin} -m pip install --quiet uv"
     compile_command = " ".join([pip_install, "&&", " ".join(compile_flags)])
 
     command = [
@@ -220,7 +218,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Refresh Hermeto-compatible requirements.txt lockfiles for RHOAI pipelines "
-            "using pip-compile in Podman or Docker"
+            "using uv pip compile in Podman or Docker"
         ),
     )
     parser.add_argument(
@@ -231,7 +229,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--image",
         default=DEFAULT_CONTAINER_IMAGE,
-        help=f"Container image to run pip-compile in (default: {DEFAULT_CONTAINER_IMAGE})",
+        help=f"Container image to run uv pip compile in (default: {DEFAULT_CONTAINER_IMAGE})",
     )
     parser.add_argument(
         "--runtime",
@@ -246,12 +244,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what pip-compile would change without writing requirements.txt",
+        help="Show the resolved requirements on stdout without writing requirements.txt",
     )
     parser.add_argument(
         "--quiet",
         action="store_true",
-        help="Suppress live pip-compile progress output",
+        help="Suppress live uv pip compile progress output",
     )
     return parser.parse_args(argv)
 
