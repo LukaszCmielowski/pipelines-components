@@ -71,11 +71,10 @@ autogluon-features==1.5.0+rhaiv.5 \
     # via
     #   autogluon-tabular
     #   autogluon-timeseries
-autogluon-tabular[fastai,lightgbm,tabm,xgboost]==1.5.0+rhaiv.5 \
+autogluon-tabular==1.5.0+rhaiv.5 \
     --hash=sha256:dbfe5e5f0a59fe969f6da2d68958b0f748260dd2c23764428bf107e524292fe9
     # via
     #   -r requirements.in
-    #   autogluon-tabular
     #   autogluon-timeseries
 autogluon-timeseries==1.5.0+rhaiv.5 \
     --hash=sha256:fd454bde4ebe575481a814cb199e15df838821b4a0f3e9627f367b9dcedb525f
@@ -251,7 +250,7 @@ frozenlist==1.8.0 \
     # via
     #   aiohttp
     #   aiosignal
-fsspec[http]==2026.6.0 \
+fsspec==2026.6.0 \
     --hash=sha256:9a76dd86f01d5e2034c8192684e131d070de32d4d9d76843821351819e6ee2ef
     # via
     #   huggingface-hub
@@ -836,6 +835,13 @@ sentencepiece==0.2.2 \
     --hash=sha256:783e2c63cc9389a9049887908db0577997f19d887db6c4eb2cfc3c12f63a0078 \
     --hash=sha256:d9a0be1cca4d5885319a63c5f36f1d927d0c9e3e09e46508974b1bb450c620c1
     # via transformers
+setuptools==81.0.0 \
+    --hash=sha256:f6e4d2e589c5fa14b5bbda3d170eac0db8852c7fe7a357f708d172726353778e
+    # via
+    #   spacy
+    #   tensorboard
+    #   thinc
+    #   torch
 shellingham==1.5.4 \
     --hash=sha256:c62d421a942ec6b2400acb0091f31f7bd860d133dfcc8e7c5a252afedba20f8f
     # via typer
@@ -991,7 +997,7 @@ traitlets==5.15.1 \
     # via
     #   ipython
     #   matplotlib-inline
-transformers[sentencepiece]==5.14.1 \
+transformers==5.14.1 \
     --hash=sha256:3e917182ca1be0140cac8411afb52e0df0999e106c4eea2e81a052b6b5015a8d
     # via
     #   autogluon-timeseries
@@ -1002,7 +1008,7 @@ triad==1.0.2 \
     # via
     #   adagio
     #   fugue
-triton==3.6.0 ; platform_machine != "s390x" \
+triton==3.6.0 \
     --hash=sha256:1fd543ee4b888f749e186f87fb4c669894fd2f74849b820ffee3014a54e99d05 \
     --hash=sha256:669850f373cd9bd588b5a4d86c6849f16be98b3e8087130ad945082842ae631b \
     --hash=sha256:a64f6de7b2d45d0426474a980776161e626ccdcbb35e8b540686411fe204e0c9
@@ -1062,7 +1068,7 @@ utilsforecast==0.2.11 \
     #   autogluon-timeseries
     #   mlforecast
     #   statsforecast
-uvicorn[standard]==0.51.0 \
+uvicorn==0.51.0 \
     --hash=sha256:e510a18c6896c39d758bd41eeddb9f736034fe2fcb19c55d0b601762e34ac193
     # via python-fasthtml
 uvloop==0.22.1 \
@@ -1126,12 +1132,3 @@ yarl==1.24.2 \
     --hash=sha256:c72aabbf544bceb3fa895376a188a90b7152efd47045b589fd358505ad8a85d4 \
     --hash=sha256:fcf4442656e2947f3a7e7d3cc85c8030a92570c133df0c9a3ab576a8be8e55fd
     # via aiohttp
-
-# The following packages are considered to be unsafe in a requirements file:
-setuptools==81.0.0 \
-    --hash=sha256:f6e4d2e589c5fa14b5bbda3d170eac0db8852c7fe7a357f708d172726353778e
-    # via
-    #   spacy
-    #   tensorboard
-    #   thinc
-    #   torch
