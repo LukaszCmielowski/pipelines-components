@@ -9,33 +9,9 @@ from kfp_components.components.data_processing.autorag.text_extraction.component
 MAX_CPUS = "32"
 MAX_MEMORY = "64Gi"
 
-# Must match metadata.yaml ``name`` (and managed-pipelines catalog when registered).
-PIPELINE_NAME = "documents-indexing-pipeline"
-
-# Inference credentials exposed by the MaaS secret.
-MAAS_SECRET_KEYS = {
-    "MAAS_BASE_URL": "MAAS_BASE_URL",
-    "MAAS_API_KEY": "MAAS_API_KEY",
-}
-
-# Union of every vector-database env var across supported backends. The secret
-# supplies only the keys for the chosen backend; the component selects Milvus vs
-# PGVector from the key prefix that is actually present. Mapped with
-# ``optional=True`` so absent keys are silently skipped instead of failing the pod.
-VECTOR_DB_SECRET_KEYS = {
-    "MILVUS_URI": "MILVUS_URI",
-    "MILVUS_TOKEN": "MILVUS_TOKEN",
-    "MILVUS_SERVER_CERT": "MILVUS_SERVER_CERT",
-    "PGVECTOR_HOST": "PGVECTOR_HOST",
-    "PGVECTOR_PORT": "PGVECTOR_PORT",
-    "PGVECTOR_DB": "PGVECTOR_DB",
-    "PGVECTOR_USER": "PGVECTOR_USER",
-    "PGVECTOR_PASSWORD": "PGVECTOR_PASSWORD",
-}
-
 
 @dsl.pipeline(
-    name=PIPELINE_NAME,
+    name="documents-indexing-pipeline",
     description=(
         "AutoRAG pipeline for building a production vector index from your documents. Powered by ai4rag, "
         "it discovers documents, extracts text, and indexes chunks into a vector database using settings from "
@@ -50,7 +26,7 @@ def documents_indexing_pipeline(
     input_data_secret_name: str,
     input_data_bucket_name: str,
     input_data_key: Optional[str] = None,
-    collection_name: str = None,
+    collection_name: Optional[str] = None,
     embedding_params: Optional[dict] = None,
     chunking_method: str = "recursive",
     chunk_size: int = 1024,
@@ -135,13 +111,25 @@ def documents_indexing_pipeline(
     use_secret_as_env(
         documents_indexing_task,
         secret_name=maas_secret_name,
-        secret_key_to_env=MAAS_SECRET_KEYS,
+        secret_key_to_env={
+            "MAAS_BASE_URL": "MAAS_BASE_URL",
+            "MAAS_API_KEY": "MAAS_API_KEY",
+        },
     )
     # Vector database configuration: one secret, backend chosen from the key prefix.
     use_secret_as_env(
         documents_indexing_task,
         secret_name=vector_db_secret_name,
-        secret_key_to_env=VECTOR_DB_SECRET_KEYS,
+        secret_key_to_env={
+            "MILVUS_URI": "MILVUS_URI",
+            "MILVUS_TOKEN": "MILVUS_TOKEN",
+            "MILVUS_SERVER_CERT": "MILVUS_SERVER_CERT",
+            "PGVECTOR_HOST": "PGVECTOR_HOST",
+            "PGVECTOR_PORT": "PGVECTOR_PORT",
+            "PGVECTOR_DB": "PGVECTOR_DB",
+            "PGVECTOR_USER": "PGVECTOR_USER",
+            "PGVECTOR_PASSWORD": "PGVECTOR_PASSWORD",
+        },
         optional=True,
     )
 

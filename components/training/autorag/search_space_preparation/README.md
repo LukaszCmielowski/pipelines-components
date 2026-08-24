@@ -6,8 +6,7 @@
 
 Search space preparation and validation for AutoRAG experiments.
 
-Resolves and validates the requested MaaS models, builds the AutoRAG search space, and writes it as a JSON report. This step runs *before* text extraction so that unresponsive or misconfigured models fail the experiment fast, before any heavy document processing is performed. Model pre-selection is
-handled by the separate ``models_pre_selector`` component.
+Resolves and validates the requested MaaS models, builds the AutoRAG search space, and writes it as a JSON report. This step runs *before* text extraction so that unresponsive or misconfigured models fail the experiment fast, before any heavy document processing is performed.
 
 ## Inputs 📥
 
@@ -15,8 +14,8 @@ handled by the separate ``models_pre_selector`` component.
 | --------- | ---- | ------- | ----------- |
 | `test_data` | `dsl.Input[dsl.Artifact]` | `None` | Input artifact with benchmark questions and expected answers. Used for language detection during search-space preparation. |
 | `search_space_report` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact for the JSON search space report. |
-| `embedding_models` | `List[str]` | `None` | List of embedding model identifiers to try. Required: MaaS exposes no metadata distinguishing model types, so embedding models can no longer be inferred and must be declared explicitly. |
-| `generation_models` | `List[str]` | `None` | List of generation model identifiers to try. Required: MaaS exposes no metadata distinguishing model types, so generation models can no longer be inferred and must be declared explicitly. |
+| `embedding_models` | `List[str]` | `None` | List of embedding model identifiers to try. |
+| `generation_models` | `List[str]` | `None` | List of generation model identifiers to try. |
 | `embedded_artifact` | `dsl.EmbeddedInput[dsl.Dataset]` | `None` | Embedded ``autorag.shared`` helpers injected by KFP at runtime. |
 | `component_status` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing stage-level progress tracking. |
 | `preset` | `str` | `speed` | Pipeline quality tier. "speed" (default) uses recursive chunking without contextual enrichment. "balanced" uses hybrid chunking with LLM contextual enrichment in the search space. |

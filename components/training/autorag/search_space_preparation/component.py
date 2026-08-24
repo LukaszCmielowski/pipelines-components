@@ -27,19 +27,14 @@ def search_space_preparation(
     Resolves and validates the requested MaaS models, builds the AutoRAG search
     space, and writes it as a JSON report. This step runs *before* text
     extraction so that unresponsive or misconfigured models fail the experiment
-    fast, before any heavy document processing is performed. Model
-    pre-selection is handled by the separate ``models_pre_selector`` component.
+    fast, before any heavy document processing is performed.
 
     Args:
         test_data: Input artifact with benchmark questions and expected answers.
             Used for language detection during search-space preparation.
         search_space_report: Output artifact for the JSON search space report.
-        embedding_models: List of embedding model identifiers to try. Required: MaaS
-            exposes no metadata distinguishing model types, so embedding models can
-            no longer be inferred and must be declared explicitly.
-        generation_models: List of generation model identifiers to try. Required: MaaS
-            exposes no metadata distinguishing model types, so generation models can
-            no longer be inferred and must be declared explicitly.
+        embedding_models: List of embedding model identifiers to try.
+        generation_models: List of generation model identifiers to try.
         embedded_artifact: Embedded ``autorag.shared`` helpers injected by KFP at runtime.
         component_status: Output artifact containing stage-level progress tracking.
         preset: Pipeline quality tier. "speed" (default) uses recursive chunking
@@ -72,9 +67,9 @@ def search_space_preparation(
     if preset not in VALID_PRESETS:
         raise ValueError(f"preset must be one of {VALID_PRESETS}; got {preset!r}.")
 
-    for _name, _models in (("generation_models", generation_models), ("embedding_models", embedding_models)):
-        if not isinstance(_models, list) or not _models or any(not m for m in _models):
-            raise ValueError(f"{_name} must be a non-empty list of non-empty model identifiers.")
+    for name, models in (("generation_models", generation_models), ("embedding_models", embedding_models)):
+        if not isinstance(models, list) or not models or any(not m for m in models):
+            raise ValueError(f"{name} must be a non-empty list of non-empty model identifiers.")
 
     chunking_methods = PRESET_CHUNKING_METHODS[preset]
     chunk_sizes = PRESET_CHUNK_SIZES[preset]
@@ -115,8 +110,6 @@ def search_space_preparation(
                 api_key=os.environ["MAAS_API_KEY"],
             )
 
-            # MaaS exposes no metadata to distinguish model types, so both lists
-            # must be declared explicitly; chunking dimensions come from the preset.
             payload = {
                 "foundation_models": [{"model_id": gm} for gm in generation_models],
                 "embedding_models": [{"model_id": em} for em in embedding_models],
@@ -127,8 +120,6 @@ def search_space_preparation(
 
             benchmark_df = pd.read_json(test_data.path)
 
-            # Model discovery and responsiveness validation happen here (inside
-            # prepare_search_space_with_maas) — this is the fail-fast checkpoint.
             search_space = prepare_search_space_with_maas(
                 payload,
                 client=maas_client,

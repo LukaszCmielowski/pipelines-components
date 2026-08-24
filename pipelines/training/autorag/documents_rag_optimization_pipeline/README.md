@@ -9,8 +9,8 @@ Automated system for building and optimizing Retrieval-Augmented Generation (RAG
 The Documents RAG Optimization Pipeline is an automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications within Red Hat OpenShift AI. It leverages Kubeflow Pipelines to orchestrate the optimization workflow, using the ai4rag optimization engine to systematically
 explore RAG configurations and identify the best performing parameter settings based on an upfront-specified quality metric.
 
-The system integrates with MaaS (Models-as-a-Service) for inference and a vector database (Milvus or PGVector) for retrieval, producing optimized RAG patterns as artifacts that can be deployed and used for production RAG applications. Each optimized pattern contains a ``pattern.json`` with
-deployment settings, executable notebooks, and evaluation results.
+The system integrates with MaaS (Models-as-a-Service) for inference and a vector database (Milvus or PGVector) for retrieval, producing optimized RAG patterns as artifacts that can be deployed and used for production RAG applications. Each optimized pattern contains a ``pattern.json`` (with
+deployment settings), executable notebooks, and evaluation results.
 
 ## Inputs 📥
 
@@ -75,7 +75,7 @@ Besides RAG pattern and data artifacts below, each run publishes:
 | `text-extraction` | `component_status` | `component_status.json` | Stage progress for docling text extraction. |
 | `search-space-preparation` | `component_status` | `component_status.json` | Stage progress for search-space preparation and model pre-selection. |
 | `rag-templates-optimization` | `component_status` | `component_status.json` | Stage progress for RAG template optimization (including sub-steps). |
-| `rag-templates-optimization` | `leaderboard_html` | `*.html` | Leaderboard HTML comparing optimized RAG patterns. |
+| `rag-templates-optimization` | `leaderboard` | `*.html` | Leaderboard HTML comparing optimized RAG patterns. |
 
 Example artifact-store layout (task folder names are kebab-case):
 

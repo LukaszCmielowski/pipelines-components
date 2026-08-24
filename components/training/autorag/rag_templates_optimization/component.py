@@ -22,7 +22,7 @@ def rag_templates_optimization(
     vector_db_secret_name: str,
     input_data_secret_name: str,
     input_data_bucket_name: str,
-    leaderboard_html: dsl.Output[dsl.HTML],
+    leaderboard: dsl.Output[dsl.HTML],
     embedded_artifact: dsl.EmbeddedInput[dsl.Dataset] = None,
     optimization_settings: Optional[dict] = None,
     input_data_key: Optional[str] = "",
@@ -37,7 +37,7 @@ def rag_templates_optimization(
     Args:
         extracted_text: Path to extracted text documents.
         test_data: Path to benchmark test data JSON.
-        search_space_mps_report: Path to the YAML search space report.
+        search_space_mps_report: Path to the JSON search space report.
         rag_patterns: Output artifact for generated RAG patterns.
         test_data_key: Path to benchmark JSON in object storage.
         maas_secret_name: Name of the K8s secret with MaaS inference credentials
@@ -50,7 +50,7 @@ def rag_templates_optimization(
         input_data_secret_name: Name of the K8s secret with S3 credentials for
             input data.
         input_data_bucket_name: S3 bucket containing input documents.
-        leaderboard_html: Output HTML artifact; the leaderboard table is written to
+        leaderboard: Output HTML artifact; the leaderboard table is written to
             leaderboard_html.path (single file).
         component_status: Output artifact containing stage-level progress tracking.
         embedded_artifact: Embedded ``autorag.shared`` helpers injected by KFP at runtime.
@@ -79,22 +79,6 @@ def rag_templates_optimization(
     from ai4rag.components.optimization.rag_templates_optimization import DEFAULT_METRIC, run_rag_optimization
     from ai4rag.components.utils import create_maas_client
     from ai4rag.rag.vector_store import get_vector_store_config
-
-    def _detect_vector_db_provider() -> str:
-        """Select the vector DB backend from the injected secret's env-var prefix.
-
-        The ``vector_db_secret_name`` secret carries the full backend
-        configuration; the prefix of its keys is the single source of truth for
-        which store to use — ``MILVUS_*`` for Milvus, ``PGVECTOR_*`` for PGVector.
-        """
-        if any(k.startswith("MILVUS") for k in os.environ):
-            return "milvus"
-        if any(k.startswith("PGVECTOR") for k in os.environ):
-            return "pgvector"
-        raise ValueError(
-            "No vector database configuration found. Expected MILVUS_* or PGVECTOR_* "
-            "environment variables injected from vector_db_secret_name."
-        )
 
     logging.basicConfig(level=logging.INFO)
 
@@ -136,11 +120,17 @@ def rag_templates_optimization(
                 api_key=os.environ["MAAS_API_KEY"],
             )
 
-            # The vector store backend and its connection settings are resolved
-            # entirely from the vector_db_secret_name secret injected as env vars.
-            provider = _detect_vector_db_provider()
+            if any(k.startswith("MILVUS") for k in os.environ):
+                provider = "milvus"
+            elif any(k.startswith("PGVECTOR") for k in os.environ):
+                provider = "pgvector"
+            else:
+                raise ValueError(
+                    "No vector database configuration found. Expected MILVUS_* or PGVECTOR_* "
+                    "environment variables injected from vector_db_secret_name."
+                )
             vector_store_config = get_vector_store_config(provider)
-            logging.info("Vector database provider detected from secret: %s", provider)
+            logging.info("Detected %s database provider from secret.", provider)
 
             output_dir = Path(rag_patterns.path)
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -194,10 +184,10 @@ def rag_templates_optimization(
                 ),
             )
 
-            Path(leaderboard_html.path).parent.mkdir(parents=True, exist_ok=True)
-            with open(leaderboard_html.path, "w", encoding="utf-8") as f:
+            Path(leaderboard.path).parent.mkdir(parents=True, exist_ok=True)
+            with open(leaderboard.path, "w", encoding="utf-8") as f:
                 f.write(html_content)
-            leaderboard_html.metadata["display_name"] = "autorag_leaderboard"
+            leaderboard.metadata["display_name"] = "autorag_leaderboard"
 
 
 if __name__ == "__main__":

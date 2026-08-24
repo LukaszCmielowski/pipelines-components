@@ -18,11 +18,11 @@
     },
     {
       "id": "search_space_preparation",
-      "description": "Prepare and validate the AutoRAG search space (fails fast on unresponsive models).",
+      "description": "Prepare and validate the AutoRAG search space.",
       "stages": [
         {
           "id": "prepare_search_space",
-          "description": "Validate MaaS config, resolve and validate the requested models, build the search space, and write the report."
+          "description": "Resolve and validate the requested models, build the search space, and write the report."
         }
       ]
     },
@@ -38,7 +38,7 @@
     },
     {
       "id": "models_pre_selector",
-      "description": "Trim the model set via pre-selection when the search space exceeds the model caps.",
+      "description": "Trim the model set via pre-selection when the search space exceeds the model limits.",
       "stages": [
         {
           "id": "model_pre_selection",

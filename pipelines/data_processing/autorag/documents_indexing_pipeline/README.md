@@ -18,7 +18,7 @@ Discovers documents from object storage, extracts text, and indexes chunks into 
 | `input_data_secret_name` | `str` | `None` | Name of the secret with S3 credentials for input data ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_ENDPOINT", "AWS_DEFAULT_REGION"). |
 | `input_data_bucket_name` | `str` | `None` | Name of the S3 bucket containing input data. |
 | `input_data_key` | `Optional[str]` | `None` | Path to folder with input documents within bucket. |
-| `collection_name` | `str` | `None` | Vector store collection to reuse (aligned with ``pattern.json`` ``settings.vector_store_binding.collection_name``). Omit to create a new collection. |
+| `collection_name` | `Optional[str]` | `None` | Vector store collection to reuse (aligned with ``pattern.json`` ``settings.vector_store_binding.collection_name``). Omit to create a new collection. |
 | `embedding_params` | `Optional[dict]` | `None` | Dict passed to OpenAIEmbeddingParams (default: {}). |
 | `chunking_method` | `str` | `recursive` | Chunking method (e.g. "recursive"). |
 | `chunk_size` | `int` | `1024` | Maximum chunk size in tokens (128--2048). |

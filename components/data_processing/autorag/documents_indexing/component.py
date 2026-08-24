@@ -93,22 +93,6 @@ def documents_indexing(
     logging.basicConfig(level=logging.INFO)
     _logger = logging.getLogger(__name__)
 
-    def _detect_vector_db_provider() -> str:
-        """Select the vector DB backend from the injected secret's env-var prefix.
-
-        The vector-database secret carries the full backend configuration; the
-        prefix of its keys is the single source of truth for which store to use
-        — ``MILVUS_*`` for Milvus, ``PGVECTOR_*`` for PGVector.
-        """
-        if any(k.startswith("MILVUS") for k in os.environ):
-            return "milvus"
-        if any(k.startswith("PGVECTOR") for k in os.environ):
-            return "pgvector"
-        raise ValueError(
-            "No vector database configuration found. Expected MILVUS_* or PGVECTOR_* "
-            "environment variables injected from the vector-database secret."
-        )
-
     # --- Validate inputs before making any API calls ---
 
     if not embedding_model_id or not embedding_model_id.strip():
@@ -137,18 +121,23 @@ def documents_indexing(
     if batch_size < 0:
         raise ValueError("batch_size must be a non-negative integer.")
 
-    # --- Set up MaaS client and vector store configuration ---
-
     maas_client = create_maas_client(
         base_url=os.environ["MAAS_BASE_URL"],
         api_key=os.environ["MAAS_API_KEY"],
     )
 
-    # Backend and connection settings come entirely from the vector-database
-    # secret injected as env vars; the key prefix selects Milvus vs PGVector.
-    provider = _detect_vector_db_provider()
+    if any(k.startswith("MILVUS") for k in os.environ):
+        provider = "milvus"
+    elif any(k.startswith("PGVECTOR") for k in os.environ):
+        provider = "pgvector"
+    else:
+        raise ValueError(
+            "No vector database configuration found. Expected MILVUS_* or PGVECTOR_* "
+            "environment variables injected from the vector-database secret."
+        )
+
     vector_store_config = get_vector_store_config(provider)
-    _logger.info("Vector database provider detected from secret: %s", provider)
+    _logger.info("Detected %s database provider from secret.", provider)
 
     params = OpenAIEmbeddingParams(**(embedding_params or {}))
 
@@ -328,11 +317,6 @@ def documents_indexing(
         chunker = LangChainChunker(method=chunking_method, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
     embedding_model = OpenAIEmbeddingModel(client=maas_client, model_id=embedding_model_id, params=params)
-
-    # --- Process documents in batches ---
-    # The store is used as a context manager so backend resources (Milvus client,
-    # PGVector connection pool) are released once indexing completes, before the
-    # (connection-free) report and HTML artefacts are written.
 
     effective_batch_size = batch_size if batch_size > 0 else total_documents
     total_chunks = 0

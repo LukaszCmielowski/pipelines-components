@@ -125,7 +125,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-connection",
                 input_data_secret_name="s3-input-connection",
                 input_data_bucket_name="customer-docs",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
                 optimization_settings={"max_number_of_rag_patterns": 8},
                 input_data_key="data/docs/",
             )
@@ -193,7 +193,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
             )
 
         mock_get_config.assert_called_once_with("pgvector")
@@ -228,7 +228,7 @@ class TestRagTemplatesOptimizationUnitTests:
                         vector_db_secret_name="vector-db-secret",
                         input_data_secret_name="s3-secret",
                         input_data_bucket_name="bucket",
-                        leaderboard_html=leaderboard_html,
+                        leaderboard=leaderboard_html,
                     )
 
     @mock.patch.dict("os.environ", MOCKED_ENV_VARIABLES, clear=True)
@@ -263,7 +263,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
             )
 
         assert rag_patterns.metadata["name"] == "rag_patterns_artifact"
@@ -298,7 +298,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
             )
 
         assert output_dir.exists()
@@ -330,7 +330,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
                 input_data_key=None,
             )
 
@@ -364,7 +364,7 @@ class TestRagTemplatesOptimizationUnitTests:
                         vector_db_secret_name="vector-db-secret",
                         input_data_secret_name="s3-secret",
                         input_data_bucket_name="bucket",
-                        leaderboard_html=leaderboard_html,
+                        leaderboard=leaderboard_html,
                     )
 
     @mock.patch.dict("os.environ", MOCKED_ENV_VARIABLES, clear=True)
@@ -394,12 +394,12 @@ class TestRagTemplatesOptimizationUnitTests:
                     vector_db_secret_name="vector-db-secret",
                     input_data_secret_name="s3-secret",
                     input_data_bucket_name="bucket",
-                    leaderboard_html=leaderboard_html,
+                    leaderboard=leaderboard_html,
                 )
 
     @mock.patch.dict("os.environ", MOCKED_ENV_VARIABLES, clear=True)
     def test_leaderboard_html_written_with_correct_args(self, tmp_path):
-        """build_leaderboard_html receives output_dir (Path) and HTML is written to leaderboard_html."""
+        """build_leaderboard_html receives output_dir (Path) and HTML is written to leaderboard."""
         from pathlib import Path
 
         modules, mock_create_maas, mock_run_opt, _, _ = _make_ai4rag_mocks()
@@ -432,7 +432,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
             )
 
         mock_leaderboard.build_leaderboard_html.assert_called_once()
@@ -469,7 +469,7 @@ class TestRagTemplatesOptimizationUnitTests:
                     vector_db_secret_name="vector-db-secret",
                     input_data_secret_name="s3-secret",
                     input_data_bucket_name="bucket",
-                    leaderboard_html=leaderboard_html,
+                    leaderboard=leaderboard_html,
                     preset="invalid",
                 )
 
@@ -501,7 +501,7 @@ class TestRagTemplatesOptimizationUnitTests:
                 vector_db_secret_name="vector-db-secret",
                 input_data_secret_name="s3-secret",
                 input_data_bucket_name="bucket",
-                leaderboard_html=leaderboard_html,
+                leaderboard=leaderboard_html,
                 preset=preset_value,
             )
 

@@ -22,8 +22,6 @@ from kfp_components.components.training.autorag.search_space_preparation.compone
 MAX_CPUS = "32"
 MAX_MEMORY = "64Gi"
 
-SUPPORTED_OPTIMIZATION_METRICS = frozenset({"faithfulness", "answer_correctness", "context_correctness"})
-
 # Must match run_status_templates/pipelines/<name>.json
 PIPELINE_NAME = "documents-rag-optimization-pipeline"
 
@@ -31,22 +29,6 @@ PIPELINE_NAME = "documents-rag-optimization-pipeline"
 MAAS_SECRET_KEYS = {
     "MAAS_BASE_URL": "MAAS_BASE_URL",
     "MAAS_API_KEY": "MAAS_API_KEY",
-}
-
-# Union of every vector-database env var across supported backends. The secret
-# supplies only the keys for the chosen backend; the optimization component
-# selects Milvus vs PGVector from the key prefix that is actually present. Mapped
-# with ``optional=True`` so absent keys are silently skipped instead of failing
-# the pod.
-VECTOR_DB_SECRET_KEYS = {
-    "MILVUS_URI": "MILVUS_URI",
-    "MILVUS_TOKEN": "MILVUS_TOKEN",
-    "MILVUS_SERVER_CERT": "MILVUS_SERVER_CERT",
-    "PGVECTOR_HOST": "PGVECTOR_HOST",
-    "PGVECTOR_PORT": "PGVECTOR_PORT",
-    "PGVECTOR_DB": "PGVECTOR_DB",
-    "PGVECTOR_USER": "PGVECTOR_USER",
-    "PGVECTOR_PASSWORD": "PGVECTOR_PASSWORD",
 }
 
 
@@ -85,7 +67,7 @@ def documents_rag_optimization_pipeline(
     The system integrates with MaaS (Models-as-a-Service) for inference and a vector database
     (Milvus or PGVector) for retrieval, producing optimized RAG patterns as artifacts that can
     be deployed and used for production RAG applications. Each optimized pattern contains a
-    ``pattern.json`` with deployment settings, executable notebooks, and evaluation results.
+    ``pattern.json`` (with deployment settings), executable notebooks, and evaluation results.
 
     Args:
         test_data_secret_name: Name of the Kubernetes secret holding S3-compatible credentials for
@@ -239,19 +221,23 @@ def documents_rag_optimization_pipeline(
         optional=True,
     )
 
-    # MaaS inference credentials. Search-space preparation validates models,
-    # model pre-selection evaluates them (when it runs), and optimization serves
-    # them — all three need MaaS access.
     use_secret_as_env(search_space_preparation_task, maas_secret_name, MAAS_SECRET_KEYS)
     use_secret_as_env(models_pre_selector_task, maas_secret_name, MAAS_SECRET_KEYS)
     use_secret_as_env(rag_optimization_task, maas_secret_name, MAAS_SECRET_KEYS)
 
-    # Vector database configuration is needed only during optimization, where
-    # documents are embedded and indexed. The backend is chosen from the key prefix.
     use_secret_as_env(
         rag_optimization_task,
         vector_db_secret_name,
-        VECTOR_DB_SECRET_KEYS,
+        secret_key_to_env={
+            "MILVUS_URI": "MILVUS_URI",
+            "MILVUS_TOKEN": "MILVUS_TOKEN",
+            "MILVUS_SERVER_CERT": "MILVUS_SERVER_CERT",
+            "PGVECTOR_HOST": "PGVECTOR_HOST",
+            "PGVECTOR_PORT": "PGVECTOR_PORT",
+            "PGVECTOR_DB": "PGVECTOR_DB",
+            "PGVECTOR_USER": "PGVECTOR_USER",
+            "PGVECTOR_PASSWORD": "PGVECTOR_PASSWORD",
+        },
         optional=True,
     )
 

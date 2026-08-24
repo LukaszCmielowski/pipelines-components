@@ -70,8 +70,6 @@ def models_pre_selector(
 
     VALID_PRESETS = {"speed", "balanced"}
     PRESET_INFERENCE_MAX_THREADS = {"speed": 10, "balanced": 4}
-    # Number of benchmark records sampled for pre-selection, and the seed used to
-    # sample them (reproducibility). Mirror the historical search-space defaults.
     SAMPLE_SIZE = 5
     RANDOM_SEED = 17
 
@@ -106,7 +104,6 @@ def models_pre_selector(
             foundation_specs = report.get("foundation_model", [])
             embedding_specs = report.get("embedding_model", [])
 
-            # Caps are owned by ai4rag so preparation and optimization agree on them.
             n_foundation = ModelsPreSelector.DEFAULT_N_FOUNDATION_MODELS
             n_embedding = ModelsPreSelector.DEFAULT_N_EMBEDDING_MODELS
 
@@ -136,9 +133,6 @@ def models_pre_selector(
                     api_key=os.environ["MAAS_API_KEY"],
                 )
 
-                # Restore the serialized specs into live model instances bound to
-                # the shared client; the report was already validated upstream, so
-                # skip responsiveness re-checks (validate=False).
                 foundation_models = get_foundation_models(maas_client, foundation_specs, validate=False)
                 embedding_models = get_embedding_models(maas_client, embedding_specs, validate=False)
 
