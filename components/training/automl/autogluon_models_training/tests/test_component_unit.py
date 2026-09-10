@@ -380,7 +380,10 @@ class TestAutogluonModelsTrainingUnitTests:
         assert experiment_nb_path.exists()
         experiment_nb = json.loads(experiment_nb_path.read_text(encoding="utf-8"))
         experiment_nb_source = "".join(
-            line for cell in experiment_nb.get("cells", []) if cell.get("cell_type") == "code" for line in cell.get("source", [])
+            line
+            for cell in experiment_nb.get("cells", [])
+            if cell.get("cell_type") == "code"
+            for line in cell.get("source", [])
         )
         assert "<REPLACE_S3_SECRET>" not in experiment_nb_source
         assert 'train_data_secret_name = "my-s3-secret"' in experiment_nb_source
