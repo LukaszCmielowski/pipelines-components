@@ -228,6 +228,8 @@ class TestTimeseriesModelsTrainingUnitTests:
         )
         assert 'train_data_secret_name = "my-s3-secret"' in experiment_nb_source
         assert 'target = "sales"' in experiment_nb_source
+        assert "test_data_bucket_name" not in experiment_nb_source
+        assert "test_data_file_key" not in experiment_nb_source
         assert "kfp_components" not in experiment_nb_source
         assert models_artifact.metadata["context"]["experiment_notebook"] == (
             "notebooks/automl_experiment_notebook.ipynb"

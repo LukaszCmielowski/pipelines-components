@@ -620,6 +620,7 @@ def autogluon_timeseries_models_training(
 
         from kfp_components.components.training.automl.shared.experiment_notebook_utils import (
             EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
+            include_user_test_data_in_notebook,
             timeseries_experiment_notebook_replacements,
             write_experiment_notebook,
         )
@@ -629,6 +630,9 @@ def autogluon_timeseries_models_training(
             write_experiment_notebook(
                 output_dir=Path(models_artifact.path),
                 kind="timeseries",
+                include_user_test_data=include_user_test_data_in_notebook(
+                    test_data_bucket_name, test_data_file_key
+                ),
                 replacements=timeseries_experiment_notebook_replacements(
                     train_data_secret_name=train_data_secret_name,
                     train_data_bucket_name=train_data_bucket_name,

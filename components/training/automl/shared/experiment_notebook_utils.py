@@ -22,6 +22,48 @@ def _py_list(values: list[str] | None) -> str:
     return json.dumps(values or [])
 
 
+def include_user_test_data_in_notebook(test_data_bucket_name: str, test_data_file_key: str) -> bool:
+    """Return True when the run used a user-provided external test dataset."""
+    bucket = (test_data_bucket_name or "").strip()
+    key = (test_data_file_key or "").strip()
+    return bool(bucket and key)
+
+
+def _strip_user_test_data_from_source(source: list[str]) -> list[str]:
+    """Remove optional test-data config and pipeline-argument lines."""
+    result: list[str] = []
+    i = 0
+    while i < len(source):
+        line = source[i]
+        if line.lstrip().startswith("# Optional user-provided test dataset"):
+            i += 1
+            while i < len(source) and (
+                "test_data_bucket_name" in source[i] or "test_data_file_key" in source[i]
+            ):
+                i += 1
+            if i < len(source) and not source[i].strip():
+                i += 1
+            continue
+        if '"test_data_bucket_name"' in line and "test_data_bucket_name" in line:
+            i += 1
+            continue
+        if '"test_data_file_key"' in line and "test_data_file_key" in line:
+            i += 1
+            continue
+        result.append(line)
+        i += 1
+    return result
+
+
+def _strip_user_test_data_from_notebook(notebook: dict) -> dict:
+    """Remove user test-data sections from generated experiment notebooks."""
+    for cell in notebook.get("cells", []):
+        if cell.get("cell_type") != "code":
+            continue
+        cell["source"] = _strip_user_test_data_from_source(cell.get("source", []))
+    return notebook
+
+
 def replace_placeholder_in_notebook(notebook: dict, replacements: dict[str, str]) -> dict:
     """Replace placeholder tokens in code cell sources."""
     for cell in notebook.get("cells", []):
@@ -109,6 +151,7 @@ def write_experiment_notebook(
     output_dir: Path,
     kind: Literal["tabular", "timeseries"],
     replacements: dict[str, str],
+    include_user_test_data: bool = False,
 ) -> Path:
     """Write a run-level experiment launcher notebook under ``output_dir/notebooks/``."""
     template_path = shared_automl_dir() / "notebook_templates" / _template_name(kind)
@@ -116,6 +159,8 @@ def write_experiment_notebook(
         notebook = json.load(f)
 
     notebook = replace_placeholder_in_notebook(notebook, replacements)
+    if not include_user_test_data:
+        notebook = _strip_user_test_data_from_notebook(notebook)
     notebook_path = output_dir / "notebooks"
     notebook_path.mkdir(parents=True, exist_ok=True)
     destination = notebook_path / EXPERIMENT_NOTEBOOK_FILENAME

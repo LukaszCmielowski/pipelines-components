@@ -8,6 +8,7 @@ import json
 from ..experiment_notebook_utils import (
     EXPERIMENT_NOTEBOOK_FILENAME,
     EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
+    include_user_test_data_in_notebook,
     replace_placeholder_in_notebook,
     tabular_experiment_notebook_replacements,
     timeseries_experiment_notebook_replacements,
@@ -28,6 +29,12 @@ class TestExperimentNotebookUtils:
         updated = replace_placeholder_in_notebook(notebook, {"<REPLACE_TASK_TYPE>": '"regression"'})
         assert updated["cells"][0]["source"] == ["<REPLACE_TASK_TYPE>\n"]
         assert updated["cells"][1]["source"] == ['task_type = "regression"\n']
+
+    def test_include_user_test_data_in_notebook(self):
+        assert not include_user_test_data_in_notebook("", "")
+        assert not include_user_test_data_in_notebook("bucket", "")
+        assert not include_user_test_data_in_notebook("", "datasets/test.csv")
+        assert include_user_test_data_in_notebook("bucket", "datasets/test.csv")
 
     def test_tabular_experiment_notebook_replacements_maps_values(self):
         replacements = tabular_experiment_notebook_replacements(
@@ -118,11 +125,40 @@ class TestExperimentNotebookUtils:
         assert "<REPLACE_S3_SECRET>" not in source
         assert 'train_data_secret_name = "my-secret"' in source
         assert 'task_type = "binary"' in source
+        assert "test_data_bucket_name" not in source
+        assert "test_data_file_key" not in source
         assert "verify=False" not in source
         assert "KFP_TOKEN requires an HTTPS KFP host" in source
         assert "Unsafe artifact key" in source
         assert "kfp_components" not in source
         assert "client.run_pipeline" in source
+
+    def test_write_experiment_notebook_tabular_with_user_test_data(self, tmp_path):
+        destination = write_experiment_notebook(
+            output_dir=tmp_path,
+            kind="tabular",
+            include_user_test_data=True,
+            replacements=tabular_experiment_notebook_replacements(
+                train_data_secret_name="my-secret",
+                train_data_bucket_name="my-bucket",
+                train_data_file_key="datasets/train.csv",
+                test_data_bucket_name="test-bucket",
+                test_data_file_key="datasets/test.csv",
+                label_column="target",
+                task_type="binary",
+                top_n=3,
+                positive_class="yes",
+                eval_metric="accuracy",
+                preset="speed",
+            ),
+        )
+        notebook = json.loads(destination.read_text(encoding="utf-8"))
+        source = "".join(
+            line for cell in notebook["cells"] if cell.get("cell_type") == "code" for line in cell.get("source", [])
+        )
+        assert 'test_data_bucket_name = "test-bucket"' in source
+        assert 'test_data_file_key = "datasets/test.csv"' in source
+        assert '"test_data_bucket_name": test_data_bucket_name' in source
 
     def test_write_experiment_notebook_timeseries(self, tmp_path):
         destination = write_experiment_notebook(
@@ -151,4 +187,6 @@ class TestExperimentNotebookUtils:
         )
         assert 'pipeline_name = "autogluon-timeseries-training-pipeline"' in source
         assert 'target = "sales"' in source
+        assert "test_data_bucket_name" not in source
+        assert "test_data_file_key" not in source
         assert EXPERIMENT_NOTEBOOK_RELATIVE_PATH.endswith(EXPERIMENT_NOTEBOOK_FILENAME)
