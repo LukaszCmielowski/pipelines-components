@@ -228,6 +228,9 @@ def _base_call_kwargs(workspace_path, models_artifact, test_data, tmp_path=None)
         pipeline_name=PIPELINE_NAME,
         run_id=RUN_ID,
         sample_row=SAMPLE_ROW,
+        train_data_secret_name="my-s3-secret",
+        train_data_bucket_name="my-data-bucket",
+        train_data_file_key="datasets/train.csv",
         models_artifact=models_artifact,
         html_artifact=html,
         component_status=rs,
@@ -372,6 +375,21 @@ class TestAutogluonModelsTrainingUnitTests:
             "LightGBM_BAG_L1_FULL",
             "NeuralNetFastAI_BAG_L1_FULL",
         ]
+
+        experiment_nb_path = Path(models_output_dir) / "notebooks" / "automl_experiment_notebook.ipynb"
+        assert experiment_nb_path.exists()
+        experiment_nb = json.loads(experiment_nb_path.read_text(encoding="utf-8"))
+        experiment_nb_source = "".join(
+            line for cell in experiment_nb.get("cells", []) if cell.get("cell_type") == "code" for line in cell.get("source", [])
+        )
+        assert "<REPLACE_S3_SECRET>" not in experiment_nb_source
+        assert 'train_data_secret_name = "my-s3-secret"' in experiment_nb_source
+        assert 'task_type = "regression"' in experiment_nb_source
+        assert "kfp_components" not in experiment_nb_source
+        assert "client.run_pipeline" in experiment_nb_source
+        assert mock_models_artifact.metadata["context"]["experiment_notebook"] == (
+            "notebooks/automl_experiment_notebook.ipynb"
+        )
 
         # Artifacts written on disk for each model
         for model_name_full in ("LightGBM_BAG_L1_FULL", "NeuralNetFastAI_BAG_L1_FULL"):

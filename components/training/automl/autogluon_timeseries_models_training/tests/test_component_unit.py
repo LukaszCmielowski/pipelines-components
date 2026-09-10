@@ -182,6 +182,9 @@ class TestTimeseriesModelsTrainingUnitTests:
             workspace_path="/tmp/workspace",
             pipeline_name="ts-pipeline-123",
             run_id="run-123",
+            train_data_secret_name="my-s3-secret",
+            train_data_bucket_name="my-data-bucket",
+            train_data_file_key="datasets/ts.csv",
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
             prediction_length=24,
@@ -214,6 +217,21 @@ class TestTimeseriesModelsTrainingUnitTests:
         # Verify full refit happened
         assert "model_names" in models_artifact.metadata
         assert "context" in models_artifact.metadata
+        experiment_nb_path = Path(models_artifact.path) / "notebooks" / "automl_experiment_notebook.ipynb"
+        assert experiment_nb_path.exists()
+        experiment_nb = json.loads(experiment_nb_path.read_text(encoding="utf-8"))
+        experiment_nb_source = "".join(
+            line
+            for cell in experiment_nb.get("cells", [])
+            if cell.get("cell_type") == "code"
+            for line in cell.get("source", [])
+        )
+        assert 'train_data_secret_name = "my-s3-secret"' in experiment_nb_source
+        assert 'target = "sales"' in experiment_nb_source
+        assert "kfp_components" not in experiment_nb_source
+        assert models_artifact.metadata["context"]["experiment_notebook"] == (
+            "notebooks/automl_experiment_notebook.ipynb"
+        )
 
     @mock.patch("pandas.read_csv")
     @mock.patch("pandas.concat")
