@@ -38,9 +38,7 @@ def _strip_user_test_data_from_source(source: list[str]) -> list[str]:
         line = source[i]
         if line.lstrip().startswith("# Optional user-provided test dataset"):
             i += 1
-            while i < len(source) and (
-                "test_data_bucket_name" in source[i] or "test_data_file_key" in source[i]
-            ):
+            while i < len(source) and ("test_data_bucket_name" in source[i] or "test_data_file_key" in source[i]):
                 i += 1
             if i < len(source) and not source[i].strip():
                 i += 1

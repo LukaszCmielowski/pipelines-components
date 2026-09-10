@@ -21,10 +21,7 @@ from ..experiment_notebook_utils import (
 
 def _code_source(notebook: dict) -> str:
     return "".join(
-        line
-        for cell in notebook["cells"]
-        if cell.get("cell_type") == "code"
-        for line in cell.get("source", [])
+        line for cell in notebook["cells"] if cell.get("cell_type") == "code" for line in cell.get("source", [])
     )
 
 
