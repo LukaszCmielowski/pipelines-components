@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -82,67 +83,95 @@ def _template_name(kind: Literal["tabular", "timeseries"]) -> str:
     return f"{kind}_experiment_notebook.ipynb"
 
 
+@dataclass(frozen=True)
+class TabularExperimentNotebookConfig:  # pylint: disable=too-many-instance-attributes
+    """Pipeline parameters to pre-fill the tabular experiment notebook template."""
+
+    train_data_secret_name: str
+    train_data_bucket_name: str
+    train_data_file_key: str
+    test_data_bucket_name: str
+    test_data_file_key: str
+    label_column: str
+    task_type: str
+    top_n: int
+    positive_class: str
+    eval_metric: str
+    preset: str
+
+    @property
+    def include_user_test_data(self) -> bool:
+        """Return True when user-provided external test data was configured."""
+        return include_user_test_data_in_notebook(
+            self.test_data_bucket_name,
+            self.test_data_file_key,
+        )
+
+
+@dataclass(frozen=True)
+class TimeseriesExperimentNotebookConfig:  # pylint: disable=too-many-instance-attributes
+    """Pipeline parameters to pre-fill the time series experiment notebook template."""
+
+    train_data_secret_name: str
+    train_data_bucket_name: str
+    train_data_file_key: str
+    test_data_bucket_name: str
+    test_data_file_key: str
+    target: str
+    id_column: str
+    timestamp_column: str
+    known_covariates_names: list[str] | None
+    prediction_length: int
+    top_n: int
+    eval_metric: str
+    preset: str
+
+    @property
+    def include_user_test_data(self) -> bool:
+        """Return True when user-provided external test data was configured."""
+        return include_user_test_data_in_notebook(
+            self.test_data_bucket_name,
+            self.test_data_file_key,
+        )
+
+
 def tabular_experiment_notebook_replacements(
-    *,
-    train_data_secret_name: str,
-    train_data_bucket_name: str,
-    train_data_file_key: str,
-    test_data_bucket_name: str,
-    test_data_file_key: str,
-    label_column: str,
-    task_type: str,
-    top_n: int,
-    positive_class: str,
-    eval_metric: str,
-    preset: str,
+    config: TabularExperimentNotebookConfig,
 ) -> dict[str, str]:
     """Build placeholder replacements for the tabular experiment notebook template."""
     return {
-        "<REPLACE_S3_SECRET>": _py_str(train_data_secret_name),
-        "<REPLACE_DATA_BUCKET>": _py_str(train_data_bucket_name),
-        "<REPLACE_DATA_FILE_KEY>": _py_str(train_data_file_key),
-        "<REPLACE_TEST_DATA_BUCKET>": _py_str(test_data_bucket_name),
-        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(test_data_file_key),
-        "<REPLACE_LABEL_COLUMN>": _py_str(label_column),
-        "<REPLACE_TASK_TYPE>": _py_str(task_type),
-        "<REPLACE_TOP_N>": str(top_n),
-        "<REPLACE_POSITIVE_CLASS>": _py_str(positive_class),
-        "<REPLACE_EVAL_METRIC>": _py_str(eval_metric),
-        "<REPLACE_PRESET>": _py_str(preset),
+        "<REPLACE_S3_SECRET>": _py_str(config.train_data_secret_name),
+        "<REPLACE_DATA_BUCKET>": _py_str(config.train_data_bucket_name),
+        "<REPLACE_DATA_FILE_KEY>": _py_str(config.train_data_file_key),
+        "<REPLACE_TEST_DATA_BUCKET>": _py_str(config.test_data_bucket_name),
+        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(config.test_data_file_key),
+        "<REPLACE_LABEL_COLUMN>": _py_str(config.label_column),
+        "<REPLACE_TASK_TYPE>": _py_str(config.task_type),
+        "<REPLACE_TOP_N>": str(config.top_n),
+        "<REPLACE_POSITIVE_CLASS>": _py_str(config.positive_class),
+        "<REPLACE_EVAL_METRIC>": _py_str(config.eval_metric),
+        "<REPLACE_PRESET>": _py_str(config.preset),
     }
 
 
 def timeseries_experiment_notebook_replacements(
-    *,
-    train_data_secret_name: str,
-    train_data_bucket_name: str,
-    train_data_file_key: str,
-    test_data_bucket_name: str,
-    test_data_file_key: str,
-    target: str,
-    id_column: str,
-    timestamp_column: str,
-    known_covariates_names: list[str] | None,
-    prediction_length: int,
-    top_n: int,
-    eval_metric: str,
-    preset: str,
+    config: TimeseriesExperimentNotebookConfig,
 ) -> dict[str, str]:
     """Build placeholder replacements for the timeseries experiment notebook template."""
     return {
-        "<REPLACE_S3_SECRET>": _py_str(train_data_secret_name),
-        "<REPLACE_DATA_BUCKET>": _py_str(train_data_bucket_name),
-        "<REPLACE_DATA_FILE_KEY>": _py_str(train_data_file_key),
-        "<REPLACE_TEST_DATA_BUCKET>": _py_str(test_data_bucket_name),
-        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(test_data_file_key),
-        "<REPLACE_TARGET>": _py_str(target),
-        "<REPLACE_ID_COLUMN>": _py_str(id_column),
-        "<REPLACE_TIMESTAMP_COLUMN>": _py_str(timestamp_column),
-        "<REPLACE_KNOWN_COVARIATES_NAMES>": _py_list(known_covariates_names),
-        "<REPLACE_PREDICTION_LENGTH>": str(prediction_length),
-        "<REPLACE_TOP_N>": str(top_n),
-        "<REPLACE_EVAL_METRIC>": _py_str(eval_metric),
-        "<REPLACE_PRESET>": _py_str(preset),
+        "<REPLACE_S3_SECRET>": _py_str(config.train_data_secret_name),
+        "<REPLACE_DATA_BUCKET>": _py_str(config.train_data_bucket_name),
+        "<REPLACE_DATA_FILE_KEY>": _py_str(config.train_data_file_key),
+        "<REPLACE_TEST_DATA_BUCKET>": _py_str(config.test_data_bucket_name),
+        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(config.test_data_file_key),
+        "<REPLACE_TARGET>": _py_str(config.target),
+        "<REPLACE_ID_COLUMN>": _py_str(config.id_column),
+        "<REPLACE_TIMESTAMP_COLUMN>": _py_str(config.timestamp_column),
+        "<REPLACE_KNOWN_COVARIATES_NAMES>": _py_list(config.known_covariates_names),
+        "<REPLACE_PREDICTION_LENGTH>": str(config.prediction_length),
+        "<REPLACE_TOP_N>": str(config.top_n),
+        "<REPLACE_EVAL_METRIC>": _py_str(config.eval_metric),
+        "<REPLACE_PRESET>": _py_str(config.preset),
     }
 
 

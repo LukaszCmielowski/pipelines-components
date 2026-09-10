@@ -774,32 +774,31 @@ def autogluon_models_training(
 
         from kfp_components.components.training.automl.shared.experiment_notebook_utils import (
             EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
-            include_user_test_data_in_notebook,
+            TabularExperimentNotebookConfig,
             tabular_experiment_notebook_replacements,
             write_experiment_notebook,
         )
 
         experiment_notebook_written = False
         try:
+            experiment_notebook_config = TabularExperimentNotebookConfig(
+                train_data_secret_name=train_data_secret_name,
+                train_data_bucket_name=train_data_bucket_name,
+                train_data_file_key=train_data_file_key,
+                test_data_bucket_name=test_data_bucket_name,
+                test_data_file_key=test_data_file_key,
+                label_column=label_column,
+                task_type=task_type,
+                top_n=top_n,
+                positive_class=positive_class,
+                eval_metric=eval_metric,
+                preset=preset,
+            )
             write_experiment_notebook(
                 output_dir=Path(models_artifact.path),
                 kind="tabular",
-                include_user_test_data=include_user_test_data_in_notebook(
-                    test_data_bucket_name, test_data_file_key
-                ),
-                replacements=tabular_experiment_notebook_replacements(
-                    train_data_secret_name=train_data_secret_name,
-                    train_data_bucket_name=train_data_bucket_name,
-                    train_data_file_key=train_data_file_key,
-                    test_data_bucket_name=test_data_bucket_name,
-                    test_data_file_key=test_data_file_key,
-                    label_column=label_column,
-                    task_type=task_type,
-                    top_n=top_n,
-                    positive_class=positive_class,
-                    eval_metric=eval_metric,
-                    preset=preset,
-                ),
+                include_user_test_data=experiment_notebook_config.include_user_test_data,
+                replacements=tabular_experiment_notebook_replacements(experiment_notebook_config),
             )
             experiment_notebook_written = True
         except Exception as notebook_exc:
