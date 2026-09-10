@@ -624,28 +624,33 @@ def autogluon_timeseries_models_training(
             write_experiment_notebook,
         )
 
-        write_experiment_notebook(
-            output_dir=Path(models_artifact.path),
-            kind="timeseries",
-            replacements=timeseries_experiment_notebook_replacements(
-                train_data_secret_name=train_data_secret_name,
-                train_data_bucket_name=train_data_bucket_name,
-                train_data_file_key=train_data_file_key,
-                test_data_bucket_name=test_data_bucket_name,
-                test_data_file_key=test_data_file_key,
-                target=target,
-                id_column=id_column,
-                timestamp_column=timestamp_column,
-                known_covariates_names=known_covariates_names,
-                prediction_length=prediction_length,
-                top_n=top_n,
-                eval_metric=eval_metric,
-                preset=preset,
-            ),
-        )
+        experiment_notebook_written = False
+        try:
+            write_experiment_notebook(
+                output_dir=Path(models_artifact.path),
+                kind="timeseries",
+                replacements=timeseries_experiment_notebook_replacements(
+                    train_data_secret_name=train_data_secret_name,
+                    train_data_bucket_name=train_data_bucket_name,
+                    train_data_file_key=train_data_file_key,
+                    test_data_bucket_name=test_data_bucket_name,
+                    test_data_file_key=test_data_file_key,
+                    target=target,
+                    id_column=id_column,
+                    timestamp_column=timestamp_column,
+                    known_covariates_names=known_covariates_names,
+                    prediction_length=prediction_length,
+                    top_n=top_n,
+                    eval_metric=eval_metric,
+                    preset=preset,
+                ),
+            )
+            experiment_notebook_written = True
+        except Exception as notebook_exc:
+            logger.warning("Could not generate experiment notebook: %s", notebook_exc)
 
         models_artifact.metadata["model_names"] = json.dumps(model_names_full)
-        models_artifact.metadata["context"] = {
+        context = {
             "data_config": {
                 "sampling_config": sampling_config,
                 "split_config": split_config,
@@ -653,8 +658,10 @@ def autogluon_timeseries_models_training(
             "model_config": model_config,
             "best_model_name": best_model_name,
             "models": models_metadata,
-            "experiment_notebook": EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
         }
+        if experiment_notebook_written:
+            context["experiment_notebook"] = EXPERIMENT_NOTEBOOK_RELATIVE_PATH
+        models_artifact.metadata["context"] = context
 
         outputs = NamedTuple(
             "outputs",

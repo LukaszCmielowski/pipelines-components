@@ -778,27 +778,32 @@ def autogluon_models_training(
             write_experiment_notebook,
         )
 
-        write_experiment_notebook(
-            output_dir=Path(models_artifact.path),
-            kind="tabular",
-            replacements=tabular_experiment_notebook_replacements(
-                train_data_secret_name=train_data_secret_name,
-                train_data_bucket_name=train_data_bucket_name,
-                train_data_file_key=train_data_file_key,
-                test_data_bucket_name=test_data_bucket_name,
-                test_data_file_key=test_data_file_key,
-                label_column=label_column,
-                task_type=task_type,
-                top_n=top_n,
-                positive_class=positive_class,
-                eval_metric=eval_metric,
-                preset=preset,
-            ),
-        )
+        experiment_notebook_written = False
+        try:
+            write_experiment_notebook(
+                output_dir=Path(models_artifact.path),
+                kind="tabular",
+                replacements=tabular_experiment_notebook_replacements(
+                    train_data_secret_name=train_data_secret_name,
+                    train_data_bucket_name=train_data_bucket_name,
+                    train_data_file_key=train_data_file_key,
+                    test_data_bucket_name=test_data_bucket_name,
+                    test_data_file_key=test_data_file_key,
+                    label_column=label_column,
+                    task_type=task_type,
+                    top_n=top_n,
+                    positive_class=positive_class,
+                    eval_metric=eval_metric,
+                    preset=preset,
+                ),
+            )
+            experiment_notebook_written = True
+        except Exception as notebook_exc:
+            logger.warning("Could not generate experiment notebook: %s", notebook_exc)
 
         # Serialize as a JSON string and parse back in downstream components.
         models_artifact.metadata["model_names"] = json.dumps(model_names_full)
-        models_artifact.metadata["context"] = {
+        context = {
             "data_config": {
                 "sampling_config": sampling_config,
                 "split_config": split_config,
@@ -808,8 +813,10 @@ def autogluon_models_training(
             "model_config": model_config,
             "best_model_name": best_model_name,
             "models": models_metadata,
-            "experiment_notebook": EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
         }
+        if experiment_notebook_written:
+            context["experiment_notebook"] = EXPERIMENT_NOTEBOOK_RELATIVE_PATH
+        models_artifact.metadata["context"] = context
 
     return NamedTuple("outputs", eval_metric=str, best_model_name=str)(
         eval_metric=eval_metric,

@@ -2,8 +2,8 @@
 
 # ruff: noqa: D102
 
+import ast
 import json
-from pathlib import Path
 
 from ..experiment_notebook_utils import (
     EXPERIMENT_NOTEBOOK_FILENAME,
@@ -14,8 +14,6 @@ from ..experiment_notebook_utils import (
     write_experiment_notebook,
 )
 
-_TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "notebook_templates"
-
 
 class TestExperimentNotebookUtils:
     """Unit tests for experiment notebook helper functions."""
@@ -24,10 +22,10 @@ class TestExperimentNotebookUtils:
         notebook = {
             "cells": [
                 {"cell_type": "markdown", "source": ["<REPLACE_TASK_TYPE>\n"]},
-                {"cell_type": "code", "source": ['task_type = "<REPLACE_TASK_TYPE>"\n']},
+                {"cell_type": "code", "source": ["task_type = <REPLACE_TASK_TYPE>\n"]},
             ]
         }
-        updated = replace_placeholder_in_notebook(notebook, {"<REPLACE_TASK_TYPE>": "regression"})
+        updated = replace_placeholder_in_notebook(notebook, {"<REPLACE_TASK_TYPE>": '"regression"'})
         assert updated["cells"][0]["source"] == ["<REPLACE_TASK_TYPE>\n"]
         assert updated["cells"][1]["source"] == ['task_type = "regression"\n']
 
@@ -45,9 +43,34 @@ class TestExperimentNotebookUtils:
             eval_metric="r2",
             preset="speed",
         )
-        assert replacements["<REPLACE_S3_SECRET>"] == "secret"
-        assert replacements["<REPLACE_TASK_TYPE>"] == "regression"
+        assert replacements["<REPLACE_S3_SECRET>"] == '"secret"'
+        assert replacements["<REPLACE_TASK_TYPE>"] == '"regression"'
         assert replacements["<REPLACE_TOP_N>"] == "3"
+
+    def test_tabular_replacements_escape_injection_payload(self, tmp_path):
+        payload = '"; __import__("os").system("id"); #'
+        replacements = tabular_experiment_notebook_replacements(
+            train_data_secret_name="secret",
+            train_data_bucket_name="bucket",
+            train_data_file_key=payload,
+            test_data_bucket_name="",
+            test_data_file_key="",
+            label_column="target",
+            task_type="binary",
+            top_n=3,
+            positive_class="",
+            eval_metric="",
+            preset="speed",
+        )
+        destination = write_experiment_notebook(output_dir=tmp_path, kind="tabular", replacements=replacements)
+        notebook = json.loads(destination.read_text(encoding="utf-8"))
+        config_source = ""
+        for cell in notebook["cells"]:
+            if cell.get("cell_type") == "code" and "train_data_file_key" in "".join(cell.get("source", [])):
+                config_source = "".join(cell.get("source", []))
+                break
+        ast.parse(config_source)
+        assert f"train_data_file_key = {json.dumps(payload)}" in config_source
 
     def test_timeseries_experiment_notebook_replacements_serializes_covariates(self):
         replacements = timeseries_experiment_notebook_replacements(
@@ -65,7 +88,7 @@ class TestExperimentNotebookUtils:
             eval_metric="mean_absolute_scaled_error",
             preset="balanced",
         )
-        assert replacements["<REPLACE_KNOWN_COVARIATES_NAMES>"] == "['promo']"
+        assert replacements["<REPLACE_KNOWN_COVARIATES_NAMES>"] == '["promo"]'
         assert replacements["<REPLACE_PREDICTION_LENGTH>"] == "24"
 
     def test_write_experiment_notebook_tabular(self, tmp_path):
@@ -95,6 +118,9 @@ class TestExperimentNotebookUtils:
         assert "<REPLACE_S3_SECRET>" not in source
         assert 'train_data_secret_name = "my-secret"' in source
         assert 'task_type = "binary"' in source
+        assert "verify=False" not in source
+        assert "KFP_TOKEN requires an HTTPS KFP host" in source
+        assert "Unsafe artifact key" in source
         assert "kfp_components" not in source
         assert "client.run_pipeline" in source
 

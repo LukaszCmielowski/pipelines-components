@@ -12,6 +12,16 @@ EXPERIMENT_NOTEBOOK_FILENAME = "automl_experiment_notebook.ipynb"
 EXPERIMENT_NOTEBOOK_RELATIVE_PATH = f"notebooks/{EXPERIMENT_NOTEBOOK_FILENAME}"
 
 
+def _py_str(value: str) -> str:
+    """Return a safe Python string literal for notebook code cells."""
+    return json.dumps(value)
+
+
+def _py_list(values: list[str] | None) -> str:
+    """Return a safe Python list literal for notebook code cells."""
+    return json.dumps(values or [])
+
+
 def replace_placeholder_in_notebook(notebook: dict, replacements: dict[str, str]) -> dict:
     """Replace placeholder tokens in code cell sources."""
     for cell in notebook.get("cells", []):
@@ -46,17 +56,17 @@ def tabular_experiment_notebook_replacements(
 ) -> dict[str, str]:
     """Build placeholder replacements for the tabular experiment notebook template."""
     return {
-        "<REPLACE_S3_SECRET>": train_data_secret_name,
-        "<REPLACE_DATA_BUCKET>": train_data_bucket_name,
-        "<REPLACE_DATA_FILE_KEY>": train_data_file_key,
-        "<REPLACE_TEST_DATA_BUCKET>": test_data_bucket_name,
-        "<REPLACE_TEST_DATA_FILE_KEY>": test_data_file_key,
-        "<REPLACE_LABEL_COLUMN>": label_column,
-        "<REPLACE_TASK_TYPE>": task_type,
+        "<REPLACE_S3_SECRET>": _py_str(train_data_secret_name),
+        "<REPLACE_DATA_BUCKET>": _py_str(train_data_bucket_name),
+        "<REPLACE_DATA_FILE_KEY>": _py_str(train_data_file_key),
+        "<REPLACE_TEST_DATA_BUCKET>": _py_str(test_data_bucket_name),
+        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(test_data_file_key),
+        "<REPLACE_LABEL_COLUMN>": _py_str(label_column),
+        "<REPLACE_TASK_TYPE>": _py_str(task_type),
         "<REPLACE_TOP_N>": str(top_n),
-        "<REPLACE_POSITIVE_CLASS>": positive_class,
-        "<REPLACE_EVAL_METRIC>": eval_metric,
-        "<REPLACE_PRESET>": preset,
+        "<REPLACE_POSITIVE_CLASS>": _py_str(positive_class),
+        "<REPLACE_EVAL_METRIC>": _py_str(eval_metric),
+        "<REPLACE_PRESET>": _py_str(preset),
     }
 
 
@@ -78,19 +88,19 @@ def timeseries_experiment_notebook_replacements(
 ) -> dict[str, str]:
     """Build placeholder replacements for the timeseries experiment notebook template."""
     return {
-        "<REPLACE_S3_SECRET>": train_data_secret_name,
-        "<REPLACE_DATA_BUCKET>": train_data_bucket_name,
-        "<REPLACE_DATA_FILE_KEY>": train_data_file_key,
-        "<REPLACE_TEST_DATA_BUCKET>": test_data_bucket_name,
-        "<REPLACE_TEST_DATA_FILE_KEY>": test_data_file_key,
-        "<REPLACE_TARGET>": target,
-        "<REPLACE_ID_COLUMN>": id_column,
-        "<REPLACE_TIMESTAMP_COLUMN>": timestamp_column,
-        "<REPLACE_KNOWN_COVARIATES_NAMES>": repr(known_covariates_names or []),
+        "<REPLACE_S3_SECRET>": _py_str(train_data_secret_name),
+        "<REPLACE_DATA_BUCKET>": _py_str(train_data_bucket_name),
+        "<REPLACE_DATA_FILE_KEY>": _py_str(train_data_file_key),
+        "<REPLACE_TEST_DATA_BUCKET>": _py_str(test_data_bucket_name),
+        "<REPLACE_TEST_DATA_FILE_KEY>": _py_str(test_data_file_key),
+        "<REPLACE_TARGET>": _py_str(target),
+        "<REPLACE_ID_COLUMN>": _py_str(id_column),
+        "<REPLACE_TIMESTAMP_COLUMN>": _py_str(timestamp_column),
+        "<REPLACE_KNOWN_COVARIATES_NAMES>": _py_list(known_covariates_names),
         "<REPLACE_PREDICTION_LENGTH>": str(prediction_length),
         "<REPLACE_TOP_N>": str(top_n),
-        "<REPLACE_EVAL_METRIC>": eval_metric,
-        "<REPLACE_PRESET>": preset,
+        "<REPLACE_EVAL_METRIC>": _py_str(eval_metric),
+        "<REPLACE_PRESET>": _py_str(preset),
     }
 
 
