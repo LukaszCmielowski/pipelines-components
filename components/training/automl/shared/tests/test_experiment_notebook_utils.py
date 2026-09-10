@@ -144,16 +144,31 @@ class TestExperimentNotebookUtils:
         )
         assert destination == tmp_path / "notebooks" / EXPERIMENT_NOTEBOOK_FILENAME
         assert destination.exists()
-        source = _code_source(json.loads(destination.read_text(encoding="utf-8")))
+        notebook = json.loads(destination.read_text(encoding="utf-8"))
+        full_source = "".join("".join(cell.get("source", [])) for cell in notebook["cells"])
+        source = _code_source(notebook)
+        assert "kfp-connection" in full_source
+        assert "run-defaults" in full_source
+        assert "training-data" in full_source
+        assert "pipeline-parameters" in full_source
         assert "<REPLACE_S3_SECRET>" not in source
         assert 'train_data_secret_name = "my-secret"' in source
         assert 'task_type = "binary"' in source
         assert "test_data_bucket_name" not in source
         assert "test_data_file_key" not in source
         assert "verify=False" not in source
+        assert "KF_PIPELINES_ENDPOINT" in source
+        assert "ELYRA_RUNTIME_CONFIG" in source
+        assert "_resolve_kfp_ssl_ca_cert" in source
+        assert "ssl_ca_cert" in source
         assert "KFP_TOKEN requires an HTTPS KFP host" in source
+        assert "s3_verify" in source
         assert "Unsafe artifact key" in source
         assert "kfp_components" not in source
+        assert "resolve_pipeline_template" in source
+        assert "list_pipeline_version_rows" in source
+        assert '"version_id": resolved_version_id' in source
+        assert "get_pipeline_id" not in source
         assert "client.run_pipeline" in source
 
     def test_write_experiment_notebook_tabular_with_user_test_data(self, tmp_path):
