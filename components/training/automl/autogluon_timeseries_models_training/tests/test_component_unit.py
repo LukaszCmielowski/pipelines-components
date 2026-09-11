@@ -75,8 +75,9 @@ def mock_artifacts():
         Path(extra_train_path).touch()
 
         html_artifact = _make_html_artifact(Path(tmpdir))
+        experiment_notebook = _make_experiment_notebook_artifact(Path(tmpdir))
 
-        yield models_artifact, extra_train_path, html_artifact
+        yield models_artifact, extra_train_path, html_artifact, experiment_notebook
 
 
 def _mock_leaderboard(model_names):
@@ -110,8 +111,16 @@ def _make_html_artifact(tmp_path):
     return art
 
 
+def _make_experiment_notebook_artifact(tmp_path):
+    art = mock.MagicMock()
+    art.path = str(tmp_path / "experiment_notebook")
+    art.metadata = {}
+    return art
+
+
 _DEFAULT_COMPONENT_STATUS = _make_component_status_artifact(Path("/tmp"))
 _DEFAULT_HTML_ARTIFACT = _make_html_artifact(Path("/tmp"))
+_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT = _make_experiment_notebook_artifact(Path("/tmp"))
 
 
 def _mock_ts_df():
@@ -142,7 +151,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Happy path returns top models, config, and predictor path with full refit."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         # Mock selection predictor
         mock_predictor = mock.MagicMock()
@@ -189,6 +198,7 @@ class TestTimeseriesModelsTrainingUnitTests:
             extra_train_data_path=extra_train_path,
             prediction_length=24,
             html_artifact=html_artifact,
+            experiment_notebook=experiment_notebook,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -217,7 +227,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         # Verify full refit happened
         assert "model_names" in models_artifact.metadata
         assert "context" in models_artifact.metadata
-        experiment_nb_path = Path(models_artifact.path) / "notebooks" / "automl_experiment_notebook.ipynb"
+        experiment_nb_path = Path(experiment_notebook.path) / "automl_experiment_notebook.ipynb"
         assert experiment_nb_path.exists()
         experiment_nb = json.loads(experiment_nb_path.read_text(encoding="utf-8"))
         experiment_nb_source = "".join(
@@ -231,9 +241,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         assert "test_data_bucket_name" not in experiment_nb_source
         assert "test_data_file_key" not in experiment_nb_source
         assert "kfp_components" not in experiment_nb_source
-        assert models_artifact.metadata["context"]["experiment_notebook"] == (
-            "notebooks/automl_experiment_notebook.ipynb"
-        )
+        assert "experiment_notebook" not in models_artifact.metadata["context"]
 
     @mock.patch("pandas.read_csv")
     @mock.patch("pandas.concat")
@@ -248,7 +256,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Balanced preset uses medium_quality and 60-minute time limit."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -282,6 +290,7 @@ class TestTimeseriesModelsTrainingUnitTests:
             extra_train_data_path=extra_train_path,
             preset="balanced",
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -304,7 +313,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Known covariates are passed to predictor ctor and returned in model_config."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -339,6 +348,7 @@ class TestTimeseriesModelsTrainingUnitTests:
             extra_train_data_path=extra_train_path,
             known_covariates_names=covariates,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -363,7 +373,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """top_n exceeding trained model count raises ValueError."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR", "AutoARIMA"])
@@ -390,12 +400,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_top_n_zero_raises(self, mock_artifacts):  # noqa: F811
         """top_n must be in range (0, TOP_N_MAX] (see component TOP_N_MAX)."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match=r"top_n must be an integer in the range \(0, 7\]; got 0\."):
@@ -412,12 +423,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_top_n_above_max_raises(self, mock_artifacts):  # noqa: F811
         """top_n above TOP_N_MAX is rejected before training."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match=r"top_n must be an integer in the range \(0, 7\]; got 8\."):
@@ -434,12 +446,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_prediction_length_raises(self, mock_artifacts):  # noqa: F811
         """prediction_length must be a positive integer."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match="prediction_length must be greater than 0"):
@@ -457,12 +470,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 prediction_length=0,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_preset(self, mock_artifacts):
         """Preset must be one of the valid AutoGluon quality tiers."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match="preset must be one of"):
@@ -480,7 +494,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 preset="best_quality",
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -494,7 +509,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Training errors are wrapped in ValueError with component-specific message."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.fit.side_effect = RuntimeError("boom")
@@ -518,7 +533,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -532,7 +548,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Leaderboard errors are wrapped in ValueError with component-specific message."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.side_effect = RuntimeError("no leaderboard")
@@ -556,7 +572,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -573,7 +590,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         caplog,
     ):
         """When eval metric is NaN/Inf, error is caught, logged, and RuntimeError raised if all models fail."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         # Mock selection predictor
         mock_predictor = mock.MagicMock()
@@ -615,7 +632,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                     models_artifact=models_artifact,
                     extra_train_data_path=extra_train_path,
                     html_artifact=html_artifact,
-                    component_status=_DEFAULT_COMPONENT_STATUS,
+                    experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
                 )
 
         # Verify the specific error was logged
@@ -637,7 +655,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         caplog,
     ):
         """When some models fail refit, component succeeds with partial results and warnings."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         # Mock selection predictor
         mock_predictor = mock.MagicMock()
@@ -679,7 +697,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
         # Verify partial success: DeepAR and AutoARIMA succeeded, TFT failed
@@ -709,7 +728,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """When all models fail refit, component raises RuntimeError."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         # Mock selection predictor
         mock_predictor = mock.MagicMock()
@@ -747,14 +766,15 @@ class TestTimeseriesModelsTrainingUnitTests:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     # ── eval_metric parameter ─────────────────────────────────────────────────
 
     def test_empty_eval_metric_raises(self, mock_artifacts):  # noqa: F811
         """eval_metric must be a non-empty string."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(TypeError, match="eval_metric must be a non-empty string"):
@@ -772,12 +792,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 eval_metric="",
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_unsupported_eval_metric_raises(self, mock_artifacts):  # noqa: F811
         """eval_metric not in METRIC_ALIASES raises ValueError before training."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match="eval_metric must be one of"):
@@ -795,12 +816,13 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 eval_metric="BADMETRIC",
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_sql_metric_not_in_metric_aliases_raises(self, mock_artifacts):  # noqa: F811
         """'sql' is in AVAILABLE_METRICS but not METRIC_ALIASES; passes through normalization and fails validation."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         test_data = mock.MagicMock()
         test_data.path = "/tmp/test.csv"
         with pytest.raises(ValueError, match="eval_metric must be one of"):
@@ -818,7 +840,8 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 eval_metric="sql",
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -834,7 +857,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """MASE (old default) is silently normalized to mean_absolute_scaled_error."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -869,6 +892,7 @@ class TestTimeseriesModelsTrainingUnitTests:
             extra_train_data_path=extra_train_path,
             eval_metric="MASE",
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -891,7 +915,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_artifacts,  # noqa: F811
     ):
         """Custom eval_metric is passed to both TimeSeriesPredictor constructors, stored in model_config, and returned."""  # noqa: E501
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -927,6 +951,7 @@ class TestTimeseriesModelsTrainingUnitTests:
             extra_train_data_path=extra_train_path,
             eval_metric="WQL",
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -956,7 +981,7 @@ class TestMetricsJsonSignConvention:
         mock_artifacts,  # noqa: F811
     ):
         """metrics.json keeps negated error metrics from AutoGluon evaluate() for leaderboard sorting."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         mock_build_back_testing_json.return_value = {"schema_version": 1}
 
         mock_predictor = mock.MagicMock()
@@ -992,6 +1017,7 @@ class TestMetricsJsonSignConvention:
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1021,7 +1047,7 @@ class TestBackTestingArtifactFailure:
         caplog,
     ):
         """Component continues when back_testing.json generation fails."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
         mock_build_back_testing_json.side_effect = RuntimeError("backtest unavailable")
 
         mock_predictor = mock.MagicMock()
@@ -1056,7 +1082,8 @@ class TestBackTestingArtifactFailure:
                 models_artifact=models_artifact,
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
-                component_status=_DEFAULT_COMPONENT_STATUS,
+                experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
+            component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
         metrics_dir = Path(models_artifact.path) / "DeepAR_FULL" / "metrics"
@@ -1099,7 +1126,7 @@ class TestLeaderboardPhase:
         tmp_path,
     ):
         """Phase C writes the leaderboard HTML file and returns best_model_name in the result."""
-        models_artifact, extra_train_path, _ = mock_artifacts
+        models_artifact, extra_train_path, _, experiment_notebook = mock_artifacts
         self._configure_pd_mock_for_leaderboard("DeepAR_FULL", {"MASE": -0.42})
 
         mock_predictor = mock.MagicMock()
@@ -1134,6 +1161,7 @@ class TestLeaderboardPhase:
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1177,7 +1205,7 @@ class TestLeaderboardPhase:
         columns rather than ``.round(4)``, which silently drops trailing zeros
         (e.g. -4 -> "-4.0" instead of "-4.0000").
         """
-        models_artifact, extra_train_path, _ = mock_artifacts
+        models_artifact, extra_train_path, _, experiment_notebook = mock_artifacts
         mock_sorted_df = self._configure_pd_mock_for_leaderboard("DeepAR_FULL", {"MASE": -0.42})
 
         mock_predictor = mock.MagicMock()
@@ -1212,6 +1240,7 @@ class TestLeaderboardPhase:
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1236,7 +1265,7 @@ class TestLeaderboardPhase:
         tmp_path,
     ):
         """best_model_name in the return tuple and in models_artifact context are identical."""
-        models_artifact, extra_train_path, _ = mock_artifacts
+        models_artifact, extra_train_path, _, experiment_notebook = mock_artifacts
         self._configure_pd_mock_for_leaderboard("TFT_FULL", {"MASE": -0.30})
 
         mock_predictor = mock.MagicMock()
@@ -1271,6 +1300,7 @@ class TestLeaderboardPhase:
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1291,7 +1321,7 @@ class TestPredictorMetadata:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """predictor/predictor_metadata.json exists and captures selected-model config."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1326,6 +1356,7 @@ class TestPredictorMetadata:
             prediction_length=7,
             eval_metric="MASE",
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1352,7 +1383,7 @@ class TestPredictorMetadata:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """predictor_metadata.json records the covariate columns the model was trained with."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1387,6 +1418,7 @@ class TestPredictorMetadata:
             prediction_length=7,
             known_covariates_names=["promo", "temperature"],
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1406,7 +1438,7 @@ class TestTimeseriesInferenceBlock:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """model.json contains inference with instances fields for id, timestamp, target."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1443,6 +1475,7 @@ class TestTimeseriesInferenceBlock:
             extra_train_data_path=extra_train_path,
             prediction_length=7,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1476,7 +1509,7 @@ class TestTimeseriesInferenceBlock:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """Inference block includes known_covariates when model has covariate columns."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1520,6 +1553,7 @@ class TestTimeseriesInferenceBlock:
             prediction_length=7,
             known_covariates_names=["promo", "temperature"],
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
@@ -1582,7 +1616,7 @@ class TestTimeseriesInferenceBlock:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """model.json inference block excludes __synthetic_item_id from schema and payload."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1619,6 +1653,7 @@ class TestTimeseriesInferenceBlock:
             extra_train_data_path=extra_train_path,
             prediction_length=7,
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
             uses_synthetic_id=True,
         )
@@ -1656,7 +1691,7 @@ class TestTimeseriesInferenceBlock:
         self, mock_predictor_cls, mock_ts_df_cls, mock_concat, mock_read_csv, mock_artifacts
     ):
         """model.json omits inference when covariate dtype lookup fails during schema build."""
-        models_artifact, extra_train_path, html_artifact = mock_artifacts
+        models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
         mock_predictor.leaderboard.return_value = _mock_leaderboard(["DeepAR"])
@@ -1695,6 +1730,7 @@ class TestTimeseriesInferenceBlock:
             prediction_length=7,
             known_covariates_names=["promo"],
             html_artifact=html_artifact,
+            experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 

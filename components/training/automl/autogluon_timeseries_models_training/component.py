@@ -21,6 +21,7 @@ def autogluon_timeseries_models_training(
     models_artifact: dsl.Output[dsl.Model],
     extra_train_data_path: str,
     html_artifact: dsl.Output[dsl.HTML],
+    experiment_notebook: dsl.Output[dsl.Artifact],
     component_status: dsl.Output[dsl.Artifact],
     uses_synthetic_id: bool = False,
     sample_rows: str = "[]",
@@ -69,6 +70,7 @@ def autogluon_timeseries_models_training(
         models_artifact: Combined output artifact containing all refitted models.
         extra_train_data_path: Path to extra train split for full refit.
         html_artifact: Output HTML artifact containing the ranked leaderboard page.
+        experiment_notebook: Output artifact containing the run-level experiment launcher notebook.
         component_status: Output artifact containing stage-level progress tracking for this component.
         uses_synthetic_id: True if the loader injected a synthetic ID column for two-column datasets.
         sample_rows: Sample rows JSON string used in generated notebook placeholders.
@@ -619,13 +621,11 @@ def autogluon_timeseries_models_training(
         )
 
         from kfp_components.components.training.automl.shared.experiment_notebook_utils import (
-            EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
             TimeseriesExperimentNotebookConfig,
             timeseries_experiment_notebook_replacements,
             write_experiment_notebook,
         )
 
-        experiment_notebook_written = False
         try:
             experiment_notebook_config = TimeseriesExperimentNotebookConfig(
                 train_data_secret_name=train_data_secret_name,
@@ -643,12 +643,12 @@ def autogluon_timeseries_models_training(
                 preset=preset,
             )
             write_experiment_notebook(
-                output_dir=Path(models_artifact.path),
+                output_dir=Path(experiment_notebook.path),
                 kind="timeseries",
                 include_user_test_data=experiment_notebook_config.include_user_test_data,
                 replacements=timeseries_experiment_notebook_replacements(experiment_notebook_config),
             )
-            experiment_notebook_written = True
+            experiment_notebook.metadata["display_name"] = "automl_experiment_notebook"
         except Exception as notebook_exc:
             logger.warning("Could not generate experiment notebook: %s", notebook_exc)
 
@@ -662,8 +662,6 @@ def autogluon_timeseries_models_training(
             "best_model_name": best_model_name,
             "models": models_metadata,
         }
-        if experiment_notebook_written:
-            context["experiment_notebook"] = EXPERIMENT_NOTEBOOK_RELATIVE_PATH
         models_artifact.metadata["context"] = context
 
         outputs = NamedTuple(

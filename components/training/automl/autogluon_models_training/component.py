@@ -20,6 +20,7 @@ def autogluon_models_training(
     sample_row: str,
     models_artifact: dsl.Output[dsl.Model],
     html_artifact: dsl.Output[dsl.HTML],
+    experiment_notebook: dsl.Output[dsl.Artifact],
     component_status: dsl.Output[dsl.Artifact],
     sampling_config: Optional[dict] = None,
     split_config: Optional[dict] = None,
@@ -66,6 +67,7 @@ def autogluon_models_training(
         train_data_file_key: S3 object key for the training dataset.
         models_artifact: Output Model artifact containing all refitted model subdirectories.
         html_artifact: Output HTML artifact containing the ranked leaderboard page.
+        experiment_notebook: Output artifact containing the run-level experiment launcher notebook.
         component_status: Output artifact containing stage-level progress tracking for this component.
         sampling_config: Data sampling config stored in artifact metadata.
         split_config: Data split config stored in artifact metadata.
@@ -773,13 +775,11 @@ def autogluon_models_training(
         )
 
         from kfp_components.components.training.automl.shared.experiment_notebook_utils import (
-            EXPERIMENT_NOTEBOOK_RELATIVE_PATH,
             TabularExperimentNotebookConfig,
             tabular_experiment_notebook_replacements,
             write_experiment_notebook,
         )
 
-        experiment_notebook_written = False
         try:
             experiment_notebook_config = TabularExperimentNotebookConfig(
                 train_data_secret_name=train_data_secret_name,
@@ -795,12 +795,12 @@ def autogluon_models_training(
                 preset=preset,
             )
             write_experiment_notebook(
-                output_dir=Path(models_artifact.path),
+                output_dir=Path(experiment_notebook.path),
                 kind="tabular",
                 include_user_test_data=experiment_notebook_config.include_user_test_data,
                 replacements=tabular_experiment_notebook_replacements(experiment_notebook_config),
             )
-            experiment_notebook_written = True
+            experiment_notebook.metadata["display_name"] = "automl_experiment_notebook"
         except Exception as notebook_exc:
             logger.warning("Could not generate experiment notebook: %s", notebook_exc)
 
@@ -817,8 +817,6 @@ def autogluon_models_training(
             "best_model_name": best_model_name,
             "models": models_metadata,
         }
-        if experiment_notebook_written:
-            context["experiment_notebook"] = EXPERIMENT_NOTEBOOK_RELATIVE_PATH
         models_artifact.metadata["context"] = context
 
     return NamedTuple("outputs", eval_metric=str, best_model_name=str)(

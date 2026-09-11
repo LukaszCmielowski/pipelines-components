@@ -10,7 +10,7 @@ from typing import Literal
 from kfp_components.components.training.automl.shared.run_status import shared_automl_dir
 
 EXPERIMENT_NOTEBOOK_FILENAME = "automl_experiment_notebook.ipynb"
-EXPERIMENT_NOTEBOOK_RELATIVE_PATH = f"notebooks/{EXPERIMENT_NOTEBOOK_FILENAME}"
+EXPERIMENT_NOTEBOOK_RELATIVE_PATH = EXPERIMENT_NOTEBOOK_FILENAME
 
 
 def _py_str(value: str) -> str:
@@ -180,7 +180,7 @@ def write_experiment_notebook(
     replacements: dict[str, str],
     include_user_test_data: bool = False,
 ) -> Path:
-    """Write a run-level experiment launcher notebook under ``output_dir/notebooks/``."""
+    """Write a run-level experiment launcher notebook under ``output_dir``."""
     template_path = shared_automl_dir() / "notebook_templates" / _template_name(kind)
     with template_path.open(encoding="utf-8") as f:
         notebook = json.load(f)
@@ -188,9 +188,9 @@ def write_experiment_notebook(
     notebook = replace_placeholder_in_notebook(notebook, replacements)
     if not include_user_test_data:
         notebook = _strip_user_test_data_from_notebook(notebook)
-    notebook_path = output_dir / "notebooks"
-    notebook_path.mkdir(parents=True, exist_ok=True)
-    destination = notebook_path / EXPERIMENT_NOTEBOOK_FILENAME
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    destination = output_path / EXPERIMENT_NOTEBOOK_FILENAME
     with destination.open("w", encoding="utf-8") as f:
         json.dump(notebook, f, indent=1)
         f.write("\n")

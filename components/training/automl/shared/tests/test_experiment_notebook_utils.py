@@ -142,7 +142,7 @@ class TestExperimentNotebookUtils:
             kind="tabular",
             replacements=tabular_experiment_notebook_replacements(config),
         )
-        assert destination == tmp_path / "notebooks" / EXPERIMENT_NOTEBOOK_FILENAME
+        assert destination == tmp_path / EXPERIMENT_NOTEBOOK_FILENAME
         assert destination.exists()
         notebook = json.loads(destination.read_text(encoding="utf-8"))
         full_source = "".join("".join(cell.get("source", [])) for cell in notebook["cells"])
