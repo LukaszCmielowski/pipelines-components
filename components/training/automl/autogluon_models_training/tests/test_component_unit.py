@@ -1270,7 +1270,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=mock_models_artifact,
                 html_artifact=_make_html_artifact(tmp_path),
                 experiment_notebook=_make_experiment_notebook_artifact(tmp_path),
-            component_status=_make_component_status_artifact(tmp_path),
+                component_status=_make_component_status_artifact(tmp_path),
             )
 
     @mock.patch("pandas.read_csv")
@@ -1308,7 +1308,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=mock_models_artifact,
                 html_artifact=_make_html_artifact(tmp_path),
                 experiment_notebook=_make_experiment_notebook_artifact(tmp_path),
-            component_status=_make_component_status_artifact(tmp_path),
+                component_status=_make_component_status_artifact(tmp_path),
             )
 
     # ── Input validation ───────────────────────────────────────────────────────
@@ -1336,7 +1336,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_task_type(self):
@@ -1355,7 +1355,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_empty_train_data_path(self):
@@ -1374,7 +1374,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_empty_workspace_path(self):
@@ -1393,7 +1393,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_top_n_zero(self):
@@ -1412,7 +1412,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_top_n_exceeds_max(self):
@@ -1431,7 +1431,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_empty_pipeline_name(self):
@@ -1450,7 +1450,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_empty_run_id(self):
@@ -1469,7 +1469,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_sample_row_json(self):
@@ -1488,7 +1488,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_sample_row_not_list(self):
@@ -1507,7 +1507,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 models_artifact=self._minimal_artifact(),
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_sampling_config_type(self):
@@ -1527,7 +1527,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 sampling_config="invalid",
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_split_config_type(self):
@@ -1547,7 +1547,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 split_config=[],
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_preset(self):
@@ -1567,7 +1567,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 preset="best_quality",
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_whitespace_eval_metric(self):
@@ -1587,7 +1587,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 eval_metric="   ",
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_eval_metric_for_task_type_raises(self):
@@ -1607,7 +1607,7 @@ class TestAutogluonModelsTrainingUnitTests:
                 html_artifact=_DEFAULT_HTML_ARTIFACT,
                 eval_metric="accuracy",  # valid for binary/multiclass, not regression,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     # ── eval_metric parameter ─────────────────────────────────────────────────

@@ -401,7 +401,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_top_n_zero_raises(self, mock_artifacts):  # noqa: F811
@@ -424,7 +424,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_top_n_above_max_raises(self, mock_artifacts):  # noqa: F811
@@ -447,7 +447,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_invalid_prediction_length_raises(self, mock_artifacts):  # noqa: F811
@@ -471,7 +471,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 prediction_length=0,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_rejects_invalid_preset(self, mock_artifacts):
@@ -495,7 +495,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 preset="best_quality",
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -534,7 +534,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -573,7 +573,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -633,7 +633,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                     extra_train_data_path=extra_train_path,
                     html_artifact=html_artifact,
                     experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                    component_status=_DEFAULT_COMPONENT_STATUS,
                 )
 
         # Verify the specific error was logged
@@ -698,7 +698,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
         # Verify partial success: DeepAR and AutoARIMA succeeded, TFT failed
@@ -767,7 +767,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     # ── eval_metric parameter ─────────────────────────────────────────────────
@@ -793,7 +793,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 eval_metric="",
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_unsupported_eval_metric_raises(self, mock_artifacts):  # noqa: F811
@@ -817,7 +817,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 eval_metric="BADMETRIC",
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     def test_sql_metric_not_in_metric_aliases_raises(self, mock_artifacts):  # noqa: F811
@@ -841,7 +841,7 @@ class TestTimeseriesModelsTrainingUnitTests:
                 eval_metric="sql",
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
     @mock.patch("pandas.read_csv")
@@ -1083,7 +1083,7 @@ class TestBackTestingArtifactFailure:
                 extra_train_data_path=extra_train_path,
                 html_artifact=html_artifact,
                 experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
-            component_status=_DEFAULT_COMPONENT_STATUS,
+                component_status=_DEFAULT_COMPONENT_STATUS,
             )
 
         metrics_dir = Path(models_artifact.path) / "DeepAR_FULL" / "metrics"
