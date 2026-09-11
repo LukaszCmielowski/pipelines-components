@@ -158,6 +158,7 @@ class TestExperimentNotebookUtils:
         assert "test_data_file_key" not in source
         assert "verify=False" not in source
         assert "KF_PIPELINES_ENDPOINT" in source
+        assert "Set in this cell, then re-run:" in full_source
         assert "ELYRA_RUNTIME_CONFIG" in source
         assert "_resolve_kfp_ssl_ca_cert" in source
         assert "ssl_ca_cert" in source
