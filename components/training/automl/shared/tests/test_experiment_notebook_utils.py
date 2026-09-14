@@ -147,6 +147,7 @@ class TestExperimentNotebookUtils:
         notebook = json.loads(destination.read_text(encoding="utf-8"))
         full_source = "".join("".join(cell.get("source", [])) for cell in notebook["cells"])
         source = _code_source(notebook)
+        assert 'pipeline_name = "autogluon-tabular-training-pipeline"' in source
         assert "kfp-connection" in full_source
         assert "run-defaults" in full_source
         assert "training-data" in full_source
@@ -167,7 +168,8 @@ class TestExperimentNotebookUtils:
         assert "Unsafe artifact key" in source
         assert "kfp_components" not in source
         assert "resolve_pipeline_template" in source
-        assert "list_pipeline_version_rows" in source
+        assert "get_pipeline_and_versions" in source
+        assert "list_pipeline_version_rows" not in source
         assert '"version_id": resolved_version_id' in source
         assert "get_pipeline_id" not in source
         assert "client.run_pipeline" in source
