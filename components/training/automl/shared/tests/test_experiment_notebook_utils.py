@@ -173,6 +173,10 @@ class TestExperimentNotebookUtils:
         assert '"version_id": resolved_version_id' in source
         assert "get_pipeline_id" not in source
         assert "client.run_pipeline" in source
+        assert "preflight-checks" in full_source
+        assert "submit_run = False" in source
+        assert "head_bucket" in source
+        assert "Open this run in Kubeflow Pipelines" in source
 
     def test_write_experiment_notebook_tabular_with_user_test_data(self, tmp_path):
         config = _tabular_config(
