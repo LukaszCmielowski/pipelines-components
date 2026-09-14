@@ -73,8 +73,7 @@ def _strip_empty_positive_class_from_notebook(notebook: dict) -> dict:
         cell["source"] = [
             line
             for line in cell.get("source", [])
-            if not line.lstrip().startswith("positive_class =")
-            and '"positive_class": positive_class' not in line
+            if not line.lstrip().startswith("positive_class =") and '"positive_class": positive_class' not in line
         ]
     return notebook
 
