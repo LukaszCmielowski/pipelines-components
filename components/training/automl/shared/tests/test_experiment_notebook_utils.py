@@ -155,8 +155,16 @@ class TestExperimentNotebookUtils:
         assert "<REPLACE_S3_SECRET>" not in source
         assert 'train_data_secret_name = "my-secret"' in source
         assert 'task_type = "binary"' in source
+        assert 'positive_class = "yes"' in source
+        assert '"positive_class": positive_class' in source
         assert "test_data_bucket_name" not in source
         assert "test_data_file_key" not in source
+        training_data_source = next(
+            "".join(cell.get("source", []))
+            for cell in notebook["cells"]
+            if "train_data_file_key =" in "".join(cell.get("source", []))
+        )
+        assert training_data_source.endswith('train_data_file_key = "datasets/train.csv"\n')
         assert "verify=False" not in source
         assert "KF_PIPELINES_ENDPOINT" in source
         assert "Set in this cell, then re-run:" in full_source
@@ -177,6 +185,17 @@ class TestExperimentNotebookUtils:
         assert "submit_run = False" in source
         assert "head_bucket" in source
         assert "Open this run in Kubeflow Pipelines" in source
+        assert "RHOAI_DASHBOARD_URL" in source
+        assert "/develop-train/pipelines/runs/" in source
+
+    def test_write_tabular_notebook_omits_empty_positive_class(self, tmp_path):
+        destination = write_experiment_notebook(
+            output_dir=tmp_path,
+            kind="tabular",
+            replacements=tabular_experiment_notebook_replacements(_tabular_config()),
+        )
+        source = _code_source(json.loads(destination.read_text(encoding="utf-8")))
+        assert "positive_class" not in source
 
     def test_write_experiment_notebook_tabular_with_user_test_data(self, tmp_path):
         config = _tabular_config(
@@ -196,6 +215,8 @@ class TestExperimentNotebookUtils:
         assert 'test_data_bucket_name = "test-bucket"' in source
         assert 'test_data_file_key = "datasets/test.csv"' in source
         assert '"test_data_bucket_name": test_data_bucket_name' in source
+        assert 'positive_class = "yes"' in source
+        assert '"positive_class": positive_class' in source
 
     def test_write_experiment_notebook_timeseries(self, tmp_path):
         destination = write_experiment_notebook(

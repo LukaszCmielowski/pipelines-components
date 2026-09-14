@@ -37,6 +37,8 @@ def _strip_user_test_data_from_source(source: list[str]) -> list[str]:
     while i < len(source):
         line = source[i]
         if line.lstrip().startswith("# Optional user-provided test dataset"):
+            if result and not result[-1].strip():
+                result.pop()
             i += 1
             while i < len(source) and ("test_data_bucket_name" in source[i] or "test_data_file_key" in source[i]):
                 i += 1
@@ -60,6 +62,20 @@ def _strip_user_test_data_from_notebook(notebook: dict) -> dict:
         if cell.get("cell_type") != "code":
             continue
         cell["source"] = _strip_user_test_data_from_source(cell.get("source", []))
+    return notebook
+
+
+def _strip_empty_positive_class_from_notebook(notebook: dict) -> dict:
+    """Remove the optional tabular positive-class input from a generated notebook."""
+    for cell in notebook.get("cells", []):
+        if cell.get("cell_type") != "code":
+            continue
+        cell["source"] = [
+            line
+            for line in cell.get("source", [])
+            if not line.lstrip().startswith("positive_class =")
+            and '"positive_class": positive_class' not in line
+        ]
     return notebook
 
 
@@ -188,6 +204,8 @@ def write_experiment_notebook(
     notebook = replace_placeholder_in_notebook(notebook, replacements)
     if not include_user_test_data:
         notebook = _strip_user_test_data_from_notebook(notebook)
+    if kind == "tabular" and replacements.get("<REPLACE_POSITIVE_CLASS>") == _py_str(""):
+        notebook = _strip_empty_positive_class_from_notebook(notebook)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     destination = output_path / EXPERIMENT_NOTEBOOK_FILENAME
