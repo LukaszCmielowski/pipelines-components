@@ -182,7 +182,7 @@ class TestExperimentNotebookUtils:
         assert "get_pipeline_id" not in source
         assert "client.run_pipeline" in source
         assert "preflight-checks" in full_source
-        assert "submit_run = False" in source
+        assert "submit_run" not in source
         assert "head_bucket" in source
         assert "Open this run in Kubeflow Pipelines" in source
         assert "RHOAI_DASHBOARD_URL" in source
