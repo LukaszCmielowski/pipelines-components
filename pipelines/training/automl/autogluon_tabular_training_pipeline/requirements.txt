@@ -941,16 +941,13 @@ tokenizers==0.23.2 \
 toolz==0.12.1 \
     --hash=sha256:aeba0a924aeee680963d2de463e57163523098316044370bdc5dd2802671a2b6
     # via gluonts
-torch==2.11.0 \
-    --hash=sha256:2722128ac000fea6a190208bea2e7835a6c574c81159ed10c835a436542ac434 \
-    --hash=sha256:378d861cd0c459ec00307398ebaae166e8f47a7fdcac66bac1c9b13b7febaddf \
-    --hash=sha256:41a57777b3f408648a1ec08afc057094c286a0239ff342ca6273d20dd90d6e5f \
-    --hash=sha256:4855365a7ee5941ea411f7a566c4bdf8da00d3f81397e9a188b3924ff0628a0f \
-    --hash=sha256:6dc0a06d35e667cc69e9400e1af9c4163f7d4a6788e243503a577fbf1532e1d7 \
-    --hash=sha256:8bf9a0229437ac32ed26e6182625881b4b0565441a83211bd43b490a3de94dd3 \
-    --hash=sha256:dfca93204eed6834d6b98044cc6696e1b315c8b5bfc10c25974f616e2f5b3543 \
-    --hash=sha256:ec239a70ca4f079146b44fe59a80ffe6f8b13d4b9f81a75b293e8d2ae3f73f5f
+torch==2.13.0 \
+    --hash=sha256:2a04ad8ab85fbeeac8463915f8e070949a9f98bd7630601af8b6955ee1fe0f4d \
+    --hash=sha256:97ce14be01501f66257b84875af54124a510869d742163c2cb66e7fdc3bd2bd5 \
+    --hash=sha256:8a6ea722d77aecdcb3af8daf3d505419160281c81524fd0599dac13bdfa9a0d1 \
+    --hash=sha256:cfc35cf3b57b501b890a838bcdc7b7324195e047e92488f1faf9a8c8cbd402a7
     # via
+    #   -r requirements.in
     #   accelerate
     #   autogluon-tabular
     #   autogluon-timeseries
@@ -966,16 +963,14 @@ torchmetrics==1.9.0 \
     # via
     #   lightning
     #   pytorch-lightning
-torchvision==0.26.0 \
-    --hash=sha256:3a61d67726843d0759edd0b29f3d4417065ac2d25c16ccd4b343396dfeeb51cf \
-    --hash=sha256:3b7b806cc3a1848b9f0e73b7e54e99d95164f68dad0a325a281f7ea3189bdb31 \
-    --hash=sha256:4c2d7b88cf26250d29be5b9c311abdcb083690647acd882dfeacc45c3fccb333 \
-    --hash=sha256:9f6806229ed45fa1a9bae0347a67e8312871fc5f574568f8cab401b838469e75 \
-    --hash=sha256:a7abcae79427e5ecb427201bcf5c016a7ca25fb62514580b46e20e72e93e3fb0 \
-    --hash=sha256:ccd1be6e20f7ec0fd0ab80758c680b6619f05b452f1ad9291a2c6a2d7d713055 \
-    --hash=sha256:e977133b2fef0ee9dd6293a787341e04bae04908391e9391630ef2e1852d74ce \
-    --hash=sha256:f460a22e1e55d6b8a03ead0ed8da43580a4741f5735e7baf48607b355adb6e17
-    # via fastai
+torchvision==0.28.0 \
+    --hash=sha256:0b8e5403c8cd3b87a9fdfeb0214660577f50f5b5f1de3d6b468689a2d5020b82 \
+    --hash=sha256:a82cc9d830807fa7a583045194d2cb236d5f3cdf8193da80a545882a9815ac1b \
+    --hash=sha256:fd780b0a74546e59cb734be3e19c9fb902be9090655bce56b8d357f99b63091e \
+    --hash=sha256:7b152773dc1560838cae3eb075ca450d52980f34a6b0eee103707073bf80858a
+    # via
+    #   -r requirements.in
+    #   fastai
 tqdm==4.70.0 \
     --hash=sha256:acd95794a3e06dc813ba6d8dad685f23f6a352280150074e7c474897fb782963
     # via
