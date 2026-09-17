@@ -381,9 +381,11 @@ class TestRagTemplatesOptimizationMetricResolution:
         ("preset", "metric_id", "expected_evaluator"),
         [
             ("speed", "unitxt:faithfulness", "unitxt"),
+            ("speed", "faithfulness", "unitxt"),
             ("speed", "custom:overall_score", "custom"),
             ("balanced", "unitxt:faithfulness", "unitxt"),
             ("balanced", "ragas:faithfulness", "ragas"),
+            ("balanced", "faithfulness", "ragas"),
             ("balanced", "ragas:context_precision", "ragas"),
             ("balanced", "custom:overall_score", "custom"),
         ],
@@ -431,7 +433,6 @@ class TestRagTemplatesOptimizationMetricResolution:
         [
             ("speed", "ragas:context_precision", "is unavailable for this preset"),
             ("balanced", "answer_relevance", "is unavailable for this preset"),
-            ("balanced", "faithfulness", "is ambiguous"),
             ("speed", "nonexistent_metric", "is not supported"),
         ],
     )

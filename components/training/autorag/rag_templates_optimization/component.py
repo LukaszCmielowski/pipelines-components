@@ -119,6 +119,7 @@ def rag_templates_optimization(
         "speed": frozenset({"unitxt", "custom"}),
         "balanced": frozenset({"unitxt", "ragas", "custom"}),
     }
+    LEGACY_METRIC_PREFERENCES = {"faithfulness": "ragas"}
     PRESET_INFERENCE_MAX_THREADS = {"speed": 10, "balanced": 4}
 
     def _build_evaluators(
@@ -259,8 +260,9 @@ def rag_templates_optimization(
         Args:
             metric_id: Metric requested via ``optimization_settings.metric``.
                 Qualified IDs (for example, ``"unitxt:faithfulness"``) avoid
-                ambiguity between evaluator metric names. Unqualified IDs are
-                accepted only when they identify one enabled evaluator metric.
+                ambiguity between evaluator metric names. Unqualified IDs use
+                the established RAGAS preference for ``"faithfulness"`` when
+                RAGAS is enabled, and otherwise require one enabled metric.
             active_evaluators: Evaluators enabled by the selected preset.
 
         Returns:
@@ -291,6 +293,10 @@ def rag_templates_optimization(
                 f"but this preset enables {sorted(active_evaluators)}."
             )
         if len(available) > 1:
+            preferred_evaluator = LEGACY_METRIC_PREFERENCES.get(metric_name)
+            preferred_metric = next((m for m in available if m.evaluator == preferred_evaluator), None)
+            if preferred_metric is not None:
+                return preferred_metric
             raise ValueError(
                 f"Optimization metric {metric_id!r} is ambiguous. Select one of "
                 f"{sorted(f'{m.evaluator}:{m.name}' for m in available)}."
