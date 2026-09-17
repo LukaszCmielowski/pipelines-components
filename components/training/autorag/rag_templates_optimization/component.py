@@ -372,9 +372,7 @@ def rag_templates_optimization(
                 raise ValueError("test_data_key must point to a JSON file.")
 
             settings = _validate_optimization_settings(optimization_settings)
-            optimization_metric = _get_optimization_metric(
-                settings.get("metric"), active_evaluators=active_evaluators
-            )
+            optimization_metric = _get_optimization_metric(settings.get("metric"), active_evaluators=active_evaluators)
 
             documents = load_docling_documents(extracted_text)
             benchmark_data = pd.read_json(Path(test_data))
