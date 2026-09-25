@@ -112,7 +112,6 @@ Example artifact-store layout (task folder names are kebab-case):
 ├── automl-data-loader/<task_id>/component_status/component_status.json
 └── autogluon-models-training/<task_id>/component_status/component_status.json
 ```
-
 See [AutoML training components README](../../../components/training/automl/README.md) for JSON field details.
 
 #### Dashboard join keys
@@ -264,7 +263,6 @@ pipeline = autogluon_tabular_training_pipeline(
     top_n=3,
 )
 ```
-
 ### Classification (binary or multiclass)
 
 ```python
@@ -341,5 +339,3 @@ run = client.create_run_from_pipeline_package(
     },
 )
 ```
-
-

@@ -104,7 +104,6 @@ def my_pipeline():
         extra_train_data_path=f"{dsl.WORKSPACE_PATH_PLACEHOLDER}/datasets/extra_train_dataset.parquet",
     )
 ```
-
 ### Classification (binary or multiclass)
 
 ```python
@@ -198,7 +197,6 @@ Each model directory contains a `model.json` file with the model's metadata, mat
   }
 }
 ```
-
 This file allows downstream consumers to read model metadata directly from the filesystem without relying on artifact metadata propagation.
 
 #### `inference` block (KServe AutoGluon tabular)
@@ -312,5 +310,3 @@ Example:
   }
 }
 ```
-
-
