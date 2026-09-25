@@ -345,6 +345,69 @@ class TestTimeseriesDataLoaderUnitTests:
             MockedDataFrame.BYTES_PER_ROW = original_bytes_per_row
 
     @mock.patch.dict(os.environ, mocked_env_variables, clear=True)
+    def test_partial_train_read_does_not_report_sample_cap_reached(self, tmp_path):
+        """A mid-stream train CSV error keeps loaded rows but must not set sample_cap_reached."""
+        train_csv = _timeseries_csv(n_rows=MIN_VALID_RECORDS + 20)
+        mocked_pandas = make_mocked_pandas_module()
+        real_read_csv = mocked_pandas.read_csv
+
+        def flaky_read_csv(stream, chunksize=None):
+            if chunksize is None:
+                return real_read_csv(stream, chunksize=chunksize)
+
+            def _chunks():
+                yield from real_read_csv(stream, chunksize=chunksize)
+                raise OSError("connection reset by peer")
+
+            return _chunks()
+
+        mocked_pandas.read_csv = flaky_read_csv
+        sampled_test = _make_test_artifact(tmp_path)
+
+        with _mock_boto3_module(get_object_return={"Body": io.BytesIO(train_csv.encode("utf-8"))}):
+            with mock.patch.dict(sys.modules, {"pandas": mocked_pandas}):
+                timeseries_data_loader.python_func(
+                    file_key="train.csv",
+                    bucket_name="b",
+                    workspace_path=str(tmp_path),
+                    target="target",
+                    id_column="item_id",
+                    timestamp_column="timestamp",
+                    sampled_test_dataset=sampled_test,
+                )
+
+        payload = json.loads((tmp_path / "component_status" / "component_status.json").read_text())
+        stages = {stage["id"]: stage for stage in payload["stages"]}
+        assert stages["prepare_data"]["metrics"]["sample_cap_reached"] is False
+
+    @mock.patch.dict(os.environ, mocked_env_variables, clear=True)
+    def test_sample_cap_reached_when_size_limit_stops_read(self, tmp_path):
+        """Hitting the preset byte budget sets sample_cap_reached without failing the run."""
+        body_stream = io.BytesIO(_timeseries_csv(n_rows=300).encode("utf-8"))
+        sampled_test = _make_test_artifact(tmp_path)
+
+        original_bytes_per_row = MockedDataFrame.BYTES_PER_ROW
+        try:
+            # 800 KiB/row → speed's 100 MiB budget keeps ~131 rows (>= MIN_VALID_RECORDS).
+            MockedDataFrame.BYTES_PER_ROW = 800_000
+            with _mock_boto3_and_pandas(get_object_return={"Body": body_stream}):
+                timeseries_data_loader.python_func(
+                    file_key="timeseries/train.csv",
+                    bucket_name="my-bucket",
+                    workspace_path=str(tmp_path),
+                    target="target",
+                    id_column="item_id",
+                    timestamp_column="timestamp",
+                    sampled_test_dataset=sampled_test,
+                )
+        finally:
+            MockedDataFrame.BYTES_PER_ROW = original_bytes_per_row
+
+        payload = json.loads((tmp_path / "component_status" / "component_status.json").read_text())
+        stages = {stage["id"]: stage for stage in payload["stages"]}
+        assert stages["prepare_data"]["metrics"]["sample_cap_reached"] is True
+
+    @mock.patch.dict(os.environ, mocked_env_variables, clear=True)
     def test_no_data_rows_raises(self, tmp_path):
         """Header-only training CSV yields zero chunks; fail before split with a clear error.
 

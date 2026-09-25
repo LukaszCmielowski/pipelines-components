@@ -241,10 +241,11 @@ def timeseries_data_loader(
         ):
             """Load time series CSV from S3, truncating to max_size_bytes while preserving order.
 
-            When ``truncation_report`` is a dict, its ``"truncated"`` key is set to True if the
-            size limit stopped the read before the stream was exhausted. The signal is
-            conservative: a stream whose rows add up to exactly ``max_size_bytes`` is also
-            reported, since the read stops without proving no rows follow.
+            When ``truncation_report`` is a dict:
+            - ``"cap_reached"`` is True only when the size limit stopped the read (including the
+              conservative case where accumulated rows hit exactly ``max_size_bytes``).
+            - ``"truncated"`` is True when the returned frame may be incomplete for any reason
+              (cap exhaustion or mid-stream read error with partial recovery).
 
             When ``fail_on_partial_read`` is True, a mid-stream error is fatal. If no rows were
             read, an empty dataframe is returned so the caller can report an empty test dataset.
@@ -268,7 +269,12 @@ def timeseries_data_loader(
             accumulated_size = 0
             total_rows_read = 0
 
-            def _mark_truncated():
+            def _mark_cap_reached():
+                if truncation_report is not None:
+                    truncation_report["truncated"] = True
+                    truncation_report["cap_reached"] = True
+
+            def _mark_partial_read():
                 if truncation_report is not None:
                     truncation_report["truncated"] = True
 
@@ -277,7 +283,7 @@ def timeseries_data_loader(
                     chunk_memory = chunk_df.memory_usage(deep=True).sum()
 
                     if accumulated_size + chunk_memory > max_size_bytes:
-                        _mark_truncated()
+                        _mark_cap_reached()
                         remaining_bytes = max_size_bytes - accumulated_size
                         if remaining_bytes <= 0:
                             break
@@ -295,7 +301,7 @@ def timeseries_data_loader(
                     total_rows_read += len(chunk_df)
 
                     if accumulated_size >= max_size_bytes:
-                        _mark_truncated()
+                        _mark_cap_reached()
                         break
 
             except Exception as e:
@@ -308,7 +314,7 @@ def timeseries_data_loader(
                     total_rows_read,
                     e,
                 )
-                _mark_truncated()
+                _mark_partial_read()
 
             if not chunk_list:
                 if fail_on_partial_read:
@@ -513,7 +519,7 @@ def timeseries_data_loader(
                 "sampled_rows": n_valid,
                 "sampled_in_memory_bytes": int(df.memory_usage(deep=True).sum()),
                 "sample_cap_bytes": MAX_SIZE_BYTES,
-                "sample_cap_reached": bool(sampling_report.get("truncated")),
+                "sample_cap_reached": bool(sampling_report.get("cap_reached")),
                 "sampling_method": "first_n_rows",
                 "preset": preset,
             },

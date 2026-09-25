@@ -354,7 +354,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         assert result.model_config["presets"] == "deep"
         assert result.model_config["time_limit"] == 360 * 60
 
-    @mock.patch("pandas.read_csv")
+    @mock.patch("pandas.read_parquet")
     @mock.patch("pandas.concat")
     @mock.patch("autogluon.timeseries.TimeSeriesDataFrame")
     @mock.patch("autogluon.timeseries.TimeSeriesPredictor")
