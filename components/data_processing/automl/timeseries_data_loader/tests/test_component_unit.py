@@ -363,6 +363,9 @@ class TestTimeseriesDataLoaderUnitTests:
 
         mocked_pandas.read_csv = flaky_read_csv
         sampled_test = _make_test_artifact(tmp_path)
+        component_status = mock.MagicMock()
+        component_status.path = str(tmp_path / "component_status")
+        component_status.metadata = {}
 
         with _mock_boto3_module(get_object_return={"Body": io.BytesIO(train_csv.encode("utf-8"))}):
             with mock.patch.dict(sys.modules, {"pandas": mocked_pandas}):
@@ -374,9 +377,10 @@ class TestTimeseriesDataLoaderUnitTests:
                     id_column="item_id",
                     timestamp_column="timestamp",
                     sampled_test_dataset=sampled_test,
+                    component_status=component_status,
                 )
 
-        payload = json.loads((tmp_path / "component_status" / "component_status.json").read_text())
+        payload = json.loads((Path(component_status.path) / "component_status.json").read_text())
         stages = {stage["id"]: stage for stage in payload["stages"]}
         assert stages["prepare_data"]["metrics"]["sample_cap_reached"] is False
 
@@ -385,6 +389,9 @@ class TestTimeseriesDataLoaderUnitTests:
         """Hitting the preset byte budget sets sample_cap_reached without failing the run."""
         body_stream = io.BytesIO(_timeseries_csv(n_rows=300).encode("utf-8"))
         sampled_test = _make_test_artifact(tmp_path)
+        component_status = mock.MagicMock()
+        component_status.path = str(tmp_path / "component_status")
+        component_status.metadata = {}
 
         original_bytes_per_row = MockedDataFrame.BYTES_PER_ROW
         try:
@@ -399,11 +406,12 @@ class TestTimeseriesDataLoaderUnitTests:
                     id_column="item_id",
                     timestamp_column="timestamp",
                     sampled_test_dataset=sampled_test,
+                    component_status=component_status,
                 )
         finally:
             MockedDataFrame.BYTES_PER_ROW = original_bytes_per_row
 
-        payload = json.loads((tmp_path / "component_status" / "component_status.json").read_text())
+        payload = json.loads((Path(component_status.path) / "component_status.json").read_text())
         stages = {stage["id"]: stage for stage in payload["stages"]}
         assert stages["prepare_data"]["metrics"]["sample_cap_reached"] is True
 
