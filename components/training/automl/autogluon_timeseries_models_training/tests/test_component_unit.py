@@ -304,7 +304,7 @@ class TestTimeseriesModelsTrainingUnitTests:
     @mock.patch("pandas.concat")
     @mock.patch("autogluon.timeseries.TimeSeriesDataFrame")
     @mock.patch("autogluon.timeseries.TimeSeriesPredictor")
-    def test_heavy_preset_fit_args(
+    def test_deep_preset_fit_args(
         self,
         mock_predictor_cls,
         mock_ts_df_cls,
@@ -312,7 +312,7 @@ class TestTimeseriesModelsTrainingUnitTests:
         mock_read_csv,
         mock_artifacts,  # noqa: F811
     ):
-        """Heavy uses medium_quality with a six-hour time budget."""
+        """Deep uses high_quality with a six-hour time budget."""
         models_artifact, extra_train_path, html_artifact, experiment_notebook = mock_artifacts
 
         mock_predictor = mock.MagicMock()
@@ -342,16 +342,16 @@ class TestTimeseriesModelsTrainingUnitTests:
             run_id="run-123",
             models_artifact=models_artifact,
             extra_train_data_path=extra_train_path,
-            preset="heavy",
+            preset="deep",
             html_artifact=html_artifact,
             experiment_notebook=_DEFAULT_EXPERIMENT_NOTEBOOK_ARTIFACT,
             component_status=_DEFAULT_COMPONENT_STATUS,
         )
 
         fit_call = mock_predictor.fit.call_args
-        assert fit_call[1]["presets"] == "medium_quality"
+        assert fit_call[1]["presets"] == "high_quality"
         assert fit_call[1]["time_limit"] == 360 * 60
-        assert result.model_config["presets"] == "heavy"
+        assert result.model_config["presets"] == "deep"
         assert result.model_config["time_limit"] == 360 * 60
 
     @mock.patch("pandas.read_csv")

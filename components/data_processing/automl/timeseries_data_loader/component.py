@@ -37,7 +37,7 @@ def timeseries_data_loader(
 
     This component loads time series data from S3, samples it (up to 100 MB for the
     ``"speed"`` preset, up to 1 GB for ``"balanced"``, and up to 10 GB for
-    ``"heavy"``),
+    ``"deep"``),
     applies light **cleansing** (replace ``+/-inf`` with NaN so AutoGluon can apply its
     own missing-value logic; require parseable timestamps and non-null ids; drop
     exact duplicate ``(id_column, timestamp_column)`` rows, keep last), then performs a two-stage
@@ -77,7 +77,7 @@ def timeseries_data_loader(
         test_data_file_key: S3 object key of the user-provided test CSV (default: empty string).
         preset: Training quality tier controlling the sampling size budget. ``"speed"``
             (default) samples up to 100 MB; ``"balanced"`` samples up to 1 GB; and
-            ``"heavy"`` samples up to 10 GB. User-provided test datasets are capped
+            ``"deep"`` samples up to 10 GB. User-provided test datasets are capped
             at 50 MB, 100 MB, and 1 GB respectively.
 
     Raises:
@@ -135,19 +135,19 @@ def timeseries_data_loader(
         validate_test_data_params,
     )
 
-    VALID_PRESETS = {"speed", "balanced", "heavy"}
+    VALID_PRESETS = {"speed", "balanced", "deep"}
     # Sampling budget per quality tier: "speed" stays small for fast runs,
     # "balanced" allows the default supported dataset size, while
-    # "heavy" is sized for the higher-memory training profile.
+    # "deep" is sized for the higher-memory training profile.
     PRESET_MAX_SIZE_BYTES = {
         "speed": 100 * 1024 * 1024,  # 100 MB
         "balanced": 1024 * 1024 * 1024,  # 1 GB
-        "heavy": 10 * 1024 * 1024 * 1024,  # 10 GB
+        "deep": 10 * 1024 * 1024 * 1024,  # 10 GB
     }
     PRESET_TEST_DATA_MAX_SIZE_BYTES = {
         "speed": 50 * 1024 * 1024,  # 50 MiB
         "balanced": 100 * 1024 * 1024,  # 100 MiB
-        "heavy": 1024 * 1024 * 1024,  # 1 GiB
+        "deep": 1024 * 1024 * 1024,  # 1 GiB
     }
     MIN_VALID_RECORDS_AFTER_CLEANSING = 100
     PANDAS_CHUNK_SIZE = 10000  # Rows per batch for streaming read

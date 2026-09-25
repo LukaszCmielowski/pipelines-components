@@ -78,8 +78,9 @@ def autogluon_models_training(
             Empty string (default) lets AutoGluon infer the positive class when ``fit`` runs.
             Ignored for ``multiclass`` and ``regression``.
         preset: Training quality tier. ``"speed"`` (45-minute selection budget, default),
-            ``"balanced"`` (180-minute selection budget), or ``"heavy"`` (six-hour
-            selection budget with a sequential GBM-focused portfolio).
+            ``"balanced"`` (180-minute selection budget), or ``"deep"`` (six-hour
+            selection budget with AutoGluon ``best_quality``, light hyperparameters,
+            bagging/stacking, and parallel fit).
         eval_metric: Metric for model ranking (e.g. ``"r2"``, ``"accuracy"``). Defaults
             to ``"r2"`` for regression and ``"accuracy"`` otherwise.
         run_name: Per-execution MLflow run name recorded as a tag on child runs. Falls
@@ -127,21 +128,24 @@ def autogluon_models_training(
     from autogluon.tabular.configs.hyperparameter_configs import get_hyperparameter_config
 
     VALID_TASK_TYPES = {"binary", "multiclass", "regression"}
-    VALID_PRESETS = {"speed", "balanced", "heavy"}
-    PRESET_TIME_LIMITS = {"speed": 45 * 60, "balanced": 180 * 60, "heavy": 360 * 60}
-    PRESET_AG_NAMES = {"speed": "good_quality", "balanced": "high_quality", "heavy": "medium_quality"}
+    VALID_PRESETS = {"speed", "balanced", "deep"}
+    PRESET_TIME_LIMITS = {"speed": 45 * 60, "balanced": 180 * 60, "deep": 360 * 60}
+    PRESET_AG_NAMES = {"speed": "good_quality", "balanced": "high_quality", "deep": "best_quality"}
     # AutoGluon's underlying portfolios let us override only LightGBM without dropping other estimators.
-    PRESET_HYPERPARAMETERS = {"speed": "light", "balanced": "zeroshot", "heavy": {"GBM": {}}}
-    PRESET_LGBM_THREADS = {"speed": 4, "balanced": 8, "heavy": 16}
+    # deep uses "light" (not bare GBM) so the AG portfolio stays useful under a large-data memory budget.
+    PRESET_HYPERPARAMETERS = {"speed": "light", "balanced": "zeroshot", "deep": "light"}
+    PRESET_LGBM_THREADS = {"speed": 4, "balanced": 8, "deep": 16}
     PRESET_EXCLUDED_MODEL_TYPES = {
         "speed": ["CAT"],
         "balanced": ["CAT"],
-        "heavy": ["CAT", "KNN", "RF", "XT"],
+        # Drop memory-heavy neighbors; keep tree models from the light portfolio.
+        "deep": ["CAT", "KNN"],
     }
     PRESET_FIT_KWARGS = {
         "speed": {},
         "balanced": {},
-        "heavy": {"num_bag_folds": 0, "num_stack_levels": 0, "fit_strategy": "sequential"},
+        # AG recommends ~5-10 bag folds and stacking when time allows; use parallel fit on this tier's CPUs.
+        "deep": {"num_bag_folds": 5, "num_stack_levels": 1, "fit_strategy": "parallel"},
     }
     TOP_N_MAX = 10
 

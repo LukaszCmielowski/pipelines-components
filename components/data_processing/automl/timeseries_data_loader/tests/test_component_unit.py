@@ -236,9 +236,9 @@ class TestTimeseriesDataLoaderUnitTests:
         assert result.split_config["selection_train_size"] == 0.3
 
     @mock.patch.dict(os.environ, mocked_env_variables, clear=True)
-    def test_heavy_preset_loads_valid_data(self, tmp_path):
-        """Heavy accepts the 10 GiB sampling-profile preset."""
-        result, sampled_test = _run_loader(tmp_path, _timeseries_csv(), preset="heavy")
+    def test_deep_preset_loads_valid_data(self, tmp_path):
+        """Deep accepts the 10 GiB sampling-profile preset."""
+        result, sampled_test = _run_loader(tmp_path, _timeseries_csv(), preset="deep")
 
         assert result.sample_config["sampling_method"] == "first_n_rows"
         assert Path(result.models_selection_train_data_path).exists()

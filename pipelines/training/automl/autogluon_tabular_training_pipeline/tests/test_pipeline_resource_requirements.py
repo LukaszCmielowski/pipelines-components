@@ -12,7 +12,7 @@ from ..pipeline import autogluon_tabular_training_pipeline
 from .pipeline_resource_expectations import (
     AUTOML_TABULAR_EXECUTOR_RESOURCES,
     TRAINING_BALANCED_RESOURCES,
-    TRAINING_HEAVY_RESOURCES,
+    TRAINING_DEEP_RESOURCES,
     TRAINING_SPEED_RESOURCES,
 )
 
@@ -59,16 +59,16 @@ class TestAutogluonTabularPipelineResourceRequirements:
         )
 
     def test_preset_branches_declare_ordered_training_tiers(self):
-        """Speed, balanced, and heavy branches declare the intended resources."""
+        """Speed, balanced, and deep branches declare the intended resources."""
         actual = compile_executor_resources(autogluon_tabular_training_pipeline)
         training_resources = [resources for name, resources in actual.items() if "models-training" in name]
         assert len(training_resources) == 3
         assert TRAINING_SPEED_RESOURCES in training_resources
         assert TRAINING_BALANCED_RESOURCES in training_resources
-        assert TRAINING_HEAVY_RESOURCES in training_resources
+        assert TRAINING_DEEP_RESOURCES in training_resources
         speed = TRAINING_SPEED_RESOURCES
         balanced = TRAINING_BALANCED_RESOURCES
-        heavy = TRAINING_HEAVY_RESOURCES
-        assert float(speed.cpu_request) < float(balanced.cpu_request) < float(heavy.cpu_request)
+        deep = TRAINING_DEEP_RESOURCES
+        assert float(speed.cpu_request) < float(balanced.cpu_request) < float(deep.cpu_request)
         assert int(speed.memory_request.removesuffix("Gi")) < int(balanced.memory_request.removesuffix("Gi"))
-        assert int(balanced.memory_request.removesuffix("Gi")) < int(heavy.memory_request.removesuffix("Gi"))
+        assert int(balanced.memory_request.removesuffix("Gi")) < int(deep.memory_request.removesuffix("Gi"))
