@@ -3,6 +3,7 @@
 autogluon.tabular[lightgbm,xgboost,tabm,fastai]==1.6.3+rhaiv.2
 autogluon.timeseries==1.6.3+rhaiv.2
 ray>=2.43.0,<2.59.0
+colorama # Required by downstream Ray during import.
 boto3
 mlflow-skinny~=3.16.0
 pandas==2.2.3
