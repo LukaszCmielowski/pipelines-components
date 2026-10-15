@@ -809,7 +809,7 @@ pyyaml==6.0.3 \
     #   ray
     #   transformers
     #   uvicorn
-ray==2.58.0 \
+ray==2.58.0 ; platform_machine == "x86_64" or platform_machine == "aarch64" \
     --hash=sha256:7a1355c2a04a039f9476be3123e114e6606af89c0f42c8ef3797a9b558d6c43c \
     --hash=sha256:b68a267d6c5f4c44c89a67f40d9e54b0cec1dc5af5b569728506fdcd1db11f07
     # via -r requirements.in
