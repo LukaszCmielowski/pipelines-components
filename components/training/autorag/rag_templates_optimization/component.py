@@ -222,10 +222,9 @@ def rag_templates_optimization(
             settings = pattern_data["settings"]
             # Retry with excerpts after a context-window overflow so a large
             # retrieval result does not make the deployed agent unusable.
-            settings["agentic"] = {"enable_context_compression": True}
+            settings.setdefault("agentic", {})["enable_context_compression"] = True
             store_binding = settings["store_binding"]
             is_graph_pattern = store_binding["provider_type"] == "neo4j"
-            pattern_data["template_id"] = "agentic_graph_rag" if is_graph_pattern else "agentic_rag"
             if indexing_pipeline_params:
                 pattern_data["indexing"] = {
                     "pipeline_spec": {
@@ -539,7 +538,7 @@ def rag_templates_optimization(
                     values = embedding_models
                 params.append(Parameter(param_name, "C", values=values))
 
-            search_space = AI4RAGSearchSpace(params=params)
+            search_space = AI4RAGSearchSpace(params=params, vector_store_type=provider)
 
             evaluators = _build_evaluators(
                 foundation_models=foundation_models,
