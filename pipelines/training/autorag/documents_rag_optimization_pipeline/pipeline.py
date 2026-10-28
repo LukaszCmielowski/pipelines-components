@@ -55,6 +55,7 @@ def documents_rag_optimization_pipeline(
     optimization_metric: str = "overall_score",
     optimization_max_rag_patterns: int = 5,
     preset: str = "speed",
+    template_ids: list[str] = [],
 ):
     """Automated system for building and optimizing Retrieval-Augmented Generation (RAG) applications.
 
@@ -108,6 +109,11 @@ def documents_rag_optimization_pipeline(
             no table structure parsing, and no contextual enrichment. "balanced"
             enables Docling table layout parsing, hybrid chunking, and LLM
             contextual enrichment. Both presets use the same resource tier.
+        template_ids: RAG templates to evaluate. Set ["sequential_rag"] for a
+            single-retrieval baseline or ["agentic_rag", "sequential_rag"] to
+            search both templates. Empty uses ai4rag's backend default:
+            "agentic_rag" for Milvus/PGVector, "agentic_graph_rag" for Neo4j.
+            ai4rag validates template IDs and backend compatibility.
     MLflow logging:
         Runs are tracked in MLflow automatically when the cluster's MLflow integration
         is enabled; there is no parameter to turn it on. The platform injects the
@@ -145,6 +151,7 @@ def documents_rag_optimization_pipeline(
         embedding_models=embedding_models,
         generation_models=generation_models,
         preset=preset,
+        template_ids=template_ids,
     )
 
     search_space_preparation_task.set_caching_options(False)

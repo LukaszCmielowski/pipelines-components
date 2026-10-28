@@ -21,6 +21,7 @@ It also surfaces the language AutoRAG detects from the benchmark questions, so t
 | `embedded_artifact` | `dsl.EmbeddedInput[dsl.Dataset]` | `None` | Embedded ``autorag.shared`` helpers injected by KFP at runtime. |
 | `component_status` | `dsl.Output[dsl.Artifact]` | `None` | Output artifact containing stage-level progress tracking. |
 | `preset` | `str` | `speed` | Pipeline quality tier. "speed" (default) uses recursive chunking without contextual enrichment. "balanced" uses hybrid chunking with LLM contextual enrichment in the search space. |
+| `template_ids` | `List[str]` | `[]` | RAG templates to evaluate, such as ["sequential_rag"] or ["agentic_rag", "sequential_rag"]. Empty uses ai4rag's backend default: "agentic_rag" for Milvus/PGVector, "agentic_graph_rag" for Neo4j. ai4rag validates template IDs and backend compatibility. |
 
 ## Outputs 📤
 
@@ -69,7 +70,7 @@ def example_pipeline():
   - autorag
   - search-space
   - optimization
-- **Last Verified**: 2026-10-27 00:00:00+00:00
+- **Last Verified**: 2026-10-28 00:00:00+00:00
 - **Owners**:
   - No Parent Owners: Yes
   - Approvers:

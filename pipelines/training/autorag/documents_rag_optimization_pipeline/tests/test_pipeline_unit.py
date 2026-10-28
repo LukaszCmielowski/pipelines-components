@@ -52,6 +52,20 @@ class TestDocumentsRagOptimizationPipelineUnit:
             expected_task_ids=_EXPECTED_ROOT_DAG_TASK_IDS,
         )
 
+    def test_template_selection_reaches_search_space_preparation(self, tmp_path):
+        """Template selection remains optional and reaches the search-space step."""
+        output_path = tmp_path / "pipeline.yaml"
+        compiler.Compiler().compile(documents_rag_optimization_pipeline, package_path=str(output_path))
+        spec = load_pipeline_spec_document(output_path)
+        definition = spec["root"]["inputDefinitions"]["parameters"]["template_ids"]
+        assert definition["parameterType"] == "LIST"
+        assert definition["defaultValue"] == []
+        task = spec["root"]["dag"]["tasks"]["search-space-preparation"]
+        selection = task["inputs"]["parameters"]["template_ids"]
+        assert selection["componentInputParameter"] == "template_ids"
+        component = spec["components"][task["componentRef"]["name"]]
+        assert component["inputDefinitions"]["parameters"]["template_ids"]["parameterType"] == "LIST"
+
     def test_documents_discovery_runs_after_stage_map_publisher(self):
         """Stage map publisher must complete before downstream components start."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as tmp:

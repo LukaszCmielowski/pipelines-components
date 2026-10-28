@@ -79,8 +79,9 @@ class TestSearchSpacePreparationUnitTests:
         assert "preset" in params
         assert sig.parameters["preset"].default == "speed"
 
+    @pytest.mark.parametrize("template_ids", [[], ["sequential_rag"], ["agentic_rag", "sequential_rag"]])
     @mock.patch.dict("os.environ", MOCKED_ENV_VARIABLES, clear=True)
-    def test_delegates_to_prepare_search_space_with_maas(self, tmp_path):
+    def test_delegates_to_prepare_search_space_with_maas(self, tmp_path, template_ids):
         """Delegates to create_maas_client, prepare_search_space_with_maas, and build_search_space_report."""
         m = _make_ai4rag_mocks()
         client = mock.MagicMock(name="maas_client_instance")
@@ -101,6 +102,7 @@ class TestSearchSpacePreparationUnitTests:
                 search_space_report=report_artifact,
                 embedding_models=["embed-1", "embed-2"],
                 generation_models=["gen-1"],
+                template_ids=template_ids,
             )
 
         m.create_maas_client.assert_called_once_with(
@@ -113,6 +115,10 @@ class TestSearchSpacePreparationUnitTests:
         assert payload["foundation_models"] == [{"model_id": "gen-1"}]
         assert payload["embedding_models"] == [{"model_id": "embed-1"}, {"model_id": "embed-2"}]
         assert payload["chunking_methods"] == ["recursive"]
+        if template_ids:
+            assert payload["template_ids"] == template_ids
+        else:
+            assert "template_ids" not in payload
         assert m.prepare.call_args.kwargs["client"] is client
         assert "benchmark_data" in m.prepare.call_args.kwargs
         assert m.prepare.call_args.kwargs["vector_store_type"] == "milvus"
@@ -343,6 +349,7 @@ class TestSearchSpacePreparationUnitTests:
         assert payload["chunking_methods"] == expected_methods
         assert "chunk_sizes" not in payload
         assert "chunk_overlaps" not in payload
+        assert "template_ids" not in payload
 
     @pytest.mark.parametrize(("code", "expected"), [("en", "en"), ("ZH", "zh"), (" pl ", "pl")])
     def test_detected_language_is_returned_normalized(self, tmp_path, code, expected):

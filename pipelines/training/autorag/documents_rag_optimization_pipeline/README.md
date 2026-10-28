@@ -27,6 +27,7 @@ deployment settings), executable notebooks, and evaluation results.
 | `optimization_metric` | `str` | `overall_score` | Quality metric used to rank RAG patterns. Use an evaluator-qualified value such as ``"unitxt:faithfulness"``, ``"ragas:context_precision"``, or ``"custom:overall_score"`` (default). The ``speed`` preset supports Unitxt and custom metrics; ``balanced`` also supports RAGAS metrics. ``custom:overall_score`` aggregates Unitxt outputs for ``speed`` and Unitxt plus RAGAS outputs for ``balanced``. |
 | `optimization_max_rag_patterns` | `int` | `5` | Maximum number of optimization iterations and published RAG patterns (4-10, default 5). |
 | `preset` | `str` | `speed` | Pipeline quality tier. "speed" (default) uses recursive chunking, no table structure parsing, and no contextual enrichment. "balanced" enables Docling table layout parsing, hybrid chunking, and LLM contextual enrichment. Both presets use the same resource tier. |
+| `template_ids` | `list[str]` | `[]` | RAG templates to evaluate. Set ["sequential_rag"] for a single-retrieval baseline or ["agentic_rag", "sequential_rag"] to search both templates. Empty uses ai4rag's backend default: "agentic_rag" for Milvus/PGVector, "agentic_graph_rag" for Neo4j. ai4rag validates template IDs and backend compatibility. |
 
 ## Metadata 🗂️
 
@@ -48,7 +49,7 @@ deployment settings), executable notebooks, and evaluation results.
   - pipeline
   - autorag
   - rag-optimization
-- **Last Verified**: 2026-10-26 00:00:00+00:00
+- **Last Verified**: 2026-10-28 00:00:00+00:00
 - **Owners**:
   - No Parent Owners: Yes
   - Approvers:
@@ -63,6 +64,14 @@ deployment settings), executable notebooks, and evaluation results.
     - MichalSteczko
 
 <!-- custom-content -->
+
+### Template selection
+
+Set `template_ids` to `["sequential_rag"]` for a single-retrieval baseline, or
+`["agentic_rag", "sequential_rag"]` to include both templates in optimization.
+An empty list keeps ai4rag's backend default: `agentic_rag` for Milvus/PGVector
+and `agentic_graph_rag` for Neo4j. ai4rag rejects templates incompatible with
+the selected backend.
 
 ### Progress and dashboard artifacts
 

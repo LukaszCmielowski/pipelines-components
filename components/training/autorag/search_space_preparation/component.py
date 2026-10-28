@@ -21,6 +21,7 @@ def search_space_preparation(
     embedded_artifact: dsl.EmbeddedInput[dsl.Dataset] = None,
     component_status: dsl.Output[dsl.Artifact] = None,
     preset: str = "speed",
+    template_ids: List[str] = [],
 ) -> NamedTuple("SearchSpacePreparationOutputs", [("detected_ocr_lang", str)]):
     """Search space preparation and validation for AutoRAG experiments.
 
@@ -43,6 +44,10 @@ def search_space_preparation(
         preset: Pipeline quality tier. "speed" (default) uses recursive chunking
             without contextual enrichment. "balanced" uses hybrid chunking with
             LLM contextual enrichment in the search space.
+        template_ids: RAG templates to evaluate, such as ["sequential_rag"] or
+            ["agentic_rag", "sequential_rag"]. Empty uses ai4rag's backend default:
+            "agentic_rag" for Milvus/PGVector, "agentic_graph_rag" for Neo4j.
+            ai4rag validates template IDs and backend compatibility.
 
     Returns:
         detected_ocr_lang: ISO 639-1 code of the language AutoRAG detected from the
@@ -123,6 +128,8 @@ def search_space_preparation(
                 "embedding_models": [{"model_id": em} for em in embedding_models],
                 "chunking_methods": chunking_methods,
             }
+            if template_ids:
+                payload["template_ids"] = template_ids
             if vector_store_type == "neo4j":
                 # Neo4j owns its chunk geometry. Do not let a generic quality
                 # preset override ai4rag's graph-safe defaults (1024 tokens and
