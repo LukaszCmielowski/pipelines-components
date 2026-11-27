@@ -1,0 +1,13 @@
+---
+name: autogluon_multimodal_models_training
+description: Train and export one AutoMM image classification predictor.
+stability: alpha
+dependencies:
+  kubeflow:
+    - name: Pipelines
+      version: ">=2.16.1"
+tags:
+  - training
+  - automl
+  - multimodal
+lastVerified: 2026-11-26T00:00:00Z

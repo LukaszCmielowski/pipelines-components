@@ -1,0 +1,13 @@
+---
+name: multimodal_image_data_loader
+description: Validate, stage, and split an S3 image classification dataset.
+stability: alpha
+dependencies:
+  kubeflow:
+    - name: Pipelines
+      version: ">=2.16.1"
+tags:
+  - data-processing
+  - automl
+  - multimodal
+lastVerified: 2026-11-26T00:00:00Z

@@ -1,0 +1,9 @@
+no_parent_owners: true
+approvers:
+  - mateusz-szewczyk-dev
+  - LukaszCmielowski
+  - Mateusz-Switala
+  - jakub-walaszczyk
+reviewers:
+  - mateusz-szewczyk-dev
+  - Mateusz-Switala

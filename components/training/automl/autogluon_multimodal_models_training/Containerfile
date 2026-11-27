@@ -1,0 +1,21 @@
+FROM python:3.12-slim-bookworm AS builder
+WORKDIR /src
+COPY pyproject.toml README.md __init__.py ./
+COPY components/ components/
+COPY pipelines/ pipelines/
+COPY utils/ utils/
+RUN python -m pip wheel --no-deps --wheel-dir /wheels .
+
+FROM python:3.12-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu128 \
+    torch==2.8.0 torchvision==0.23.0
+RUN python -m pip install --no-cache-dir 'autogluon.multimodal==1.5.0' 'timm==1.0.3' 'kfp==2.16.1' \
+    'kfp-kubernetes==2.16.1'
+# AutoMM 1.5.0 still imports pkg_resources.
+RUN python -m pip install --no-cache-dir 'setuptools==80.10.2'
+COPY --from=builder /wheels/ /tmp/wheels/
+RUN python -m pip install --no-cache-dir --no-deps /tmp/wheels/kfp_components-*.whl && python -m pip check
+ENV HOME=/tmp
+USER 1001
